@@ -92,7 +92,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
 
   const profiles = useMemo(() => data.teams.map((t) => profile(t, P, data.slots)), [data, P]);
   const mine = profiles.find((p) => p.id === me)!;
-  const d = useMemo(() => diagnose(mine, profiles, P, data.teams, data.free), [mine, profiles, P, data]);
+  const d = useMemo(() => diagnose(mine, profiles, P, data.teams, data.free, data.slots), [mine, profiles, P, data]);
   const meTeam = data.teams.find((t) => t.id === me)!;
   const themTeam = data.teams.find((t) => t.id === them)!;
   const trade = give.length && get.length ? evaluateTrade(give, get, meTeam, themTeam, P, data.slots) : null;
@@ -220,10 +220,10 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
               ))}
             </ul>
 
-            {/* lineup + bench */}
+            {/* top nine + depth */}
             <div className="mt-10 grid gap-6 md:grid-cols-2">
               <section>
-                <h3 className="font-display text-3xl font-black">Best starting nine</h3>
+                <h3 className="font-display text-3xl font-black">Top nine on paper</h3>
                 <p className="text-sm text-[var(--muted)]">{n0(mine.lineup.total)} points a week at full strength</p>
                 <ul className="mt-3 space-y-1.5">
                   {data.slots.map((slot, i) => {
@@ -242,8 +242,8 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                 </ul>
               </section>
               <section>
-                <h3 className="font-display text-3xl font-black">Bench</h3>
-                <p className="text-sm text-[var(--muted)]">Weekly value each, deepest first</p>
+                <h3 className="font-display text-3xl font-black">Depth</h3>
+                <p className="text-sm text-[var(--muted)]">Outside your top nine on paper. With daily swaps they still play whenever a starter sits.</p>
                 <ul className="mt-3 space-y-1.5">
                   {mine.lineup.bench.map((pid) => {
                     const p = P[pid];

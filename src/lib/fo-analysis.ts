@@ -55,7 +55,7 @@ export type Metric = "stars" | "lineup" | "depth" | "guards" | "forwards" | "cen
 export const METRICS: { key: Metric; label: string; info: string }[] = [
   { key: "stars", label: "Star power", info: "Your three best players' weekly value. Stars win this format: every slot only counts one game." },
   { key: "lineup", label: "Starting nine", info: "Your best legal lineup's weekly value, the number that actually wins matchups." },
-  { key: "depth", label: "Depth", info: "Your best five bench players. Covers injuries and lets you lock in more big games." },
+  { key: "depth", label: "Depth", info: "Your best five players outside your top nine. With daily lineups they still play whenever a starter sits, and they cover injuries." },
   { key: "guards", label: "Guards", info: "Your best three PG/SG-eligible players." },
   { key: "forwards", label: "Forwards", info: "Your best three SF/PF-eligible players." },
   { key: "centers", label: "Centers", info: "Your best two C-eligible players." },
@@ -96,7 +96,7 @@ export function ranks(all: Profile[]) {
 export type Advice = { title: string; text: string; targets?: { pid: string; owner: string | null; why: string }[] };
 
 /** Plain-English diagnosis: what kind of team this is, what it's good at, what it's missing, and what to do. */
-export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer>, teams: FOTeam[], free: string[]) {
+export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer>, teams: FOTeam[], free: string[], slots: string[]) {
   const R = ranks(all);
   const r = R[me.id];
   const n = all.length;
@@ -110,7 +110,7 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
   let pitch = "No glaring hole. Small upgrades at your weakest spot are the way to climb.";
   if (top("stars") && low("depth")) {
     archetype = "Top-heavy";
-    pitch = "Real stars, thin bench. One injury and your lineup has holes. Add cheap depth without giving up a star.";
+    pitch = "Real stars, thin depth. On days your stars sit or get hurt, there's no one good to swap in. Add cheap depth without giving up a star.";
   } else if (top("depth") && !top("stars")) {
     archetype = "Deep, no ceiling";
     pitch = "Plenty of bodies, not enough big games. In a one-game-per-slot league, consolidate: package two pieces for one star.";
@@ -126,7 +126,18 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
   const weaknesses = METRICS.filter((x) => low(x.key)).map((x) => x.label);
   const advice: Advice[] = [];
 
-  // Weakest position group -> trade targets who are surplus on their own team.
+  // How much a team's best lineup drops without a player. Lineups change daily, so "on the bench"
+  // means nothing; what makes a player gettable is that his team barely misses him.
+  const lineupCost = (owner: string, pid: string) => {
+    const t = teams.find((x) => x.id === owner)!;
+    const base = all.find((p) => p.id === owner)!.lineup.total;
+    const without = bestLineup(t.players.filter((x) => x !== pid).map((x) => P[x]).filter(Boolean), slots).total;
+    // Daily swaps mean even a player outside the top nine adds something (some days his game is
+    // the best one available), so nobody counts as free: at least 15% of his value.
+    return Math.max(base - without, P[pid].value * 0.15);
+  };
+
+  // Weakest position group -> good players whose teams can spare them.
   const groups: { key: Metric; label: string; pos: string[] }[] = [
     { key: "guards", label: "guard", pos: ["PG", "SG"] },
     { key: "forwards", label: "forward", pos: ["SF", "PF"] },
@@ -134,21 +145,27 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
   ];
   const weakest = [...groups].sort((a, b) => r[b.key] - r[a.key])[0];
   if (r[weakest.key] > n / 2) {
-    const surplus = all
-      .filter((p) => p.id !== me.id)
-      .flatMap((p) => p.lineup.bench.slice(0, 4).map((pid) => ({ pid, owner: p.id })))
-      .filter(({ pid }) => P[pid]?.pos.some((x) => weakest.pos.includes(x)) && !P[pid].onIR)
-      .sort((a, b) => P[b.pid].value - P[a.pid].value)
+    const surplus = teams
+      .filter((t) => t.id !== me.id)
+      .flatMap((t) => t.players.map((pid) => ({ pid, owner: t.id })))
+      .filter(({ pid }) => P[pid]?.pos.some((x) => weakest.pos.includes(x)) && !P[pid].onIR && P[pid].value >= 30)
+      .map((x) => ({ ...x, cost: lineupCost(x.owner, x.pid) }))
+      .filter((x) => x.cost <= P[x.pid].value * 0.45)
+      .sort((a, b) => P[b.pid].value - 1.5 * b.cost - (P[a.pid].value - 1.5 * a.cost))
       .slice(0, 3);
     advice.push({
       title: `Upgrade at ${weakest.label}`,
-      text: `Your ${weakest.label}s rank #${r[weakest.key]} of ${n}. These ${weakest.label}s are sitting on other teams' benches, so their managers may sell.`,
-      targets: surplus.map((s) => ({ pid: s.pid, owner: s.owner, why: `Bench piece for ${s.owner}` })),
+      text: `Your ${weakest.label}s rank #${r[weakest.key]} of ${n}. These ${weakest.label}s are good, and their teams are stacked enough to barely miss them, so they're the realistic asks.`,
+      targets: surplus.map((s) => ({
+        pid: s.pid,
+        owner: s.owner,
+        why: `their lineup drops only about ${Math.round(s.cost)} a week without him`,
+      })),
     });
   }
 
   if (archetype === "Deep, no ceiling" || (top("depth") && r.stars > n / 2)) {
-    const chips = me.lineup.bench.slice(0, 3).map((id) => P[id]).filter(Boolean);
+    const chips = me.lineup.bench.slice(0, 3).map((id) => P[id]).filter(Boolean); // best players outside the top nine
     const needy = all.filter((p) => p.id !== me.id && R[p.id].depth > n / 2);
     const stars = needy
       .flatMap((p) => p.lineup.starters.filter(Boolean).map((pid) => ({ pid: pid as string, owner: p.id })))
@@ -156,8 +173,8 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
       .slice(0, 3);
     advice.push({
       title: "Consolidate: two for one",
-      text: `Your bench is deep (${chips.map((c) => c.name).join(", ")}). Teams with thin benches will pay for depth with a star.`,
-      targets: stars.map((s) => ({ pid: s.pid, owner: s.owner, why: `${s.owner} needs depth` })),
+      text: `You're deep beyond your top nine (${chips.map((c) => c.name).join(", ")}). Teams with thin depth will pay for it with a star, and in a lock-in league one big game beats two average ones.`,
+      targets: stars.map((s) => ({ pid: s.pid, owner: s.owner, why: "their depth is thin" })),
     });
   }
 
@@ -165,7 +182,7 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
     const pickups = free.filter((pid) => !P[pid].injury).slice(0, 3);
     advice.push({
       title: "Add depth off the wire",
-      text: "Your bench is among the thinnest in the league. These free agents cost nothing.",
+      text: "Your depth is among the thinnest in the league, so on game days there's often no one good to swap in. These free agents cost nothing.",
       targets: pickups.map((pid) => ({ pid, owner: null, why: `${P[pid].value.toFixed(0)} a week` })),
     });
   }
