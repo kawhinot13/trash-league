@@ -5,9 +5,15 @@ import { PageIntro } from "@/components/trash/page-intro";
 import { SectionHead, Standings } from "@/components/trash/sections";
 import { league } from "@/lib/league";
 import { players, weeklyRecap } from "@/lib/extras";
+import { liveRecap } from "@/lib/recap-live";
 import { WeeklyRecap } from "@/components/trash/recap";
 
 export const metadata: Metadata = { title: "Live — Trash" };
+
+async function LiveRecap() {
+  const r = await liveRecap();
+  return <WeeklyRecap years={r.years} weeks={r.weeks} players={players} managers={league.managers} />;
+}
 
 export default function LivePage() {
   return (
@@ -25,7 +31,9 @@ export default function LivePage() {
           Every finished week of the season in one place: blowouts, nail-biters, bench crimes and who carried who.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <WeeklyRecap {...weeklyRecap("s4")} players={players} managers={league.managers} />
+          <Suspense fallback={<WeeklyRecap {...weeklyRecap("s4")} players={players} managers={league.managers} />}>
+            <LiveRecap />
+          </Suspense>
         </div>
       </section>
 

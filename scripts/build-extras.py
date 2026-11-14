@@ -273,3 +273,43 @@ json.dump(out, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
 print("replay could not explain", len(MISFIT), "team-weeks", MISFIT[:8], file=sys.stderr)
 print("ok", {s["code"]: (s["weeks"], len(s["trades"]), len(s["draft"])) for s in out["seasons"]},
       len(out["players"]), "players", os.path.getsize(OUT) // 1024, "KB")
+
+# Keep league.json's in-progress season current: official records and points from Sleeper's
+# rosters, re-seeded, and every manager's career totals recomputed from their seasons.
+LPATH = os.path.join(ROOT, "src/data/league.json")
+LG = json.load(open(LPATH))
+for sn in LG["seasons"]:
+    if sn["status"] == "complete":
+        continue
+    lid = sn["leagueId"]
+    users = {u["user_id"]: u for u in get(f"/v1/league/{lid}/users", fresh=True)}
+    live = {}
+    for r in get(f"/v1/league/{lid}/rosters", fresh=True):
+        st = r["settings"]
+        live[users[r["owner_id"]]["display_name"]] = {
+            "w": st.get("wins", 0), "l": st.get("losses", 0), "t": st.get("ties", 0),
+            "pf": round(st.get("fpts", 0) + st.get("fpts_decimal", 0) / 100, 1),
+            "pa": round(st.get("fpts_against", 0) + st.get("fpts_against_decimal", 0) / 100, 1),
+            "moves": st.get("total_moves", 0)}
+    for row in sn["standings"]:
+        row.update(live.get(row["manager"], {}))
+    sn["standings"].sort(key=lambda x: (-(x["w"] + x["t"] / 2), -x["pf"]))
+    for i, row in enumerate(sn["standings"]):
+        row["seed"] = i + 1
+    for m in LG["managers"]:
+        row = next((x for x in sn["standings"] if x["manager"] == m["id"]), None)
+        if not row:
+            continue
+        for ms in m["seasons"]:
+            if ms["code"] == sn["code"]:
+                ms.update({k: row[k] for k in ("w", "l", "t", "pf", "seed")})
+for m in LG["managers"]:
+    rows = [next(x for x in s["standings"] if x["manager"] == m["id"]) for s in LG["seasons"] if any(x["manager"] == m["id"] for x in s["standings"])]
+    m["w"], m["l"], m["t"] = sum(r["w"] for r in rows), sum(r["l"] for r in rows), sum(r["t"] for r in rows)
+    m["pf"] = round(sum(r["pf"] for r in rows), 1)
+    m["pa"] = round(sum(r.get("pa", 0) for r in rows), 1)
+    gp = m["w"] + m["l"] + m["t"]
+    m["pct"] = round((m["w"] + m["t"] / 2) / gp, 3) if gp else 0
+LG["managers"].sort(key=lambda m: -m["pct"])
+json.dump(LG, open(LPATH, "w"), ensure_ascii=False)
+print("league.json in-progress season refreshed")

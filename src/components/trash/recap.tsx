@@ -168,7 +168,7 @@ export function WeeklyRecap({
         </motion.ul>
       </AnimatePresence>
       <p className="mt-4 text-xs text-[var(--muted)]">
-        Scores and lineups per Sleeper&apos;s weekly data. Refreshed every morning.
+        Scores read live from Sleeper&apos;s matchups, refreshed every few minutes. Best-possible lineups come from the nightly box-score replay.
       </p>
     </div>
   );
