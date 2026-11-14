@@ -6,9 +6,17 @@ import { SectionHead, Standings } from "@/components/trash/sections";
 import { league } from "@/lib/league";
 import { players, weeklyRecap } from "@/lib/extras";
 import { liveRecap } from "@/lib/recap-live";
+import { powerRankings } from "@/lib/power";
+import { PowerRankings } from "@/components/trash/power";
 import { WeeklyRecap } from "@/components/trash/recap";
 
 export const metadata: Metadata = { title: "Live — Trash" };
+
+async function Power() {
+  const p = await powerRankings();
+  if (!p) return <p className="text-[var(--muted)]">Power rankings load once Sleeper answers. Refresh in a minute.</p>;
+  return <PowerRankings rows={p.rows} week={p.week} />;
+}
 
 async function LiveRecap() {
   const r = await liveRecap();
@@ -26,6 +34,17 @@ export default function LivePage() {
       <Suspense fallback={<Standings rows={league.seasons[3].standings} live={false} week={null} />}>
         <LiveTable />
       </Suspense>
+      <section aria-labelledby="power" className="py-24 md:py-32">
+        <SectionHead id="power" title="Power rankings">
+          Not the standings: who&apos;s actually best right now, from record, scoring, roster strength and form.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <Suspense fallback={<p className="text-[var(--muted)]">Ranking the league…</p>}>
+            <Power />
+          </Suspense>
+        </div>
+      </section>
+
       <section aria-labelledby="recap" className="py-24 md:py-32">
         <SectionHead id="recap" title="Weekly recap">
           Every finished week of the season in one place: blowouts, nail-biters, bench crimes and who carried who.
