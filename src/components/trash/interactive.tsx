@@ -105,10 +105,12 @@ export function OwnsGrid({
     w === l
       ? "dead even with"
       : w > l
-        ? l === 0 && w >= 5
+        ? w >= 5 && l <= 1
           ? "owns"
           : "has the edge on"
-        : "is owned by";
+        : l >= 5 && w <= 1
+          ? "is owned by"
+          : "trails";
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-5 md:grid-cols-[1fr_300px] md:px-10">
       <div className="overflow-x-auto rounded-3xl bg-[var(--bin-2)] p-3 md:p-5">

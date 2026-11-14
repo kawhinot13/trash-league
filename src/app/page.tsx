@@ -25,7 +25,7 @@ import {
 } from "@/components/trash/interactive";
 import { league, liveStandings } from "@/lib/league";
 import { waiverIntel, weekIfEndedToday } from "@/lib/live";
-import { Almanac, LiveWeek, WaiverWire } from "@/components/trash/intel";
+import { Almanac, Explain, LiveWeek, WaiverWire } from "@/components/trash/intel";
 
 const STORY: StoryItem[] = [
   {
@@ -300,6 +300,19 @@ export default function Home() {
           rivalries aren&apos;t rivalries, they&apos;re ownership.
         </SectionHead>
         <OwnsGrid names={names} h2h={league.h2h} colors={colors} />
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <Explain>
+            <p>
+              Each square is how many regular-season games the row manager won against the column manager, all four seasons
+              combined. Gold squares are winning matchups, red are losing ones. &ldquo;Owns&rdquo; means a winning record of
+              at least 5 games with no more than 1 loss.
+            </p>
+            <p>
+              These come from Sleeper&apos;s week-by-week scores, which don&apos;t always match the official standings for
+              this league, so treat them as league lore rather than gospel.
+            </p>
+          </Explain>
+        </div>
       </section>
 
       <section aria-labelledby="managers" className="py-24 md:py-32">

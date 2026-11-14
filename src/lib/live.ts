@@ -12,17 +12,6 @@ import { league } from "@/lib/league";
  */
 const API = "https://api.sleeper.app";
 const LEAGUE = league.seasons.find((s) => s.code === "s4")!.leagueId;
-const SLOTS = ["PG", "SG", "G", "SF", "PF", "F", "C", "UTIL", "UTIL"] as const;
-const FITS: Record<string, string[]> = {
-  PG: ["PG"],
-  SG: ["SG"],
-  G: ["PG", "SG"],
-  SF: ["SF"],
-  PF: ["PF"],
-  F: ["SF", "PF"],
-  C: ["C"],
-  UTIL: ["PG", "SG", "SF", "PF", "C"],
-};
 
 type Stats = Record<string, number>;
 type Row = {
@@ -74,6 +63,8 @@ const phi = (z: number) => {
 };
 
 export type LiveRow = {
+  pending: number;
+  oppNow: number;
   manager: string;
   team: string;
   w: number;
@@ -138,42 +129,33 @@ export async function weekIfEndedToday(): Promise<{
         proj.map((r) => r.date).filter((d): d is string => !!d && d >= today),
       ),
     ].sort();
-    // Best single remaining game per player (each slot scores one game a week).
-    const best = new Map<string, { proj: number; pos: string[] }>();
+    // Each lineup slot shows the latest game its starter played while starting; a new game
+    // replaces the old score (verified: 79 of 108 slots = latest game, the rest = benched later).
+    const lastGame = new Map<string, { date: string; proj: number }>();
     for (const r of proj) {
       if (!r.date || r.date < today || played.has(`${r.player_id}|${r.date}`)) continue;
       if (r.player?.injury_status === "Out") continue;
-      const v = fp(r.stats, scoring);
-      const cur = best.get(r.player_id);
-      if (!cur || v > cur.proj) best.set(r.player_id, { proj: v, pos: r.player?.fantasy_positions ?? [] });
+      const cur = lastGame.get(r.player_id);
+      if (!cur || r.date > cur.date) lastGame.set(r.player_id, { date: r.date, proj: fp(r.stats, scoring) });
     }
     const byUser = new Map(users.map((u) => [u.user_id, u]));
     const team = rosters.map((r) => {
       const mu = matchups.find((x) => x.roster_id === r.roster_id);
-      // Filled slots keep Sleeper's score; empty slots get the best remaining game that fits.
-      const used = new Set<string>();
-      const open: string[] = [];
-      (mu?.starters ?? []).forEach((pid, i) => {
-        if ((mu?.starters_points?.[i] ?? 0) !== 0) used.add(pid);
-        else open.push(SLOTS[i] ?? "UTIL");
-      });
-      let rest = 0;
+      let final = 0;
       let v = 0;
-      const pool = (r.players ?? [])
-        .filter((id) => !used.has(id) && best.has(id))
-        .map((id) => ({ id, ...best.get(id)! }))
-        .sort((x, y) => y.proj - x.proj);
-      for (const c of pool) {
-        const fit = open
-          .map((sl, i) => ({ sl, i }))
-          .filter(({ sl }) => FITS[sl].some((p) => c.pos.includes(p)))
-          .sort((x, y) => FITS[x.sl].length - FITS[y.sl].length)[0];
-        if (!fit) continue;
-        open.splice(fit.i, 1);
-        rest += c.proj;
-        v += (0.33 * c.proj) ** 2; // a single game's spread is roughly a third of its projection
-        if (!open.length) break;
-      }
+      let pending = 0;
+      (mu?.starters ?? []).forEach((pid, i) => {
+        const now = mu?.starters_points?.[i] ?? 0;
+        const next = lastGame.get(pid);
+        // Managers protect a big score by benching, and play a starter when a better game is coming,
+        // so a slot ends the week at the better of its current score and its next projected game.
+        if (next && next.proj > now) {
+          final += next.proj;
+          v += (0.33 * next.proj) ** 2; // one game's spread is roughly a third of its projection
+          pending += 1;
+        } else final += now;
+      });
+      const rest = final - (mu?.points ?? 0);
       const m = matchups.find((x) => x.roster_id === r.roster_id)!;
       const u = byUser.get(r.owner_id);
       const s = r.settings;
@@ -189,6 +171,7 @@ export async function weekIfEndedToday(): Promise<{
         now: m?.points ?? 0,
         proj: (m?.points ?? 0) + rest,
         sd: Math.sqrt(v),
+        pending,
       };
     });
     const rows: LiveRow[] = team.map((x) => {
@@ -206,6 +189,8 @@ export async function weekIfEndedToday(): Promise<{
         proj: x.proj,
         opp: o.manager,
         oppProj: o.proj,
+        oppNow: o.now,
+        pending: x.pending,
         winProb,
         pw: x.w + (win ? 1 : 0),
         pl: x.l + (win ? 0 : 1),

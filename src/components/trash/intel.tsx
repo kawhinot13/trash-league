@@ -24,6 +24,33 @@ const Av = ({ id, s = 36 }: { id: string; s?: number }) => (
   />
 );
 
+/** Expandable plain-English explanation for anything that needs one. */
+export function Explain({
+  children,
+  title = "How this works",
+  tone = "dark",
+}: {
+  children: React.ReactNode;
+  title?: string;
+  tone?: "dark" | "court";
+}) {
+  return (
+    <details
+      className={`group mt-4 rounded-2xl border px-4 py-3 text-sm ${tone === "court" ? "border-black/15 bg-black/10 text-[#1d140b]" : "border-white/10 bg-black/20 text-[var(--muted)]"}`}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold select-none">
+        <span className="inline-flex size-5 items-center justify-center rounded-full border border-current text-xs transition-transform duration-200 group-open:rotate-45">
+          +
+        </span>
+        {title}
+      </summary>
+      <div className="mt-3 max-w-[72ch] space-y-2 leading-relaxed">
+        {children}
+      </div>
+    </details>
+  );
+}
+
 /** Segmented control with a sliding glass thumb. */
 function Segmented<T extends string>({
   value,
@@ -73,7 +100,7 @@ export function LiveWeek({
   rows: LiveRow[];
   daysLeft: number;
 }) {
-  const [mode, setMode] = useState<"proj" | "now">("proj");
+  const [mode, setMode] = useState<"proj" | "now">("now");
   const list =
     mode === "proj" ? rows : [...rows].sort((a, b) => a.rankNow - b.rankNow);
   return (
@@ -84,8 +111,8 @@ export function LiveWeek({
           value={mode}
           onChange={setMode}
           options={[
-            ["proj", "If the week ended today"],
             ["now", "Official table"],
+            ["proj", "If the week ended today"],
           ]}
         />
         <p className="text-sm font-medium">
@@ -128,7 +155,20 @@ export function LiveWeek({
                     ) : null}
                   </span>
                   <span className="block truncate text-xs text-[var(--muted)]">
-                    vs {r.opp}: {n1(r.now)} now, {n1(r.proj)} projected
+                    <span className="text-[var(--paper)]/85">{n1(r.now)}</span>{" "}
+                    now
+                    {mode === "proj" ? (
+                      <>
+                        ,{" "}
+                        <span className="text-[var(--paper)]/85">
+                          {n1(r.proj)}
+                        </span>{" "}
+                        projected
+                      </>
+                    ) : null}
+                    <span className="mx-1.5 opacity-50">|</span>vs {r.opp}{" "}
+                    {n1(r.oppNow)}
+                    {mode === "proj" ? <> (proj. {n1(r.oppProj)})</> : null}
                   </span>
                 </span>
                 <span className="hidden md:block">
@@ -164,6 +204,32 @@ export function LiveWeek({
           );
         })}
       </ol>
+      <Explain tone="court">
+        <p>
+          <strong>How your league scores.</strong> Each of the 9 starting slots
+          counts one game per week: the latest game its player played while in
+          the starting lineup. A new game replaces the old one, which is why
+          benching someone protects a big score.
+        </p>
+        <p>
+          <strong>Projected.</strong> For every slot we take the better of its
+          current score and the starter&apos;s next projected game
+          (Sleeper&apos;s projection, scored with your league&apos;s settings),
+          assuming managers play the better option. Players listed as Out are
+          skipped.
+        </p>
+        <p>
+          <strong>Win chance.</strong> Each remaining game can land about a
+          third above or below its projection; we add those swings up for both
+          teams and turn the projected gap into a probability. When no games are
+          left it is 0% or 100%.
+        </p>
+        <p>
+          <strong>Ranking.</strong> Record first, ties broken by points for. In
+          the projected view, points for includes this week&apos;s projected
+          score. Arrows show the move from the official table.
+        </p>
+      </Explain>
     </div>
   );
 }
@@ -389,17 +455,48 @@ export function WaiverWire({
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-[var(--muted)]">
-        Pickup score blends last-5 form (45%), season average (25%), projected
-        points left this week, minutes trend and Sleeper-wide add momentum.
-        Projections and trends come from Sleeper; the blend is ours.
-      </p>
+      <Explain title="What each column means">
+        <p>
+          <strong>Pickup score:</strong> our blend of last-5 form (45%), season
+          average (25%), projected points left this week (20%), minutes trend
+          and how fast Sleeper users are adding them. Injured players are marked
+          down (Out −50%, Doubtful −30%, Questionable −15%).
+        </p>
+        <p>
+          <strong>Last 5 / Season:</strong> fantasy points per game in this
+          league&apos;s scoring, over the last five games played and the whole
+          season.
+        </p>
+        <p>
+          <strong>Rest of week:</strong> projected points from games still to
+          play this week, with the game count in brackets. Good for streaming an
+          open slot.
+        </p>
+        <p>
+          <strong>Minutes trend:</strong> minutes per game lately minus season
+          average. Rising minutes usually come before rising production.
+        </p>
+        <p>
+          <strong>Adds, 48h:</strong> how many Sleeper leagues added the player
+          in the last two days, across all of Sleeper.
+        </p>
+        <p>
+          <strong>Next week:</strong> games scheduled next week.
+        </p>
+      </Explain>
     </div>
   );
 }
 
 /* ── The Almanac: league history, organised by question ──────────────── */
-type Tab = "luck" | "playoffs" | "partners" | "waivers" | "drafts" | "seasons";
+type Tab =
+  | "luck"
+  | "oddities"
+  | "playoffs"
+  | "partners"
+  | "waivers"
+  | "drafts"
+  | "seasons";
 export function Almanac({
   managers,
   seasons,
@@ -465,6 +562,7 @@ export function Almanac({
         onChange={setTab}
         options={[
           ["luck", "Luck index"],
+          ["oddities", "Oddities"],
           ["playoffs", "Playoff résumés"],
           ["partners", "Trade network"],
           ["waivers", "Waiver hawks"],
@@ -570,6 +668,8 @@ export function Almanac({
             </div>
           </div>
         ) : null}
+
+        {tab === "oddities" ? <Oddities seasons={seasons} /> : null}
 
         {tab === "playoffs" ? (
           <div className="overflow-x-auto">
@@ -788,6 +888,259 @@ export function Almanac({
           </div>
         ) : null}
       </div>
+      <AlmanacNote tab={tab} />
     </div>
   );
+}
+
+/* ── Oddities: niche records nobody else tracks ─────────────────────── */
+const OddCard = ({
+  title,
+  sub,
+  children,
+}: {
+  title: string;
+  sub: string;
+  children: React.ReactNode;
+}) => (
+  <div className="rounded-2xl bg-black/20 p-5">
+    <h3 className="font-display text-3xl leading-none font-black">{title}</h3>
+    <p className="mt-1 text-sm text-[var(--muted)]">{sub}</p>
+    <div className="mt-4">{children}</div>
+  </div>
+);
+
+function Oddities({ seasons }: { seasons: Season[] }) {
+  const done = seasons.filter((s) => s.status === "complete");
+  // Players who changed hands the most
+  const moved = new Map<
+    string,
+    { n: number; pid: string | null; owners: string[] }
+  >();
+  for (const s of seasons)
+    for (const t of s.trades)
+      for (const [who, got] of Object.entries(t.sides))
+        for (const p of got) {
+          if (!p.pid) continue;
+          const x = moved.get(p.name) ?? { n: 0, pid: p.pid, owners: [] };
+          x.n += 1;
+          x.owners.push(who);
+          moved.set(p.name, x);
+        }
+  const mostMoved = [...moved.entries()]
+    .sort((a, b) => b[1].n - a[1].n)
+    .slice(0, 6);
+  // Pick #1 curse
+  const pick1 = seasons.map((s) => {
+    const p = s.draft.find((d) => d.no === 1);
+    const st = s.standings.find((r) => r.manager === p?.by);
+    const finish =
+      s.champion === p?.by
+        ? "Won the title"
+        : s.status !== "complete"
+          ? "Season in progress"
+          : st && st.seed <= 8
+            ? `Made the playoffs (#${st.seed} seed)`
+            : `Missed the playoffs (#${st?.seed})`;
+    return { years: s.years, player: p?.player ?? "", by: p?.by ?? "", finish };
+  });
+  // Highest scorers who missed the playoffs; most points allowed
+  const missed = done
+    .flatMap((s) =>
+      s.standings
+        .filter((r) => r.seed > 8)
+        .map((r) => ({ ...r, years: s.years })),
+    )
+    .sort((a, b) => b.pf - a.pf)
+    .slice(0, 4);
+  const allowed = done
+    .flatMap((s) =>
+      s.standings.map((r) => ({
+        ...r,
+        years: s.years,
+        pa: (r as { pa?: number }).pa ?? 0,
+      })),
+    )
+    .sort((a, b) => b.pa - a.pa)
+    .slice(0, 4);
+  // Busiest trade weeks
+  const weeks = seasons
+    .flatMap((s) => {
+      const c = new Map<number, number>();
+      s.trades.forEach((t) => c.set(t.week, (c.get(t.week) ?? 0) + 1));
+      return [...c.entries()].map(([w, n]) => ({ years: s.years, week: w, n }));
+    })
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 4);
+  return (
+    <div className="grid gap-5 md:grid-cols-2">
+      <OddCard
+        title="Most-traded players"
+        sub="Times a player changed hands in a Trash trade."
+      >
+        <ol className="space-y-2.5">
+          {mostMoved.map(([name, x]) => (
+            <li key={name} className="flex items-center gap-3">
+              <span className="relative h-9 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--bin-3)]">
+                {x.pid ? (
+                  <Image
+                    src={`https://sleepercdn.com/content/nba/players/${x.pid}.jpg`}
+                    alt=""
+                    fill
+                    sizes="48px"
+                    className="object-contain object-bottom"
+                    unoptimized
+                  />
+                ) : null}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">
+                  {name}
+                </span>
+                <span className="block truncate text-xs text-[var(--muted)]">
+                  to {[...new Set(x.owners)].join(", ")}
+                </span>
+              </span>
+              <span className="font-display text-2xl font-black tabular-nums">
+                {x.n}×
+              </span>
+            </li>
+          ))}
+        </ol>
+      </OddCard>
+      <OddCard
+        title="The pick #1 curse"
+        sub="What happened to whoever drafted first overall."
+      >
+        <ol className="space-y-2.5">
+          {pick1.map((p) => (
+            <li key={p.years} className="flex items-center gap-3 text-sm">
+              <Av id={p.by} s={30} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">
+                  {p.years}: {p.player}
+                </span>
+                <span className="block truncate text-xs text-[var(--muted)]">
+                  {p.by}
+                </span>
+              </span>
+              <span
+                className={`text-right text-xs ${p.finish === "Won the title" ? "text-[var(--gold)]" : ""}`}
+              >
+                {p.finish}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </OddCard>
+      <OddCard
+        title="Scored a lot, still missed"
+        sub="Most points for in a season without making the playoffs."
+      >
+        <ol className="space-y-2.5">
+          {missed.map((r) => (
+            <li
+              key={r.manager + r.years}
+              className="flex items-center gap-3 text-sm"
+            >
+              <Av id={r.manager} s={30} />
+              <span className="flex-1 truncate font-semibold">
+                {r.manager}{" "}
+                <span className="font-normal text-[var(--muted)]">
+                  {r.years}, #{r.seed}
+                </span>
+              </span>
+              <span className="tabular-nums">{r.pf.toLocaleString()} pts</span>
+            </li>
+          ))}
+        </ol>
+      </OddCard>
+      <OddCard
+        title="Most points allowed"
+        sub="The seasons when opponents saved their best for you."
+      >
+        <ol className="space-y-2.5">
+          {allowed.map((r) => (
+            <li
+              key={r.manager + r.years}
+              className="flex items-center gap-3 text-sm"
+            >
+              <Av id={r.manager} s={30} />
+              <span className="flex-1 truncate font-semibold">
+                {r.manager}{" "}
+                <span className="font-normal text-[var(--muted)]">
+                  {r.years}, went {rec(r.w, r.l, r.t)}
+                </span>
+              </span>
+              <span className="tabular-nums">
+                {r.pa.toLocaleString()} against
+              </span>
+            </li>
+          ))}
+        </ol>
+      </OddCard>
+      <OddCard
+        title="Busiest trade weeks"
+        sub="The weeks the league couldn't stop dealing."
+      >
+        <ol className="space-y-2">
+          {weeks.map((w) => (
+            <li key={w.years + w.week} className="flex justify-between text-sm">
+              <span>
+                {w.years}, week {w.week}
+              </span>
+              <span className="font-display text-xl font-bold tabular-nums">
+                {w.n} trades
+              </span>
+            </li>
+          ))}
+        </ol>
+      </OddCard>
+    </div>
+  );
+}
+
+const ALMANAC_NOTES: Record<string, React.ReactNode> = {
+  luck: (
+    <p>
+      Luck compares actual wins with the wins a team&apos;s season points for
+      and against would normally produce (a Pythagorean expectation, the formula
+      baseball analysts use). +2.0 means two more wins than the points earned: a
+      soft schedule or close wins. Negative means the schedule was cruel.
+    </p>
+  ),
+  oddities: (
+    <p>
+      Everything here comes from the Sleeper trade log, drafts and official
+      season standings. Playoff spots are the top 8 seeds.
+    </p>
+  ),
+  playoffs: (
+    <p>
+      Championship-bracket games only. Consolation games don&apos;t count. A
+      trip is any season seeded in the top 8.
+    </p>
+  ),
+  partners: (
+    <p>
+      Every completed two-team trade, grouped by the pair of managers involved,
+      across all four seasons.
+    </p>
+  ),
+  waivers: (
+    <p>
+      Every player added through waivers or free agency, from Sleeper&apos;s
+      transaction log for all four seasons.
+    </p>
+  ),
+  drafts: <p>The first twelve picks of each season&apos;s snake draft.</p>,
+  seasons: (
+    <p>
+      Official final regular-season tables. Ties are broken by points for. The
+      star marks the eventual champion.
+    </p>
+  ),
+};
+export function AlmanacNote({ tab }: { tab: string }) {
+  return <Explain>{ALMANAC_NOTES[tab]}</Explain>;
 }
