@@ -192,7 +192,7 @@ export function Standings({
                     <span className="block h-1.5 rounded-full bg-white/10">
                       <span
                         className="block h-1.5 rounded-full bg-[var(--wood)]"
-                        style={{ width: `${((r.w + r.t / 2) / games) * 100}%` }}
+                        style={{ width: `${(((r.w + r.t / 2) / games) * 100).toFixed(2)}%` }}
                       />
                     </span>
                   </span>

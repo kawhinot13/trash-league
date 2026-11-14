@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { RivalryMachine } from "@/components/trash/rivalry";
 import { Hero } from "@/components/trash/hero";
 import {
   GlassNav,
@@ -359,6 +360,20 @@ export default function Home() {
               treat them as league lore rather than gospel.
             </p>
           </Explain>
+        </div>
+      </section>
+
+      <section aria-labelledby="rivalry" className="py-24 md:py-32">
+        <SectionHead id="rivalry" title="Rivalry machine">
+          Pick any two managers. Get every meeting, every trade between them and
+          a verdict on who really has the upper hand.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <RivalryMachine
+            managers={league.managers}
+            seasons={league.seasons}
+            h2h={league.h2h}
+          />
         </div>
       </section>
 

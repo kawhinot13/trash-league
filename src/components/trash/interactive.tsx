@@ -13,6 +13,16 @@ import { useEffect, useRef, useState } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import type { Manager } from "@/lib/league";
 
+/** Reduced-motion preference, read after hydration so server and client HTML always match. */
+function useCalm() {
+  const [calm, setCalm] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setCalm(window.matchMedia("(prefers-reduced-motion: reduce)").matches));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  return calm;
+}
+
 /* ── The story: a pinned, horizontally scrolling reel ─────────── */
 export type StoryItem = {
   img: string;
@@ -215,7 +225,7 @@ export function OwnsGrid({
 
 /* ── Manager trading cards with a 3D tilt ─────────────────────── */
 function TiltCard({ m, place }: { m: Manager; place: number }) {
-  const reduce = useReducedMotion();
+  const reduce = useCalm();
   const x = useMotionValue(0.5);
   const y = useMotionValue(0.5);
   const rx = useSpring(useTransform(y, [0, 1], [10, -10]), {
@@ -384,7 +394,7 @@ export function Rain() {
 
 /** Vote meter that stops just short of the line. No vote counts are known, so none are shown. */
 export function Ballot() {
-  const reduce = useReducedMotion();
+  const reduce = useCalm();
   const ref = useRef<HTMLDivElement>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {

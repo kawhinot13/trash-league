@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -104,6 +104,7 @@ const LINKS = [
   ["almanac", "Almanac"],
   ["crimes", "Crimes"],
   ["owns", "Who owns who"],
+  ["rivalry", "Rivalries"],
   ["managers", "Managers"],
   ["story", "Story"],
 ] as const;
@@ -282,7 +283,6 @@ export function StatStrip({
 }: {
   stats: { value: number; label: string }[];
 }) {
-  const reduce = useReducedMotion();
   return (
     <div className="relative z-10 mx-auto -mt-10 max-w-5xl px-4 md:-mt-14">
       <dl className="grid grid-cols-2 overflow-hidden rounded-[28px] border border-white/12 bg-[rgba(16,40,30,0.55)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] backdrop-blur-xl md:grid-cols-4">
@@ -292,15 +292,11 @@ export function StatStrip({
             className={`px-6 py-6 md:py-8 ${i % 2 ? "border-l border-white/10" : ""} ${i > 1 ? "border-t border-white/10 md:border-t-0" : ""} ${i === 2 ? "md:border-l" : ""}`}
           >
             <dd className="font-display text-5xl leading-none font-black tabular-nums md:text-6xl">
-              {reduce ? (
-                s.value
-              ) : (
-                <NumberTicker
+              {<NumberTicker
                   value={s.value}
                   startValue={0}
                   className="text-[var(--paper)]"
-                />
-              )}
+                />}
             </dd>
             <dt className="mt-2 text-sm text-[var(--muted)]">{s.label}</dt>
           </div>
@@ -387,9 +383,19 @@ export function Spotlight({
   );
 }
 
+/** Reduced-motion preference, read after hydration so server and client HTML always match. */
+function useCalm() {
+  const [calm, setCalm] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setCalm(window.matchMedia("(prefers-reduced-motion: reduce)").matches));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  return calm;
+}
+
 /* ── Live broadcast ticker (sports-TV crawl built from league data) ── */
 export function Ticker({ items }: { items: { tag: string; text: string }[] }) {
-  const reduce = useReducedMotion();
+  const reduce = useCalm();
   const row = (k: string) => (
     <ul
       className="flex shrink-0 items-center gap-10 pr-10"

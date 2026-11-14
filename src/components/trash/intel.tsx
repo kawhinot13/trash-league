@@ -180,7 +180,7 @@ export function LiveWeek({
                     <span className="block h-1.5 rounded-full bg-white/10">
                       <span
                         className="block h-1.5 rounded-full bg-[var(--wood)]"
-                        style={{ width: `${((r.w + r.t / 2) / games) * 100}%` }}
+                        style={{ width: `${(((r.w + r.t / 2) / games) * 100).toFixed(2)}%` }}
                       />
                     </span>
                   </span>
@@ -238,7 +238,7 @@ export function LiveWeek({
                       <span
                         className="block h-1.5 rounded-full"
                         style={{
-                          width: `${r.winProb * 100}%`,
+                          width: `${(r.winProb * 100).toFixed(2)}%`,
                           background:
                             r.winProb >= 0.5 ? "var(--gold)" : "var(--ticket)",
                         }}
@@ -377,7 +377,7 @@ export function MatchupOfWeek({
           <div className="flex h-2 overflow-hidden rounded-full">
             <span
               className="block bg-[var(--gold)]"
-              style={{ width: `${a.winProb * 100}%` }}
+              style={{ width: `${(a.winProb * 100).toFixed(2)}%` }}
             />
             <span className="block flex-1 bg-white/15" />
           </div>
@@ -711,8 +711,8 @@ export function Almanac({
       <span
         className="block h-2 rounded-full"
         style={{
-          width: `${Math.max(2, (Math.abs(v) / max) * 100)}%`,
-          background: color,
+          width: `${(Math.max(2, (Math.abs(v) / max) * 100)).toFixed(2)}%`,
+          backgroundColor: color,
         }}
       />
     </span>
