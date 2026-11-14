@@ -9,7 +9,6 @@ import {
 } from "@/components/trash/polish";
 import {
   Banners,
-  Court,
   Crimes,
   Footer,
   SectionHead,
@@ -24,8 +23,8 @@ import {
   type StoryItem,
 } from "@/components/trash/interactive";
 import { league, liveStandings } from "@/lib/league";
-import { waiverIntel, weekIfEndedToday } from "@/lib/live";
-import { Almanac, Explain, LiveWeek, WaiverWire } from "@/components/trash/intel";
+import { waiverIntel } from "@/lib/live";
+import { Almanac, Explain, WaiverWire } from "@/components/trash/intel";
 
 const STORY: StoryItem[] = [
   {
@@ -121,46 +120,12 @@ const STORY: StoryItem[] = [
 ];
 
 async function LiveTable() {
-  const live = await weekIfEndedToday();
-  if (!live) {
-    const { rows, live: ok, week } = await liveStandings();
-    return <Standings rows={rows} live={ok} week={week} />;
-  }
-  return (
-    <Court id="standings" title="Season 4 table">
-      <LiveWeek week={live.week} rows={live.rows} daysLeft={live.daysLeft} />
-    </Court>
-  );
+  const { rows, live, week } = await liveStandings();
+  return <Standings rows={rows} live={live} week={week} />;
 }
 async function LiveTicker() {
-  const [live, wire] = await Promise.all([weekIfEndedToday(), waiverIntel()]);
+  const wire = await waiverIntel();
   const items: { tag: string; text: string }[] = [];
-  if (live) {
-    const up = [...live.rows].sort(
-      (a, b) => b.rankNow - b.rankProj - (a.rankNow - a.rankProj),
-    )[0];
-    const down = [...live.rows].sort(
-      (a, b) => a.rankNow - a.rankProj - (b.rankNow - b.rankProj),
-    )[0];
-    const close = [...live.rows].sort(
-      (a, b) => Math.abs(a.winProb - 0.5) - Math.abs(b.winProb - 0.5),
-    )[0];
-    if (up && up.rankNow > up.rankProj)
-      items.push({
-        tag: "Live",
-        text: `${up.manager} would climb ${up.rankNow - up.rankProj} spots if week ${live.week} ended now`,
-      });
-    if (down && down.rankNow < down.rankProj)
-      items.push({
-        tag: "Live",
-        text: `${down.manager} would drop ${down.rankProj - down.rankNow} spots`,
-      });
-    if (close)
-      items.push({
-        tag: "Closest",
-        text: `${close.manager} vs ${close.opp}: ${Math.round(close.winProb * 100)}% to ${Math.round((1 - close.winProb) * 100)}%`,
-      });
-  }
   if (wire?.players[0])
     items.push({
       tag: "Waivers",
