@@ -58,7 +58,7 @@ def remember(pid, p, team=None):
     players[pid] = [name, p.get("fantasy_positions") or [], team or p.get("team") or ""]
 
 
-SAMPLES = 8
+SAMPLES = 12
 
 
 def consensus(lid, w, live):

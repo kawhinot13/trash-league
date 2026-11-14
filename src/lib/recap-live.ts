@@ -29,7 +29,7 @@ const get = async <T>(path: string): Promise<T> => {
  * team's highest reported score with that sample's lineup: checked against Sleeper's official
  * season totals, the highest variant is by far the closest.
  */
-async function consensus(week: number, samples = 8): Promise<Matchup[]> {
+async function consensus(week: number, samples = 12): Promise<Matchup[]> {
   const runs = await Promise.all(
     Array.from({ length: samples }, (_, i) =>
       fetch(`${API}/v1/league/${s4.leagueId}/matchups/${week}?sample=${i}`, { cache: "no-store" })
@@ -55,10 +55,12 @@ export async function liveRecap(): Promise<{ years: string; weeks: RecapWeek[]; 
     const [state, users, rosters] = await Promise.all([
       get<{ week: number }>("/v1/state/nba"),
       get<{ user_id: string; display_name: string }[]>(`/v1/league/${s4.leagueId}/users`),
-      get<{ roster_id: number; owner_id: string }[]>(`/v1/league/${s4.leagueId}/rosters`),
+      get<{ roster_id: number; owner_id: string; metadata?: { record?: string } }[]>(`/v1/league/${s4.leagueId}/rosters`),
     ]);
     const name = new Map(users.map((u) => [u.user_id, u.display_name]));
     const who = new Map(rosters.map((r) => [r.roster_id, name.get(r.owner_id) ?? String(r.roster_id)]));
+    // Official week-by-week results ("LWW..."), the one thing Sleeper reports consistently.
+    const record = new Map(rosters.map((r) => [r.roster_id, r.metadata?.record ?? ""]));
     const done = Array.from({ length: Math.max(0, state.week - 1) }, (_, i) => i + 1);
     const data = await Promise.all(
       done.map((w) => Promise.all([consensus(w), get<Tx[]>(`/v1/league/${s4.leagueId}/transactions/${w}`)])),
@@ -68,8 +70,14 @@ export async function liveRecap(): Promise<{ years: string; weeks: RecapWeek[]; 
       const old = snap.weeks.find((x) => x.week === week);
       const pairs = new Map<number, Matchup[]>();
       for (const m of mus) if (m.matchup_id !== null) pairs.set(m.matchup_id, [...(pairs.get(m.matchup_id) ?? []), m]);
+      // Only games whose reported scores agree with the official result: if Sleeper's scores say
+      // the loser won, the margin can't be trusted, so that game sits out of blowout / nail-biter.
       const games = [...pairs.values()]
         .filter((p) => p.length === 2)
+        .filter(([a, b]) => {
+          const official = record.get(a.roster_id)?.[week - 1];
+          return !official || official === "T" || (official === "W") === (a.points > b.points);
+        })
         .map(([a, b]) => (a.points >= b.points ? { w: who.get(a.roster_id)!, l: who.get(b.roster_id)!, ws: a.points, ls: b.points } : { w: who.get(b.roster_id)!, l: who.get(a.roster_id)!, ws: b.points, ls: a.points }))
         .sort((x, y) => y.ws - y.ls - (x.ws - x.ls));
       const scores = mus.map((m) => ({ id: who.get(m.roster_id)!, pts: m.points })).sort((a, b) => b.pts - a.pts);
