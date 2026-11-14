@@ -58,6 +58,37 @@ def remember(pid, p, team=None):
     players[pid] = [name, p.get("fantasy_positions") or [], team or p.get("team") or ""]
 
 
+SAMPLES = 8
+
+
+def consensus(lid, w, live):
+    """Sleeper's matchups endpoint returns a different score for the same finished week on
+    different requests (one week-3 score came back as 462, 466, 511, 515 or 542.5). Ask several
+    times and keep each team's highest reported score, with that sample's lineup. Checked against
+    Sleeper's official season totals, the highest variant is by far the closest."""
+    path = f"/v1/league/{lid}/matchups/{w}"
+    f = os.path.join(CACHE, path.strip("/").replace("/", "_") + ".consensus.json")
+    if os.path.exists(f) and not live:
+        return json.load(open(f))
+    best = {}
+    for i in range(SAMPLES):
+        for i_try in range(4):
+            try:
+                rows = json.load(urllib.request.urlopen(f"https://api.sleeper.app{path}?sample={i}-{time.time()}", timeout=60))
+                break
+            except Exception:
+                time.sleep(2 ** i_try)
+        else:
+            continue
+        for m in rows:
+            cur = best.get(m["roster_id"])
+            if cur is None or (m.get("points") or 0) > (cur.get("points") or 0):
+                best[m["roster_id"]] = m
+    out = list(best.values())
+    json.dump(out, open(f, "w"))
+    return out
+
+
 def best_lineup(slots, cands):
     """cands: [(points, positions)]. Max total with one player per slot (bitmask DP over slots)."""
     n = len(slots)
@@ -94,7 +125,7 @@ for s in LEAGUE["seasons"]:
     # Playoff weeks (22-24) count for My Guys and the title-run breakdowns, never for the regular-season numbers.
     allweeks = weeks + ([22, 23, 24] if not live else [])
     with cf.ThreadPoolExecutor(8) as ex:
-        mus = dict(zip(allweeks, ex.map(lambda w: get(f"/v1/league/{lid}/matchups/{w}", fresh=live), allweeks)))
+        mus = dict(zip(allweeks, ex.map(lambda w: consensus(lid, w, live), allweeks)))
         txs = dict(zip(allweeks, ex.map(lambda w: get(f"/v1/league/{lid}/transactions/{w}", fresh=live), allweeks)))
         sts = dict(zip(allweeks, ex.map(lambda w: get(f"/stats/nba/{season}/{w}?season_type=regular", fresh=live), allweeks)))
 

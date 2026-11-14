@@ -6,8 +6,8 @@ import { league } from "@/lib/league";
 /**
  * Season 4 weekly recap read live from Sleeper (refreshed every few minutes).
  *
- * Sleeper keeps re-scoring finished weeks in this league (a week 3 score moved from 462 to 515
- * hours after the week ended), so a once-a-day snapshot drifts from what the app shows. Scores,
+ * Sleeper's weekly scores for this league aren't stable from one request to the next, so each
+ * week is read several times and each team's highest reported score is used (see consensus). Scores,
  * matchups, top performers and waiver adds all come from the live matchups. The "best possible
  * lineup" still comes from the nightly box-score replay, never shown below the live score.
  */
@@ -23,6 +23,30 @@ const get = async <T>(path: string): Promise<T> => {
   return r.json() as Promise<T>;
 };
 
+/**
+ * Sleeper returns a different score for the same finished week on different requests (one
+ * week-3 score came back as 462, 466, 511, 515 or 542.5). Ask several times and keep each
+ * team's highest reported score with that sample's lineup: checked against Sleeper's official
+ * season totals, the highest variant is by far the closest.
+ */
+async function consensus(week: number, samples = 8): Promise<Matchup[]> {
+  const runs = await Promise.all(
+    Array.from({ length: samples }, (_, i) =>
+      fetch(`${API}/v1/league/${s4.leagueId}/matchups/${week}?sample=${i}`, { cache: "no-store" })
+        .then((r) => (r.ok ? (r.json() as Promise<Matchup[]>) : []))
+        .catch(() => [] as Matchup[]),
+    ),
+  );
+  const best = new Map<number, Matchup>();
+  for (const rows of runs)
+    for (const m of rows) {
+      const cur = best.get(m.roster_id);
+      if (!cur || (m.points ?? 0) > (cur.points ?? 0)) best.set(m.roster_id, m);
+    }
+  if (!best.size) throw new Error("no matchups");
+  return [...best.values()];
+}
+
 export async function liveRecap(): Promise<{ years: string; weeks: RecapWeek[]; live: boolean }> {
   "use cache";
   cacheLife("minutes");
@@ -37,7 +61,7 @@ export async function liveRecap(): Promise<{ years: string; weeks: RecapWeek[]; 
     const who = new Map(rosters.map((r) => [r.roster_id, name.get(r.owner_id) ?? String(r.roster_id)]));
     const done = Array.from({ length: Math.max(0, state.week - 1) }, (_, i) => i + 1);
     const data = await Promise.all(
-      done.map((w) => Promise.all([get<Matchup[]>(`/v1/league/${s4.leagueId}/matchups/${w}`), get<Tx[]>(`/v1/league/${s4.leagueId}/transactions/${w}`)])),
+      done.map((w) => Promise.all([consensus(w), get<Tx[]>(`/v1/league/${s4.leagueId}/transactions/${w}`)])),
     );
     const weeks: RecapWeek[] = done.map((week, i) => {
       const [mus, txs] = data[i];

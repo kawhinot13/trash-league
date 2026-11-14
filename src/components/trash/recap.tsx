@@ -168,7 +168,7 @@ export function WeeklyRecap({
         </motion.ul>
       </AnimatePresence>
       <p className="mt-4 text-xs text-[var(--muted)]">
-        Scores read live from Sleeper&apos;s matchups, refreshed every few minutes. Best-possible lineups come from the nightly box-score replay.
+        Scores read live from Sleeper, refreshed every few minutes. Sleeper reports slightly different scores for the same week from one request to the next, so each team&apos;s highest reported score is used. Best-possible lineups come from the nightly box-score replay.
       </p>
     </div>
   );

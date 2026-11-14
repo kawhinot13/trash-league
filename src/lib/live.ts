@@ -35,6 +35,28 @@ const get = async <T>(path: string): Promise<T> => {
   return r.json() as Promise<T>;
 };
 
+type LiveMatchup = { roster_id: number; matchup_id: number; points: number; starters: string[]; starters_points: number[] };
+/** Sleeper returns different scores for the same week on different requests in this league:
+ * read it several times and keep each team's highest reported score (closest to the official
+ * season totals). */
+async function consensusMatchups(week: number, samples = 6): Promise<LiveMatchup[]> {
+  const runs = await Promise.all(
+    Array.from({ length: samples }, (_, i) =>
+      fetch(`${API}/v1/league/${LEAGUE}/matchups/${week}?sample=${i}`, { cache: "no-store" })
+        .then((r) => (r.ok ? (r.json() as Promise<LiveMatchup[]>) : []))
+        .catch(() => [] as LiveMatchup[]),
+    ),
+  );
+  const best = new Map<number, LiveMatchup>();
+  for (const rows of runs)
+    for (const m of rows) {
+      const cur = best.get(m.roster_id);
+      if (!cur || (m.points ?? 0) > (cur.points ?? 0)) best.set(m.roster_id, m);
+    }
+  if (!best.size) throw new Error("no matchups");
+  return [...best.values()];
+}
+
 /** Fantasy points under this league's scoring. Sleeper reports milestone bonuses
  * (40+ pts, 20+ reb...) as tallies, so one weighted sum works for single games and
  * season totals alike. Verified: reproduces all 149 player scores in week 4 exactly. */
@@ -111,9 +133,7 @@ export async function weekIfEndedToday(): Promise<{
           metadata?: { team_name?: string };
         }[]
       >(`/v1/league/${LEAGUE}/users`),
-      get<{ roster_id: number; matchup_id: number; points: number; starters: string[]; starters_points: number[] }[]>(
-        `/v1/league/${LEAGUE}/matchups/${week}`,
-      ),
+      consensusMatchups(week),
       get<Row[]>(
         `/projections/nba/${state.season}/${week}?season_type=regular`,
       ),
