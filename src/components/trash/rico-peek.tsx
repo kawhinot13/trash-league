@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { RICO_BASE, RICO_HAIR } from "./rico-art";
+import { RICO_BASE } from "./rico-art";
 
 /**
  * Kilroy was here, Trash edition: a cartoon RI3O peeks over a scorer's-table
@@ -12,21 +12,27 @@ import { RICO_BASE, RICO_HAIR } from "./rico-art";
  */
 
 const INK = "#10141a";
-const SKIN = "#c27b4b";
-const SHADE = "#a2633f";
+const SKIN = "#bf7a4d";
+const SHADE = "#9c5d3c";
 
-// Head art lives in photo coordinates (traced from a tilted photo); LEVEL rotates it upright.
-const LEVEL = 13.3;
-// This window frames the upright head.
-const VB = { x: 30, y: -20, w: 830, h: 880 };
+// The head is drawn in a 888x956 space (the reference photo, straightened); this frames it.
+const VB = { x: 60, y: 20, w: 710, h: 900 };
 /** Down to just under the nose, in art units from the top of the frame. */
-const PEEK_TO = 694 - VB.y;
+const PEEK_TO = 712 - VB.y;
 
-const EYE_L = "M258 541 C272 520 312 506 354 520 C336 546 292 556 258 541 Z";
-const EYE_R = "M460 494 C478 470 524 456 564 470 C548 494 500 506 460 494 Z";
 const EYES = [
-  { d: EYE_L, cx: 306, cy: 530, lid: "M252 544 C268 516 314 500 360 518 C318 512 282 522 258 546 Z", under: "M268 556 C292 566 326 560 346 544" },
-  { d: EYE_R, cx: 514, cy: 481, lid: "M454 497 C474 466 526 450 570 466 C528 462 490 470 460 498 Z", under: "M472 506 C500 514 536 506 556 490" },
+  {
+    d: "M262 514 C284 488 342 484 368 510 C344 534 290 538 262 514 Z",
+    lid: "M258 514 C282 482 344 478 372 508 C340 494 290 496 258 514 Z",
+    under: "M276 546 C304 558 340 556 362 540",
+    cx: 318,
+  },
+  {
+    d: "M466 510 C492 484 550 488 574 514 C546 538 492 534 466 510 Z",
+    lid: "M462 508 C490 478 552 482 578 514 C546 496 496 494 462 508 Z",
+    under: "M474 540 C496 556 532 558 560 546",
+    cx: 518,
+  },
 ];
 
 function RicoFace({
@@ -44,14 +50,26 @@ function RicoFace({
       className="block h-auto w-full overflow-visible"
       aria-hidden
     >
-      <g transform={`rotate(${LEVEL} 410 560)`}>
       <g dangerouslySetInnerHTML={{ __html: RICO_BASE }} />
+      <g
+        fill="#1c1410"
+        stroke={INK}
+        strokeWidth="6"
+        strokeLinejoin="round"
+        style={{
+          transform: `translateY(${brow ? -18 : 0}px)`,
+          transition: "transform 180ms cubic-bezier(0.23, 1, 0.32, 1)",
+        }}
+      >
+        <path d="M232 470 C262 446 320 438 374 442 L372 470 C330 466 280 470 240 488 Z" />
+        <path d="M470 442 C524 436 580 444 610 466 L602 486 C566 470 520 466 472 470 Z" />
+      </g>
       {EYES.map((e, i) => (
         <g
           key={i}
           style={{
             transformBox: "view-box",
-            transformOrigin: `${e.cx}px ${e.cy}px`,
+            transformOrigin: `${e.cx}px 510px`,
             transform: `scaleY(${blink ? 0.08 : 1})`,
             transition: "transform 70ms ease-out",
           }}
@@ -59,42 +77,25 @@ function RicoFace({
           <clipPath id={`rico-eye-${i}`}>
             <path d={e.d} />
           </clipPath>
-          <path d={e.d} fill="#fbf6ec" stroke={INK} strokeWidth="6" strokeLinejoin="round" />
-          <g
-            clipPath={`url(#rico-eye-${i})`}
-          >
+          <path d={e.d} fill="#fbf6ec" stroke={INK} strokeWidth="10" strokeLinejoin="round" />
+          <g clipPath={`url(#rico-eye-${i})`}>
             <g
               style={{
-                transform: `translate(${look.x * 13}px, ${look.y * 6}px)`,
+                transform: `translate(${look.x * 14}px, ${look.y * 6}px)`,
                 transition: "transform 160ms cubic-bezier(0.23, 1, 0.32, 1)",
               }}
             >
-              <circle cx={e.cx} cy={e.cy} r="21" fill="#3a2214" />
-              <circle cx={e.cx} cy={e.cy} r="10" fill="#070707" />
-              <circle cx={e.cx + 7} cy={e.cy - 7} r="5" fill="#fff" />
+              <circle cx={e.cx} cy={510} r="21" fill="#3a2316" />
+              <circle cx={e.cx} cy={510} r="10" fill="#0b0b0b" />
+              <circle cx={e.cx + 7} cy={503} r="5" fill="#fff" />
             </g>
           </g>
-          <path d={e.lid} fill={INK} />
+          <path d={e.lid} fill={SHADE} stroke={INK} strokeWidth="10" strokeLinejoin="round" />
         </g>
       ))}
       {EYES.map((e, i) => (
-        <path key={i} d={e.under} fill="none" stroke="#7d4429" strokeWidth="5" strokeLinecap="round" />
+        <path key={i} d={e.under} fill="none" stroke="#7a442c" strokeWidth="7" strokeLinecap="round" />
       ))}
-      <g
-        fill="#1b130f"
-        stroke={INK}
-        strokeWidth="3"
-        strokeLinejoin="round"
-        style={{
-          transform: `translateY(${brow ? -16 : 0}px)`,
-          transition: "transform 180ms cubic-bezier(0.23, 1, 0.32, 1)",
-        }}
-      >
-        <path d="M206 506 C222 484 268 470 318 464 C342 461 362 458 376 456 L380 478 C352 482 320 486 290 490 C258 494 232 502 214 514 Z" />
-        <path d="M428 434 C460 420 512 412 556 422 C574 427 588 436 596 446 L586 460 C566 450 540 444 512 444 C480 444 456 450 434 456 Z" />
-      </g>
-      <g dangerouslySetInnerHTML={{ __html: RICO_HAIR }} />
-      </g>
     </svg>
   );
 }
@@ -134,6 +135,7 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
   const [brow, setBrow] = useState(false);
   const [w, setW] = useState(160);
   const [side, setSide] = useState<"l" | "r">("l");
+  const [room, setRoom] = useState(220);
   const head = useRef<HTMLDivElement>(null);
   const timers = useRef<number[]>([]);
   const dodges = useRef(0);
@@ -170,7 +172,10 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
       const nx = rand(12, Math.max(14, vw - size - 76));
       setX(nx);
       // the bubble opens toward the middle of the screen so it never runs off an edge
-      setSide(nx + (size + 64) / 2 > vw / 2 ? "r" : "l");
+      const s = nx + (size + 64) / 2 > vw / 2 ? "r" : "l";
+      setSide(s);
+      const anchor = nx + 32 + size * (s === "l" ? 0.45 : 0.55);
+      setRoom(Math.min(220, (s === "l" ? vw - anchor : anchor) - 14));
       setUp(true);
       setLook({ x: rand(-1, 1), y: 0.4 });
       peeks.current += 1;
@@ -246,10 +251,11 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
             transition={{ type: "spring", duration: 0.35, bounce: 0.3 }}
-            className="absolute z-10 w-max max-w-[220px] rounded-2xl border-[3px] bg-[var(--paper)] px-3 py-2 text-sm font-semibold text-[var(--bin)] shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+            className="absolute z-10 w-max rounded-2xl border-[3px] bg-[var(--paper)] px-3 py-2 text-sm font-semibold text-[var(--bin)] shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
             style={{
               borderColor: INK,
               bottom: visible + 30,
+              maxWidth: room,
               ...(side === "l" ? { left: 32 + w * 0.45 } : { right: 32 + w * 0.45 }),
               transformOrigin: side === "l" ? "0% 100%" : "100% 100%",
             }}
