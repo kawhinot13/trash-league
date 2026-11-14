@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { DumpsterDive } from "@/components/trash/dive";
+import { Trashle } from "@/components/trash/trashle";
 import { Hero } from "@/components/trash/hero";
 import { LiveHero, LiveTicker } from "@/components/trash/live-blocks";
 import { StatStrip } from "@/components/trash/polish";
 import { SectionHead } from "@/components/trash/sections";
 import { divePool } from "@/lib/dive";
+import { trashle } from "@/lib/trashle";
 import { lockIn, players } from "@/lib/extras";
 import { league } from "@/lib/league";
 
@@ -92,6 +94,15 @@ export default function Home() {
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
           <DumpsterDive pool={divePool()} players={players} />
+        </div>
+      </section>
+
+      <section id="trashle" aria-labelledby="trashle-title" className="scroll-mt-24 pb-24 md:pb-32">
+        <SectionHead id="trashle-title" title="Trashle">
+          A new mystery player every day. Guess the last name in six tries.
+        </SectionHead>
+        <div className="mx-auto max-w-5xl px-5 md:px-10">
+          <Trashle {...trashle()} players={players} />
         </div>
       </section>
 

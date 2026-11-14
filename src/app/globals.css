@@ -288,3 +288,34 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   .trophy-float { animation: none; }
 }
+
+/* Dumpster Dive: trash bobs inside the bin; the idle bin breathes; the start button gleams. */
+.dd-prop {
+  animation: dd-bob ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes dd-bob {
+  from { transform: translateY(-3px) rotate(-2deg); }
+  to { transform: translateY(3px) rotate(2deg); }
+}
+.dd-idle { animation: dd-breathe 3.2s ease-in-out infinite; }
+@keyframes dd-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.dd-start::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: dd-gleam 2.8s ease-in-out 1s infinite;
+}
+@keyframes dd-gleam {
+  0%, 60% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dd-prop, .dd-idle, .dd-start::after { animation: none; }
+}

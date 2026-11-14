@@ -2,9 +2,13 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { gsap } from "@/lib/gsap";
 import type { Players } from "@/lib/extras";
 import type { Prompt } from "@/lib/dive";
-import { Face } from "./player";
+import { Face, pname } from "./player";
+import { AnswerBoard } from "./dive/answers";
+import { sfx } from "./dive/sfx";
+import { Stage, tierOf, type StageApi } from "./dive/stage";
 
 const ROUNDS = 5;
 const LAUNCH = Date.UTC(2026, 10, 14);
@@ -46,151 +50,96 @@ function todays(pool: Prompt[], day: string) {
   });
 }
 
-const tier = (s: number | null) =>
-  s === null
-    ? { label: "Not in the bin", color: "var(--ticket)", sq: "⬛" }
-    : s >= 90
-      ? { label: "Dumpster diver", color: "var(--wood)", sq: "🟫" }
-      : s >= 60
-        ? { label: "Deep cut", color: "#7fd49a", sq: "🟩" }
-        : s >= 25
-          ? { label: "Solid pull", color: "var(--paper)", sq: "🟨" }
-          : { label: "Everybody said that", color: "var(--muted)", sq: "🟥" };
+const rankOf = (total: number) =>
+  total >= 400
+    ? "Lives in the dumpster"
+    : total >= 300
+      ? "Deep diver"
+      : total >= 200
+        ? "Knows ball"
+        : total >= 100
+          ? "Casual"
+          : "Read the group chat sometimes";
 
-/* ── The dumpster depth gauge: your pick sinks as deep as it is niche ── */
-function Dumpster({ pick, players }: { pick: Pick | null; players: Players }) {
-  const reduce = useReducedMotion();
-  const top = 70;
-  const depth = 190;
-  const y = pick && pick.score !== null ? top + 14 + (pick.score / 100) * (depth - 40) : 0;
-  return (
-    <div className="relative mx-auto w-full max-w-[260px]" aria-hidden>
-      <svg viewBox="0 0 260 300" className="block h-auto w-full">
-        {/* lid, propped open */}
-        <path d="M30 64 L222 20 L228 34 L36 78 Z" fill="var(--bin-3)" stroke="#10141a" strokeWidth="5" strokeLinejoin="round" />
-        {/* body */}
-        <path d="M34 70 H226 L214 266 H46 Z" fill="var(--bin-2)" stroke="#10141a" strokeWidth="6" strokeLinejoin="round" />
-        <path d="M34 70 H226 L214 266 H46 Z" fill="url(#dive-depth)" />
-        <defs>
-          <linearGradient id="dive-depth" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#000" stopOpacity="0" />
-            <stop offset="1" stopColor="#000" stopOpacity=".55" />
-          </linearGradient>
-        </defs>
-        {/* depth ticks */}
-        {[0, 25, 50, 75, 100].map((t) => {
-          const ty = top + 14 + (t / 100) * (depth - 40);
-          return (
-            <g key={t}>
-              <line x1="50" x2="66" y1={ty} y2={ty} stroke="var(--paper)" strokeOpacity=".35" strokeWidth="2" />
-              <text x="72" y={ty + 4} fontSize="11" fill="var(--paper)" fillOpacity=".5">
-                {t}
-              </text>
-            </g>
-          );
-        })}
-        <rect x="56" y="268" width="26" height="14" rx="4" fill="#10141a" />
-        <rect x="178" y="268" width="26" height="14" rx="4" fill="#10141a" />
-        <text x="130" y="244" textAnchor="middle" className="font-display" fontSize="20" fontWeight="900" fill="var(--paper)" fillOpacity=".18">
-          TRASH
-        </text>
-      </svg>
-      <AnimatePresence>
-        {pick ? (
-          <motion.div
-            key={pick.typed}
-            className="absolute left-[58%] -translate-x-1/2"
-            initial={{ top: -10, opacity: 0, rotate: -20 }}
-            animate={
-              pick.score === null
-                ? reduce
-                  ? { top: 20, opacity: 0.6 }
-                  : { top: [-10, 26, -30, 60], left: ["58%", "58%", "82%", "110%"], rotate: [-20, 10, 140, 280], opacity: [1, 1, 1, 0] }
-                : { top: (y / 300) * 100 + "%", opacity: 1, rotate: 0 }
-            }
-            transition={
-              pick.score === null
-                ? { duration: reduce ? 0.2 : 1.1, ease: "easeOut" }
-                : reduce
-                  ? { duration: 0.2 }
-                  : { type: "spring", duration: 1.1, bounce: 0.35 }
-            }
-            style={{ marginTop: -22 }}
-          >
-            {pick.pid ? (
-              <span className="block rounded-full ring-4 ring-[#10141a]">
-                <Face pid={pick.pid} players={players} size={44} />
-              </span>
-            ) : (
-              <span className="block size-11 rounded-full bg-[var(--ticket)] ring-4 ring-[#10141a]" />
-            )}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
-  );
+/** Time until the next dive (midnight Eastern), ticking. */
+function NextDive() {
+  const [left, setLeft] = useState("");
+  useEffect(() => {
+    const f = () => {
+      const now = new Date();
+      const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+      const mid = new Date(et);
+      mid.setHours(24, 0, 0, 0);
+      const s = Math.max(0, Math.floor((mid.getTime() - et.getTime()) / 1000));
+      setLeft(
+        `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`,
+      );
+    };
+    f();
+    const t = setInterval(f, 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <span className="font-display text-3xl font-black tabular-nums">{left}</span>;
 }
 
-function AnswerBox({
-  players,
-  onPick,
-  disabled,
-}: {
-  players: Players;
-  onPick: (pid: string | null, typed: string) => void;
-  disabled: boolean;
-}) {
+function AnswerBox({ players, onPick }: { players: Players; onPick: (pid: string | null, typed: string) => void }) {
   const [q, setQ] = useState("");
   const [hi, setHi] = useState(0);
   const list = useId();
+  const box = useRef<HTMLInputElement>(null);
   const all = useMemo(
     () => Object.entries(players).map(([pid, p]) => ({ pid, name: p[0], n: norm(p[0]) })).filter((x) => x.name),
     [players],
   );
   const nq = norm(q);
   const hits =
-    nq.length < 2
-      ? []
-      : all
-          .filter((x) => x.n.split(" ").some((w) => w.startsWith(nq)) || x.n.startsWith(nq))
-          .slice(0, 6);
+    nq.length < 2 ? [] : all.filter((x) => x.n.split(" ").some((w) => w.startsWith(nq)) || x.n.startsWith(nq)).slice(0, 6);
   const submit = (pid?: string) => {
-    if (disabled || !q.trim()) return;
+    if (!q.trim()) return box.current?.focus();
     const exact = pid ?? all.find((x) => x.n === nq)?.pid ?? hits[hi]?.pid ?? null;
     onPick(exact, exact ? players[exact][0] : q.trim());
     setQ("");
   };
   return (
     <div className="relative">
-      <input
-        value={q}
-        disabled={disabled}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setHi(0);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setHi((h) => Math.min(h + 1, Math.max(0, hits.length - 1)));
-          } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            setHi((h) => Math.max(0, h - 1));
-          } else if (e.key === "Enter") {
-            e.preventDefault();
-            submit();
-          }
-        }}
-        placeholder="Type a player's name"
-        aria-label="Your answer"
-        aria-autocomplete="list"
-        aria-controls={list}
-        autoComplete="off"
-        autoFocus
-        className="h-14 w-full rounded-2xl border-2 border-white/15 bg-black/30 px-5 text-lg font-semibold text-[var(--paper)] outline-none placeholder:font-normal placeholder:text-[var(--muted)] focus:border-[var(--paper)]/60"
-      />
+      <div className="flex gap-2">
+        <input
+          ref={box}
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setHi(0);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setHi((h) => Math.min(h + 1, Math.max(0, hits.length - 1)));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setHi((h) => Math.max(0, h - 1));
+            } else if (e.key === "Enter") {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder="Type a player's name"
+          aria-label="Your answer"
+          aria-autocomplete="list"
+          aria-controls={list}
+          autoComplete="off"
+          autoFocus
+          className="h-14 min-w-0 flex-1 rounded-2xl border-2 border-white/15 bg-black/30 px-5 text-lg font-semibold text-[var(--paper)] outline-none placeholder:font-normal placeholder:text-[var(--muted)] focus:border-[var(--paper)]/60"
+        />
+        <button
+          type="button"
+          onClick={() => submit()}
+          className="font-display h-14 shrink-0 cursor-pointer rounded-2xl bg-[var(--wood)] px-5 text-xl font-black text-[#10141a] transition-transform duration-150 active:scale-[0.96]"
+        >
+          Toss it
+        </button>
+      </div>
       {hits.length ? (
-        <ul id={list} role="listbox" className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-white/12 bg-[#0d241a] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <ul id={list} role="listbox" className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-white/12 bg-[#0d241a] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           {hits.map((h, k) => (
             <li key={h.pid} role="option" aria-selected={k === hi}>
               <button
@@ -216,15 +165,22 @@ export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Playe
   const [phase, setPhase] = useState<"intro" | "play" | "done">("intro");
   const [i, setI] = useState(0);
   const [picks, setPicks] = useState<Pick[]>([]);
+  const [settled, setSettled] = useState(false);
+  const [board, setBoard] = useState(false);
   const [streak, setStreak] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [openRound, setOpenRound] = useState<number | null>(null);
+  const stage = useRef<StageApi>(null);
+  const total = useRef<HTMLSpanElement>(null);
   const nextBtn = useRef<HTMLButtonElement>(null);
+  const shown = useRef(0);
 
-  // Date-dependent bits only after mount, so server and client render the same first frame.
   useEffect(() => {
     const d = todayET();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDay(d);
+    setMuted(sfx.isMuted());
     setStreak(store.get<{ last: string; n: number }>("dive:streak")?.n ?? 0);
     const saved = store.get<Saved>(`dive2:${d}`);
     if (saved?.picks?.length === ROUNDS) {
@@ -236,20 +192,41 @@ export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Playe
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : null;
   const q = qs[i];
   const current = picks[i] ?? null;
-  const total = picks.reduce((t, p) => t + (p.score ?? 0), 0);
+  const sum = picks.reduce((t, p) => t + (p.score ?? 0), 0);
+
+  // Running total counts up instead of jumping.
+  useEffect(() => {
+    if (!settled && phase === "play") return;
+    const o = { v: shown.current };
+    gsap.to(o, {
+      v: sum,
+      duration: reduce ? 0 : 0.8,
+      ease: "power2.out",
+      onUpdate: () => {
+        if (total.current) total.current.textContent = String(Math.round(o.v));
+      },
+    });
+    shown.current = sum;
+  }, [sum, settled, phase, reduce]);
 
   useEffect(() => {
-    if (current) nextBtn.current?.focus();
-  }, [current]);
+    if (settled) nextBtn.current?.focus();
+  }, [settled]);
 
-  const answer = (pid: string | null, typed: string) => {
+  const answer = async (pid: string | null, typed: string) => {
     if (!q || current) return;
     const hit = pid ? q.answers.find(([p]) => p === pid) : undefined;
-    setPicks((x) => [...x.slice(0, i), { pid, typed, score: hit ? hit[1] : null }]);
+    const score = hit ? hit[1] : null;
+    setPicks((x) => [...x.slice(0, i), { pid, typed, score }]);
+    await stage.current?.drop(pid, score);
+    setSettled(true);
   };
   const next = () => {
+    setSettled(false);
+    setBoard(false);
     if (i + 1 < qs.length) return setI(i + 1);
     setPhase("done");
+    sfx.fanfare();
     if (!day) return;
     store.set(`dive2:${day}`, { picks } satisfies Saved);
     const st = store.get<{ last: string; n: number }>("dive:streak");
@@ -259,180 +236,308 @@ export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Playe
     setStreak(n);
   };
   const share = async () => {
-    const text = `Dumpster Dive #${edition} ${picks.map((p) => tier(p.score).sq).join("")} ${total}/${ROUNDS * 100}`;
+    const sq = picks.map((p) => (p.score === null ? "⬛" : p.score >= 90 ? "🟫" : p.score >= 60 ? "🟩" : p.score >= 25 ? "🟨" : "🟥"));
+    const text = `Dumpster Dive #${edition} ${sq.join("")} ${sum}/${ROUNDS * 100}`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
   };
-  const name = (pid: string) => players[pid]?.[0] ?? pid;
-  const rating =
-    total >= 400 ? "Lives in the dumpster" : total >= 300 ? "Deep diver" : total >= 200 ? "Knows ball" : total >= 100 ? "Casual" : "Read the group chat sometimes";
 
   return (
-    <div className="relative rounded-[28px] border border-white/10 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(201,138,75,0.2),rgba(16,40,30,0.75)_60%)] p-5 md:p-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="font-display text-[clamp(2.6rem,7vw,4.6rem)] leading-[0.85] font-black">Dumpster Dive</p>
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            {edition ? `No. ${edition}` : "Daily"}, five prompts, the more niche the better
-          </p>
+    <div className="relative overflow-visible rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_70%_0%,rgba(201,138,75,0.16),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+      {/* HUD */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
+        <div className="flex items-baseline gap-3">
+          <span className="font-display text-3xl leading-none font-black md:text-4xl">Dumpster Dive</span>
+          <span className="text-sm text-[var(--muted)]">{edition ? `No. ${edition}` : ""}</span>
         </div>
-        <div className="flex gap-1.5" aria-label="Today's picks">
-          {Array.from({ length: ROUNDS }, (_, k) => {
-            const p = picks[k];
-            return (
-              <motion.span
-                key={`${k}-${p?.typed ?? ""}`}
-                initial={p && !reduce ? { scale: 0.4 } : false}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", duration: 0.4, bounce: 0.5 }}
-                className="flex size-8 items-center justify-center rounded-md border border-white/15 text-xs font-bold tabular-nums"
-                style={{
-                  background: p ? tier(p.score).color : "transparent",
-                  color: p ? "var(--bin)" : undefined,
-                }}
-              >
-                {p ? (p.score ?? "×") : ""}
-              </motion.span>
-            );
-          })}
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1" aria-label="Round results">
+            {Array.from({ length: ROUNDS }, (_, k) => {
+              const p = picks[k];
+              const live = phase === "play" && k === i && !(p && settled);
+              const t = p && (settled || k < i || phase === "done") ? tierOf(p.score) : null;
+              return (
+                <motion.span
+                  key={`${k}-${t?.short ?? ""}`}
+                  initial={t && !reduce ? { scale: 0.3, rotate: -20 } : false}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", duration: 0.45, bounce: 0.55 }}
+                  className={`flex h-9 w-7 items-center justify-center rounded-md border text-[11px] font-black tabular-nums ${live ? "border-[var(--paper)]" : "border-white/15"}`}
+                  style={{ background: t ? t.hex : "rgba(0,0,0,0.25)", color: t ? "#10141a" : undefined }}
+                >
+                  {t ? (p!.score ?? "×") : k + 1}
+                </motion.span>
+              );
+            })}
+          </div>
+          <div className="text-right">
+            <span ref={total} className="font-display block text-3xl leading-none font-black tabular-nums">
+              0
+            </span>
+            <span className="text-[10px] text-[var(--muted)]">of {ROUNDS * 100}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              sfx.setMuted(!muted);
+              setMuted(!muted);
+            }}
+            aria-label={muted ? "Turn sound on" : "Turn sound off"}
+            className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-white/8 hover:bg-white/14"
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+              {muted ? <path d="M17 9l5 6M22 9l-5 6" /> : <path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12" />}
+            </svg>
+          </button>
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        {phase === "intro" ? (
-          <motion.div
-            key="intro"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="mt-10 grid gap-8 md:grid-cols-[1fr_auto] md:items-center"
-          >
-            <div>
-              <p className="max-w-[46ch] text-lg leading-relaxed text-[var(--paper)]/85">
-                Five prompts like &ldquo;name a player Rico has started.&rdquo; Any right answer counts, but the
-                deeper you dig the more it&apos;s worth. Name the guy nobody remembers and score 100. Say the obvious
-                star and score next to nothing.
-              </p>
-              <button
-                type="button"
-                disabled={!day}
-                onClick={() => setPhase("play")}
-                className="font-display mt-6 inline-flex h-14 cursor-pointer items-center rounded-full bg-[var(--paper)] px-8 text-2xl font-black text-[var(--bin)] transition-transform duration-150 active:scale-[0.97] disabled:opacity-50"
-              >
-                Start digging
-              </button>
-            </div>
-            <Dumpster pick={null} players={players} />
-          </motion.div>
-        ) : null}
+      <div className="p-5 md:p-8">
+        <AnimatePresence mode="wait">
+          {phase === "intro" ? (
+            <motion.div
+              key="intro"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, y: reduce ? 0 : -12 }}
+              className="grid gap-8 md:grid-cols-[1fr_340px] md:items-center"
+            >
+              <div>
+                <p className="font-display text-[clamp(2.4rem,6vw,4.2rem)] leading-[0.9] font-black">
+                  The deeper you dig, the more it&apos;s worth.
+                </p>
+                <ol className="mt-6 space-y-3 text-[var(--paper)]/85">
+                  {[
+                    ["1", "Five prompts, like “name a player Rico has started.”"],
+                    ["2", "Any right answer counts. Toss your player into the bin."],
+                    ["3", "Obscure picks sink deep and score up to 100. The obvious star barely gets in."],
+                  ].map(([n, t]) => (
+                    <li key={n} className="flex gap-3">
+                      <span className="font-display flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--wood)] text-lg font-black text-[#10141a]">
+                        {n}
+                      </span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ol>
+                <button
+                  type="button"
+                  disabled={!day}
+                  onClick={() => {
+                    sfx.creak();
+                    setPhase("play");
+                  }}
+                  className="dd-start font-display relative mt-8 inline-flex h-16 cursor-pointer items-center overflow-hidden rounded-full bg-[var(--paper)] px-10 text-3xl font-black text-[var(--bin)] transition-transform duration-150 active:scale-[0.96] disabled:opacity-50"
+                >
+                  Start digging
+                </button>
+              </div>
+              <div className="dd-idle mx-auto w-full max-w-[300px] md:max-w-none">
+                <Stage players={players} apiRef={stage} />
+              </div>
+            </motion.div>
+          ) : null}
 
-        {phase === "play" && q ? (
-          <motion.div
-            key={`q-${i}`}
-            initial={{ opacity: 0, x: reduce ? 0 : 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: reduce ? 0 : -24 }}
-            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
-            className="mt-8 grid gap-8 md:grid-cols-[1fr_260px] md:items-start"
-          >
-            <div>
-              <p className="text-sm font-semibold text-[var(--wood)]">
-                {q.kind}, prompt {i + 1} of {qs.length}
-              </p>
-              <h3 className="font-display mt-2 max-w-[22ch] text-[clamp(2rem,4.8vw,3.2rem)] leading-[0.98] font-black">
-                {q.prompt}
-              </h3>
-              <p className="mt-2 text-sm text-[var(--muted)]">{q.answers.length} right answers in the bin.</p>
-              <div className="mx-auto mt-4 w-40 md:hidden">
-                <Dumpster pick={current} players={players} />
+          {phase === "play" && q ? (
+            <motion.div
+              key="play"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid gap-6 [grid-template-areas:'p'_'s'_'i'] md:grid-cols-[1fr_360px] md:[grid-template-areas:'p_s'_'i_s']"
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: reduce ? 0 : 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: reduce ? 0 : -24 }}
+                  transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                  className="[grid-area:p]"
+                >
+                  <p className="inline-flex rounded-full bg-[var(--wood)]/20 px-3 py-1 text-xs font-bold text-[var(--wood)]">
+                    {q.kind}, prompt {i + 1} of {qs.length}
+                  </p>
+                  <h3 className="font-display mt-3 max-w-[20ch] text-[clamp(2rem,4.8vw,3.3rem)] leading-[0.96] font-black">
+                    {q.prompt}
+                  </h3>
+                  <p className="mt-2 text-sm text-[var(--muted)]">{q.answers.length} right answers are in the bin.</p>
+                </motion.div>
+              </AnimatePresence>
+
+              <div className="mx-auto w-full max-w-[300px] [grid-area:s] md:max-w-none">
+                <Stage players={players} apiRef={stage} round={i} />
               </div>
 
-              <div className="mt-6">
+              <div className="[grid-area:i]">
                 {!current ? (
-                  <AnswerBox players={players} onPick={answer} disabled={!!current} />
-                ) : (
+                  <AnswerBox players={players} onPick={answer} />
+                ) : settled ? (
                   <motion.div
-                    initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+                    initial={{ opacity: 0, y: reduce ? 0 : 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: reduce ? 0 : 0.6 }}
-                    className="rounded-2xl bg-black/30 p-5"
+                    transition={{ duration: 0.3 }}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-5"
                   >
-                    <p className="text-sm text-[var(--muted)]">You said {current.typed}</p>
-                    <p className="font-display mt-1 text-4xl font-black" style={{ color: tier(current.score).color }}>
-                      {current.score === null ? "Not in the bin" : `${current.score} pts, ${tier(current.score).label.toLowerCase()}`}
+                    <p className="text-sm text-[var(--muted)]">You tossed in {current.typed}</p>
+                    <p className="font-display mt-1 text-4xl leading-none font-black" style={{ color: tierOf(current.score).color }}>
+                      {current.score === null ? "Not a right answer" : `${current.score} niche points`}
                     </p>
-                    <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-                      <p>
-                        <span className="text-[var(--muted)]">Deepest answer: </span>
-                        <span className="font-semibold">{name(q.answers[0][0])}</span>
-                      </p>
-                      <p>
-                        <span className="text-[var(--muted)]">What everyone says: </span>
-                        <span className="font-semibold">{name(q.answers[q.answers.length - 1][0])}</span>
-                      </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {[
+                        ["Deepest answer", q.answers[0]],
+                        ["What everyone says", q.answers[q.answers.length - 1]],
+                      ].map(([label, a]) => {
+                        const [pid, s] = a as [string, number];
+                        return (
+                          <div key={label as string} className="flex items-center gap-3 rounded-xl bg-black/25 p-2.5">
+                            <Face pid={pid} players={players} size={36} />
+                            <div className="min-w-0">
+                              <p className="text-xs text-[var(--muted)]">{label as string}</p>
+                              <p className="truncate text-sm font-semibold">
+                                {pname(players, pid)} <span className="text-[var(--muted)]">{s}</span>
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <button
-                      ref={nextBtn}
-                      type="button"
-                      onClick={next}
-                      className="mt-5 inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
-                    >
-                      {i + 1 < qs.length ? "Next prompt" : "See my dive"}
-                    </button>
+                    <div className="mt-5 flex flex-wrap items-center gap-3">
+                      <button
+                        ref={nextBtn}
+                        type="button"
+                        onClick={next}
+                        className="font-display inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 text-xl font-black text-[var(--bin)] transition-transform duration-150 active:scale-[0.96]"
+                      >
+                        {i + 1 < qs.length ? "Next prompt" : "See my dive report"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBoard((v) => !v)}
+                        aria-expanded={board}
+                        className="cursor-pointer text-sm font-semibold text-[var(--paper)]/85 underline-offset-4 hover:underline"
+                      >
+                        {board ? "Hide the answers" : `See all ${q.answers.length} answers`}
+                      </button>
+                    </div>
+                    {board ? (
+                      <div className="mt-5">
+                        <AnswerBoard answers={q.answers} mine={current.pid} players={players} />
+                      </div>
+                    ) : null}
                   </motion.div>
+                ) : (
+                  <p className="font-display text-2xl font-black text-[var(--muted)]">Into the bin…</p>
                 )}
               </div>
-            </div>
-            <div className="hidden md:block">
-              <Dumpster pick={current} players={players} />
-            </div>
-          </motion.div>
-        ) : null}
+            </motion.div>
+          ) : null}
 
-        {phase === "done" ? (
-          <motion.div
-            key="done"
-            initial={{ opacity: 0, scale: reduce ? 1 : 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-            className="mt-10 grid gap-8 md:grid-cols-[1fr_1fr]"
-          >
-            <div className="rounded-3xl border-2 border-white/10 bg-black/40 p-6 text-center">
-              <p className="text-sm text-[var(--muted)]">Today&apos;s dive</p>
-              <p className="font-display text-[clamp(4rem,14vw,7rem)] leading-none font-black tabular-nums">
-                {total}
-                <span className="text-[0.4em] text-[var(--muted)]">/{ROUNDS * 100}</span>
-              </p>
-              <p className="font-display mt-1 text-2xl font-black text-[var(--wood)]">{rating}</p>
-              {streak > 1 ? <p className="mt-2 text-sm text-[var(--muted)]">{streak}-day streak</p> : null}
-            </div>
-            <div>
-              <ol className="space-y-2">
-                {picks.map((p, k) => (
-                  <li key={k} className="flex items-center gap-3 text-sm">
-                    {p.pid ? <Face pid={p.pid} players={players} size={32} /> : <span className="size-8 rounded-full bg-black/30" />}
-                    <span className="min-w-0 flex-1 truncate">{p.typed}</span>
-                    <span className="font-semibold tabular-nums" style={{ color: tier(p.score).color }}>
-                      {p.score ?? "miss"}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              <button
-                type="button"
-                onClick={share}
-                className="mt-6 inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
-              >
-                {copied ? "Copied" : "Copy my result"}
-              </button>
-              <p className="mt-3 text-sm text-[var(--muted)]">New prompts at midnight Eastern.</p>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+          {phase === "done" ? (
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, scale: reduce ? 1 : 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+            >
+              <div className="grid gap-8 md:grid-cols-[1fr_1fr] md:items-center">
+                <div className="text-center md:text-left">
+                  <p className="text-sm text-[var(--muted)]">Dive report</p>
+                  <p className="font-display text-[clamp(4.5rem,15vw,8rem)] leading-none font-black tabular-nums">
+                    {sum}
+                    <span className="text-[0.35em] text-[var(--muted)]">/{ROUNDS * 100}</span>
+                  </p>
+                  <motion.p
+                    initial={reduce ? false : { scale: 1.8, opacity: 0, rotate: -8 }}
+                    animate={{ scale: 1, opacity: 1, rotate: -2 }}
+                    transition={{ type: "spring", duration: 0.6, bounce: 0.45, delay: 0.3 }}
+                    className="font-display mt-2 inline-block rounded-lg bg-[var(--wood)] px-3 py-1 text-2xl font-black text-[#10141a]"
+                  >
+                    {rankOf(sum)}
+                  </motion.p>
+                  {streak > 1 ? <p className="mt-3 text-sm text-[var(--muted)]">{streak}-day streak</p> : null}
+                </div>
+                {/* the hand: five cards fanned out */}
+                <div className="flex justify-center py-6">
+                  {picks.map((p, k) => {
+                    const t = tierOf(p.score);
+                    const rot = (k - 2) * 8;
+                    return (
+                      <motion.div
+                        key={k}
+                        initial={reduce ? false : { y: 80, opacity: 0, rotate: 0 }}
+                        animate={{ y: Math.abs(k - 2) * 8, opacity: 1, rotate: rot }}
+                        transition={{ type: "spring", duration: 0.7, bounce: 0.3, delay: 0.15 + k * 0.08 }}
+                        className="-mx-2 w-[22%] max-w-[96px] overflow-hidden rounded-xl border-[3px] bg-[#0d241a] shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
+                        style={{ borderColor: t.hex, transformOrigin: "50% 120%" }}
+                      >
+                        <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle_at_50%_30%,#2a5a45,#0d241a)]">
+                          {p.pid ? <Face pid={p.pid} players={players} size={56} /> : <span className="font-display text-3xl font-black text-[var(--ticket)]">×</span>}
+                        </div>
+                        <p className="py-1 text-center text-sm font-black tabular-nums" style={{ background: t.hex, color: "#10141a" }}>
+                          {p.score ?? "miss"}
+                        </p>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-black/25 p-4">
+                <div>
+                  <p className="text-sm text-[var(--muted)]">Next dive in</p>
+                  <NextDive />
+                </div>
+                <button
+                  type="button"
+                  onClick={share}
+                  className="font-display inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 text-xl font-black text-[var(--bin)] transition-transform duration-150 active:scale-[0.96]"
+                >
+                  {copied ? "Copied" : "Copy my result"}
+                </button>
+              </div>
+
+              <h4 className="font-display mt-10 text-3xl font-black">Every answer, every prompt</h4>
+              <ul className="mt-4 space-y-2">
+                {qs.map((pq, k) => {
+                  const p = picks[k];
+                  const open = openRound === k;
+                  return (
+                    <li key={k} className="rounded-2xl border border-white/10 bg-black/20">
+                      <button
+                        type="button"
+                        onClick={() => setOpenRound(open ? null : k)}
+                        aria-expanded={open}
+                        className="flex w-full cursor-pointer items-center gap-3 p-4 text-left"
+                      >
+                        <span className="rounded-md px-2 py-0.5 text-sm font-black tabular-nums" style={{ background: tierOf(p?.score ?? null).hex, color: "#10141a" }}>
+                          {p?.score ?? "×"}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-semibold">{pq.prompt}</span>
+                          <span className="block text-sm text-[var(--muted)]">
+                            You said {p?.typed ?? "nothing"}. Deepest: {pname(players, pq.answers[0][0])}.
+                          </span>
+                        </span>
+                        <span className={`text-xl transition-transform duration-200 ${open ? "rotate-45" : ""}`}>+</span>
+                      </button>
+                      {open ? (
+                        <div className="px-4 pb-4">
+                          <AnswerBoard answers={pq.answers} mine={p?.pid ?? null} players={players} />
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

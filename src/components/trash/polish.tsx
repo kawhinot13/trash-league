@@ -161,7 +161,7 @@ export function GlassNav() {
               href="/#dive"
               className="rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97]"
             >
-              Play the Dive
+              Daily games
             </Link>
             <button
               type="button"
