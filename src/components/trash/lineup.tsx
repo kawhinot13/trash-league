@@ -1,7 +1,7 @@
 "use client";
 
 import confetti from "canvas-confetti";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Players } from "@/lib/extras";
 import type { Suspect } from "@/lib/lineup";
@@ -53,91 +53,221 @@ function clues(g: Suspect, t: Suspect, nick: (id: string) => string): Clue[] {
 
 function Chip({ c, i, fresh }: { c: Clue; i: number; fresh: boolean }) {
   const reduce = useReducedMotion();
+  const anim = !reduce && fresh;
+  const delay = i * 0.16;
+  return (
+    <div className="[perspective:600px]">
+      <motion.div
+        initial={anim ? { rotateX: -90, opacity: 0, scale: 0.9 } : false}
+        animate={
+          anim && c.mark === "hit"
+            ? { rotateX: 0, opacity: 1, scale: [0.9, 1.14, 1], boxShadow: ["0 0 0 0 rgba(127,212,154,0)", "0 0 0 6px rgba(127,212,154,0.45)", "0 0 0 0 rgba(127,212,154,0)"] }
+            : { rotateX: 0, opacity: 1, scale: 1 }
+        }
+        transition={{ duration: anim ? 0.55 : 0, delay: anim ? delay : 0, ease: [0.23, 1, 0.32, 1] }}
+        onAnimationStart={() => {
+          if (anim) setTimeout(() => sfx.tick(), delay * 1000 + 80);
+        }}
+        className="flex min-h-14 flex-col items-center justify-center rounded-xl px-1.5 py-1.5 text-center [transform-origin:50%_0%]"
+        style={{ background: BG[c.mark], color: c.mark === "miss" ? "#f6f3ea" : "#10141a" }}
+      >
+        <span className="text-[10px] leading-none font-semibold opacity-70 md:hidden">{c.label}</span>
+        <span className="mt-0.5 flex max-w-full items-center gap-1 text-sm leading-tight font-black">
+          <span className="truncate">{c.value}</span>
+          {c.arrow ? (
+            <span className={c.arrow === "up" ? "lu-up" : "lu-down"} aria-label={c.arrow === "up" ? "higher" : "lower"}>
+              {c.arrow === "up" ? "↑" : "↓"}
+            </span>
+          ) : null}
+        </span>
+      </motion.div>
+    </div>
+  );
+}
+
+/* Height chart: 6′0″ sits on the floor line, 7′2″ near the top. Positions are % of the wall. */
+const FLOOR = 80;
+const topAt = (h: number) => FLOOR - (Math.max(70, Math.min(87, h)) - 72) * 4.6;
+
+/** A person in the lineup: head at their real height, body down to the floor. */
+function Figure({ pid, players, dark, n }: { pid?: string; players: Players; dark?: boolean; n?: number }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center">
+      <div className="relative z-10 aspect-square w-[62%] shrink-0 overflow-hidden rounded-full" style={{ background: dark ? "#030806" : "#163a2c" }}>
+        {pid && !dark ? <div className="h-full w-full [&>*]:!h-full [&>*]:!w-full"><Face pid={pid} players={players} size={96} /></div> : null}
+      </div>
+      <div
+        className="-mt-[8%] w-full flex-1 rounded-t-[42%]"
+        style={{ background: dark ? "#030806" : "linear-gradient(180deg,#24493a,#163a2c)" }}
+      >
+        {n !== undefined ? (
+          <span className="mx-auto mt-[38%] block w-[70%] rounded-sm bg-[var(--paper)] py-0.5 text-center text-[10px] font-black text-[#10141a]">
+            #{n}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** A wrong guess walks into the lineup, stands at their height, gets stamped and shoved out. */
+function WalkIn({ pid, height, n, players }: { pid: string; height: number; n: number; players: Players }) {
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    const t = setTimeout(() => sfx.slam(), reduce ? 0 : 1050);
+    return () => clearTimeout(t);
+  }, [reduce]);
   return (
     <motion.div
-      initial={fresh && !reduce ? { rotateY: 90, opacity: 0 } : false}
-      animate={{ rotateY: 0, opacity: 1 }}
-      transition={{ duration: 0.35, delay: fresh ? i * 0.16 : 0, ease: [0.23, 1, 0.32, 1] }}
-      onAnimationStart={() => fresh && setTimeout(() => sfx.tick(), i * 160)}
-      className="flex min-h-14 flex-col items-center justify-center rounded-xl px-1.5 py-1.5 text-center"
-      style={{ background: BG[c.mark], color: c.mark === "miss" ? "#f6f3ea" : "#10141a" }}
+      className="absolute z-20 w-[27%]"
+      style={{ left: "63%", top: `${topAt(height) - 5}%`, bottom: `${100 - FLOOR}%` }}
+      initial={{ x: reduce ? 0 : "260%", opacity: reduce ? 0 : 1 }}
+      animate={reduce ? { opacity: [0, 1, 1, 0] } : { x: ["260%", "0%", "0%", "-30%", "260%"], rotate: [0, 0, 0, -6, 4] }}
+      transition={{ duration: reduce ? 2.4 : 2.8, times: reduce ? [0, 0.1, 0.85, 1] : [0, 0.22, 0.72, 0.8, 1], ease: "easeInOut" }}
     >
-      <span className="text-[10px] leading-none font-semibold opacity-70 md:hidden">{c.label}</span>
-      <span className="mt-0.5 flex items-center gap-1 text-sm leading-tight font-black">
-        <span className="truncate">{c.value}</span>
-        {c.arrow ? <span aria-label={c.arrow === "up" ? "higher" : "lower"}>{c.arrow === "up" ? "↑" : "↓"}</span> : null}
-      </span>
+      <Figure pid={pid} players={players} n={n} />
+      <motion.span
+        className="font-display absolute top-[42%] left-1/2 z-30 -ml-[40%] rounded-md border-[3px] border-[var(--ticket)] bg-[#0b1d15]/85 px-2 py-1 text-lg leading-none font-black whitespace-nowrap text-[var(--ticket)] shadow-lg"
+        initial={{ opacity: 0, scale: 2.4, rotate: -24 }}
+        animate={{ opacity: [0, 1, 1, 0], scale: [2.4, 1, 1, 1], rotate: -12 }}
+        transition={{ duration: 1.9, times: [0, 0.12, 0.85, 1], delay: reduce ? 0 : 0.95 }}
+      >
+        NOT HIM
+      </motion.span>
     </motion.div>
   );
 }
 
-/** The lineup wall: height lines, a placard and the suspect, a silhouette until identified. */
-function Wall({ solved, suspect, players, flashKey }: { solved: boolean | null; suspect: Suspect | null; players: Players; flashKey: number }) {
+/** The lineup wall: height chart, the hidden suspect, walk-ins, and the big reveal. */
+function Wall({
+  solved,
+  suspect,
+  players,
+  flashKey,
+  walk,
+}: {
+  solved: boolean | null;
+  suspect: Suspect | null;
+  players: Players;
+  flashKey: number;
+  walk: { pid: string; height: number; n: number } | null;
+}) {
   const reduce = useReducedMotion();
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b1d15]" style={{ aspectRatio: "4 / 5" }}>
       {/* height chart */}
-      <div className="absolute inset-0">
-        {[84, 81, 78, 75, 72].map((h, i) => (
-          <div key={h} className="absolute inset-x-0 border-t border-dashed border-white/15" style={{ top: `${14 + i * 17}%` }}>
-            <span className="absolute -top-2.5 left-2 text-[10px] font-semibold text-white/40">{ft(h)}</span>
-            <span className="absolute -top-2.5 right-2 text-[10px] font-semibold text-white/40">{ft(h)}</span>
-          </div>
-        ))}
-      </div>
-      {/* spotlight */}
-      <div className="absolute inset-x-[15%] top-0 bottom-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(246,243,234,0.12),transparent_65%)]" />
-      {/* suspect */}
-      <div className="absolute inset-x-0 bottom-[16%] flex justify-center">
-        <AnimatePresence mode="wait">
-          {solved !== null && suspect ? (
-            <motion.div
-              key="face"
-              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.85, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ type: "spring", duration: 0.7, bounce: 0.35, delay: 0.25 }}
-              className="rounded-full ring-4 ring-[var(--paper)]/80"
-            >
-              <Face pid={suspect.pid} players={players} size={150} />
-            </motion.div>
-          ) : (
-            <motion.svg key="sil" viewBox="0 0 120 200" className="h-[62%] w-auto" exit={{ opacity: 0 }} style={{ height: "clamp(150px, 46vw, 250px)" }}>
-              <circle cx="60" cy="34" r="24" fill="#050c08" />
-              <path d="M22 200 L26 96 C28 72 42 62 60 62 C78 62 92 72 94 96 L98 200 Z" fill="#050c08" />
-              <text x="60" y="44" textAnchor="middle" fontSize="28" fontWeight="900" fill="#f6f3ea" fillOpacity=".25" fontFamily="var(--font-trash-display)">
-                ?
-              </text>
-            </motion.svg>
-          )}
-        </AnimatePresence>
-      </div>
+      {[72, 75, 78, 81, 84].map((h) => (
+        <div key={h} className="absolute inset-x-0 border-t border-dashed border-white/15" style={{ top: `${topAt(h)}%` }}>
+          <span className="absolute -top-2.5 left-1.5 text-[10px] font-semibold text-white/45">{ft(h)}</span>
+          <span className="absolute -top-2.5 right-1.5 text-[10px] font-semibold text-white/45">{ft(h)}</span>
+        </div>
+      ))}
+      <div className="absolute inset-x-0 bottom-0 bg-[#07130e]" style={{ top: `${FLOOR}%` }} />
+
+      {/* the suspect: a silhouette whose head fades into shadow, so it doesn't give the height away */}
+      <AnimatePresence>
+        {solved === null ? (
+          <motion.div
+            key="sil"
+            className="absolute w-[30%]"
+            style={{ left: "22%", top: "8%", bottom: `${100 - FLOOR}%` }}
+            initial={false}
+            animate={reduce ? {} : { scaleY: [1, 1.012, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            exit={solved === false || reduce ? { opacity: 0 } : { x: "-260%", skewX: -18, opacity: 0, transition: { duration: 0.45, ease: "easeIn" } }}
+          >
+            <div className="h-full w-full [mask-image:linear-gradient(180deg,transparent,black_38%)]">
+              <Figure players={players} dark />
+            </div>
+            <span className="font-display absolute top-[30%] left-1/2 -translate-x-1/2 text-5xl font-black text-white/15">?</span>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      {/* the reveal: the real suspect rises into place at their real height */}
+      <AnimatePresence>
+        {solved !== null && suspect ? (
+          <motion.div
+            key="reveal"
+            className="absolute w-[30%]"
+            style={{ left: "22%", top: `${topAt(suspect.height) - 6}%`, bottom: `${100 - FLOOR}%` }}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: "spring", duration: 0.8, bounce: 0.35, delay: solved ? 0.55 : 1.1 }}
+          >
+            <Figure pid={suspect.pid} players={players} />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>{walk && solved === null ? <WalkIn key={walk.n} {...walk} players={players} /> : null}</AnimatePresence>
+
+      {/* spotlight sweep on a win */}
+      <AnimatePresence>
+        {solved && !reduce ? (
+          <motion.div
+            key={`spot-${flashKey}`}
+            className="pointer-events-none absolute -top-[20%] left-1/2 h-[140%] w-[70%] origin-top bg-[conic-gradient(from_160deg_at_50%_0%,transparent,rgba(255,240,200,0.28)_20deg,transparent_40deg)]"
+            initial={{ rotate: 55, x: "-50%", opacity: 0 }}
+            animate={{ rotate: [55, -40, -8], opacity: [0, 1, 0.6] }}
+            transition={{ duration: 1.4, ease: "easeInOut" }}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      {/* police lights when they get away */}
+      <AnimatePresence>
+        {solved === false && !reduce ? (
+          <motion.div
+            key="siren"
+            className="pointer-events-none absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: [0, 1, 0, 1, 0, 1, 0],
+              background: [
+                "rgba(214,52,44,0.45)",
+                "rgba(214,52,44,0.45)",
+                "rgba(60,110,255,0.45)",
+                "rgba(60,110,255,0.45)",
+                "rgba(214,52,44,0.45)",
+                "rgba(60,110,255,0.45)",
+                "rgba(0,0,0,0)",
+              ],
+            }}
+            transition={{ duration: 1.6 }}
+          />
+        ) : null}
+      </AnimatePresence>
+
       {/* placard */}
-      <div className="absolute inset-x-[18%] bottom-[5%] rounded-md border-2 border-[#10141a] bg-[var(--paper)] px-2 py-1.5 text-center text-[#10141a] shadow-lg">
+      <div className="absolute inset-x-[14%] bottom-[5%] z-30 rounded-md border-2 border-[#10141a] bg-[var(--paper)] px-2 py-1.5 text-center text-[#10141a] shadow-lg">
         <p className="text-[10px] leading-none font-bold tracking-wide opacity-70">TRASH PD</p>
         <p className="font-display mt-0.5 truncate text-lg leading-none font-black">
           {solved !== null && suspect ? suspect.name : "Unidentified"}
         </p>
       </div>
-      {/* camera flash on reveal */}
+
+      {/* camera flash */}
       <AnimatePresence>
         {flashKey && !reduce ? (
           <motion.div
             key={flashKey}
-            className="pointer-events-none absolute inset-0 bg-white"
-            initial={{ opacity: 0.95 }}
+            className="pointer-events-none absolute inset-0 z-40 bg-white"
+            initial={{ opacity: 1 }}
             animate={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           />
         ) : null}
       </AnimatePresence>
+
       {/* verdict stamp */}
       <AnimatePresence>
         {solved !== null ? (
           <motion.div
-            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 2.2, rotate: -20 }}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 2.6, rotate: -24 }}
             animate={{ opacity: 1, scale: 1, rotate: -12 }}
-            transition={{ type: "spring", duration: 0.5, bounce: 0.4, delay: 0.6 }}
-            className="font-display absolute top-[8%] right-[6%] rounded-md border-4 px-2 py-0.5 text-2xl font-black"
+            transition={{ type: "spring", duration: 0.5, bounce: 0.45, delay: solved ? 0.9 : 1.6 }}
+            className="font-display absolute top-[6%] right-[5%] z-40 rounded-md border-4 bg-[#0b1d15]/70 px-2 py-0.5 text-2xl font-black"
             style={{ color: solved ? "#7fd49a" : "var(--ticket)", borderColor: solved ? "#7fd49a" : "var(--ticket)" }}
           >
             {solved ? "IDENTIFIED" : "GOT AWAY"}
@@ -166,6 +296,8 @@ export function Lineup({
   const [hi, setHi] = useState(0);
   const [flash, setFlash] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [walk, setWalk] = useState<{ pid: string; height: number; n: number } | null>(null);
+  const [rootRef, animateRoot] = useAnimate();
   const fx = useRef<HTMLCanvasElement>(null);
   const reduce = useReducedMotion();
   const byId = useMemo(() => new Map(suspects.map((s) => [s.pid, s])), [suspects]);
@@ -205,11 +337,14 @@ export function Lineup({
     setQ("");
     setHi(0);
     if (day) store.set(`lineup:${day}`, next);
+    const g = byId.get(pid);
+    if (g && pid !== target.pid) setWalk({ pid, height: g.height, n: next.length });
     const reveal = reduce ? 0 : 6 * 160 + 400;
     if (pid === target.pid)
       setTimeout(() => {
         setFlash(Date.now());
         sfx.chime(95);
+        if (!reduce && rootRef.current) void animateRoot(rootRef.current, { x: [0, -7, 6, -3, 0] }, { duration: 0.35, delay: 0.9 });
         if (fx.current && !reduce)
           void confetti.create(fx.current, { resize: true, useWorker: true })({
             particleCount: 100,
@@ -218,7 +353,11 @@ export function Lineup({
             colors: ["#7fd49a", "#c98a4b", "#f6f3ea"],
           });
       }, reveal);
-    else if (next.length >= TRIES) setTimeout(() => sfx.slam(), reveal);
+    else if (next.length >= TRIES)
+      setTimeout(() => {
+        sfx.buzz();
+        if (!reduce && rootRef.current) void animateRoot(rootRef.current, { x: [0, -10, 9, -5, 0] }, { duration: 0.4, delay: 1.5 });
+      }, reveal + 2600);
   };
 
   const share = async () => {
@@ -233,7 +372,7 @@ export function Lineup({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_20%_0%,rgba(246,243,234,0.07),rgba(12,32,24,0.94)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+    <div ref={rootRef} className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_20%_0%,rgba(246,243,234,0.07),rgba(12,32,24,0.94)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
       <canvas ref={fx} className="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">
@@ -253,7 +392,7 @@ export function Lineup({
 
       <div className="grid gap-6 p-5 md:grid-cols-[300px_1fr] md:p-8">
         <div className="mx-auto w-full max-w-[300px]">
-          <Wall solved={over ? won : null} suspect={target} players={players} flashKey={flash} />
+          <Wall solved={over ? won : null} suspect={target} players={players} flashKey={flash} walk={walk} />
           <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
             Name any player from Trash history. Each statement shows how close you are: green is a match, brown is close,
             arrows point toward the suspect.

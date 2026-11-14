@@ -319,3 +319,10 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   .dd-prop, .dd-idle, .dd-start::after { animation: none; }
 }
+
+/* The Lineup: arrows nudge toward the answer. */
+.lu-up { display: inline-block; animation: lu-up 1.4s ease-in-out infinite; }
+.lu-down { display: inline-block; animation: lu-down 1.4s ease-in-out infinite; }
+@keyframes lu-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes lu-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .lu-up, .lu-down { animation: none; } }
