@@ -7,6 +7,7 @@ import type { Players } from "@/lib/extras";
 import type { TrashleWord } from "@/lib/trashle";
 import { Face, pname } from "./player";
 import { sfx } from "./dive/sfx";
+import { Leaderboard, type Person } from "./leaderboard";
 
 const TRIES = 6;
 const LAUNCH = Date.UTC(2026, 10, 14);
@@ -72,7 +73,7 @@ function Tile({ ch, mark, i, flip, pop }: { ch: string; mark?: Mark; i: number; 
   );
 }
 
-export function Trashle({ answers, valid, players }: { answers: TrashleWord[]; valid: string[]; players: Players }) {
+export function Trashle({ answers, valid, players, people }: { answers: TrashleWord[]; valid: string[]; players: Players; people: Person[] }) {
   const reduce = useReducedMotion();
   const [day, setDay] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<string[]>([]);
@@ -199,14 +200,14 @@ export function Trashle({ answers, valid, players }: { answers: TrashleWord[]; v
       .map((g) => score(g, target.word).map((s) => (s === "hit" ? "🟩" : s === "near" ? "🟫" : "⬛")).join(""))
       .join("\n");
     try {
-      await navigator.clipboard.writeText(`Trashle #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${grid}`);
+      await navigator.clipboard.writeText(`Trashle #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${grid}\n${location.origin}/#trashle`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_30%_0%,rgba(127,212,154,0.12),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+    <div data-no-rico className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_30%_0%,rgba(127,212,154,0.12),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
       <canvas ref={fx} className="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">
@@ -331,6 +332,14 @@ export function Trashle({ answers, valid, players }: { answers: TrashleWord[]; v
               </motion.div>
             ) : null}
           </AnimatePresence>
+          {over && settled ? (
+            <Leaderboard
+              game="trashle"
+              day={day}
+              people={people}
+              result={{ score: won ? (TRIES + 1 - guesses.length) * 20 : 0, label: won ? `Got it in ${guesses.length}` : "Missed" }}
+            />
+          ) : null}
         </div>
       </div>
     </div>

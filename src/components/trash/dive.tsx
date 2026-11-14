@@ -9,6 +9,7 @@ import { Face, pname } from "./player";
 import { AnswerBoard } from "./dive/answers";
 import { sfx } from "./dive/sfx";
 import { Stage, tierOf, type StageApi } from "./dive/stage";
+import { Leaderboard, type Person } from "./leaderboard";
 
 const ROUNDS = 5;
 const LAUNCH = Date.UTC(2026, 10, 14);
@@ -159,7 +160,7 @@ function AnswerBox({ players, onPick }: { players: Players; onPick: (pid: string
   );
 }
 
-export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Players }) {
+export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; players: Players; people: Person[] }) {
   const reduce = useReducedMotion();
   const [day, setDay] = useState<string | null>(null);
   const [phase, setPhase] = useState<"intro" | "play" | "done">("intro");
@@ -237,7 +238,7 @@ export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Playe
   };
   const share = async () => {
     const sq = picks.map((p) => (p.score === null ? "⬛" : p.score >= 90 ? "🟫" : p.score >= 60 ? "🟩" : p.score >= 25 ? "🟨" : "🟥"));
-    const text = `Dumpster Dive #${edition} ${sq.join("")} ${sum}/${ROUNDS * 100}`;
+    const text = `Dumpster Dive #${edition} ${sq.join("")} ${sum}/${ROUNDS * 100}\n${location.origin}/#dive`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -246,7 +247,7 @@ export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Playe
   };
 
   return (
-    <div className="relative overflow-visible rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_70%_0%,rgba(201,138,75,0.16),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+    <div data-no-rico className="relative overflow-visible rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_70%_0%,rgba(201,138,75,0.16),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
       {/* HUD */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">
@@ -500,6 +501,13 @@ export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Playe
                   {copied ? "Copied" : "Copy my result"}
                 </button>
               </div>
+
+              <Leaderboard
+                game="dive"
+                day={day}
+                people={people}
+                result={picks.length === ROUNDS ? { score: sum, label: picks.map((p) => (p.score === null ? "×" : p.score)).join(" · ") } : null}
+              />
 
               <h4 className="font-display mt-10 text-3xl font-black">Every answer, every prompt</h4>
               <ul className="mt-4 space-y-2">

@@ -136,6 +136,10 @@ for s in LEAGUE["seasons"]:
     lineups = collections.defaultdict(list)
     playoffs = []
     guys = collections.defaultdict(lambda: collections.defaultdict(lambda: [0, 0, 0.0]))  # who -> pid -> [weeks, starts, pts]
+    wstarts = collections.defaultdict(dict)   # who -> week -> {pid: pts}
+    wplayers = collections.defaultdict(dict)  # who -> week -> set(pids)
+    games_wk = {}                             # week -> [[a, b, pa, pb]]
+    wadds = collections.defaultdict(list)     # week -> [[who, pid]] waiver/free-agent adds
     for w in allweeks:
         po = w > REG_WEEKS
         for m in mus[w]:
@@ -144,10 +148,21 @@ for s in LEAGUE["seasons"]:
                 continue
             for pid in m.get("players") or []:
                 guys[who][pid][0] += 1
+            wplayers[who][w] = set(m.get("players") or [])
+            ws = {}
             for pid, pts in zip(m.get("starters") or [], m.get("starters_points") or []):
                 if pid and pid != "0":
                     guys[who][pid][1] += 1
                     guys[who][pid][2] += pts or 0
+                    ws[pid] = round(pts or 0, 1)
+            wstarts[who][w] = ws
+        if not po:
+            pairs = collections.defaultdict(list)
+            for m in mus[w]:
+                if m.get("matchup_id") is not None:
+                    pairs[m["matchup_id"]].append(m)
+            games_wk[w] = [[r2n[a["roster_id"]], r2n[b["roster_id"]], round(a["points"] or 0, 1), round(b["points"] or 0, 1)]
+                           for a, b in (sorted(v, key=lambda x: x["roster_id"]) for v in pairs.values() if len(v) == 2)]
         if not po:
             rost[w] = {r2n[m["roster_id"]]: m.get("players") or [] for m in mus[w]}
         ev = collections.defaultdict(list)  # manager -> [(ts, pid, +1 add / -1 drop)]
@@ -159,6 +174,7 @@ for s in LEAGUE["seasons"]:
                 ev[r2n[rid]].append((ts, pid, 1))
                 if t["type"] != "trade":
                     adds[r2n[rid]] += 1
+                    wadds[w].append([r2n[rid], pid])
             for pid, rid in (t.get("drops") or {}).items():
                 ev[r2n[rid]].append((ts, pid, -1))
             if t["type"] == "trade":
@@ -200,16 +216,36 @@ for s in LEAGUE["seasons"]:
             for pid in pids:
                 if not pid.startswith("pick:") and pid not in players:
                     players[pid] = [pid, [], ""]
+    # Trade grades: what each side's incoming players actually scored in that manager's starting
+    # lineup after the trade (rest of the season, playoffs included), and how long they stayed.
+    for t in trades:
+        gain = {}
+        for who, pids in t["sides"].items():
+            got = [p for p in pids if not p.startswith("pick:")]
+            later = [w for w in allweeks if w > t["week"]]
+            pts = sum(wstarts[who].get(w, {}).get(p, 0) for w in later for p in got)
+            held = sum(1 for w in later for p in got if p in wplayers[who].get(w, set()))
+            gain[who] = [round(pts, 1), held]
+        t["gain"] = gain
+    # Weekly recap inputs (regular season).
+    weekly = {}
+    for w in weeks:
+        top = sorted(((pts, who, pid) for who in wstarts for pid, pts in wstarts[who].get(w, {}).items()), reverse=True)[:5]
+        adds_w = [[who, pid, wstarts[who].get(w, {}).get(pid, 0)] for who, pid in wadds[w]]
+        weekly[str(w)] = {"games": games_wk.get(w, []), "top": [[who, pid, pts] for pts, who, pid in top],
+                          "adds": sorted(adds_w, key=lambda x: -x[2])[:5]}
     out["seasons"].append({"code": s["code"], "season": season, "weeks": done, "status": s["status"],
                            "draft": draft, "rosters": {str(k): v for k, v in rost.items()},
                            "trades": [{k: v for k, v in t.items() if k != "ts"} for t in sorted(trades, key=lambda t: t["ts"])],
                            "adds": dict(adds), "lineups": dict(lineups), "playoffs": playoffs,
-                           "guys": {who: {pid: [v[0], v[1], round(v[2], 1)] for pid, v in ps.items()} for who, ps in guys.items()}})
+                           "guys": {who: {pid: [v[0], v[1], round(v[2], 1)] for pid, v in ps.items()} for who, ps in guys.items()},
+                           "weekly": weekly})
 
 # Names for anyone still missing (dropped before ever logging a stat, etc).
 need = {pid for s in out["seasons"] for r in s["rosters"].values() for ps in r.values() for pid in ps}
 need |= {d["pid"] for s in out["seasons"] for d in s["draft"]}
 need |= {pid for s in out["seasons"] for ps in s["guys"].values() for pid in ps}
+need |= {x[1] for s in out["seasons"] for wk in s["weekly"].values() for x in wk["top"] + wk["adds"]}
 miss = [p for p in need if p not in players or not players[p][0]]
 if miss:
     allp = get("/v1/players/nba")

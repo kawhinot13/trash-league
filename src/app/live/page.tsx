@@ -4,6 +4,8 @@ import { LiveTable, Waivers } from "@/components/trash/live-blocks";
 import { PageIntro } from "@/components/trash/page-intro";
 import { SectionHead, Standings } from "@/components/trash/sections";
 import { league } from "@/lib/league";
+import { players, weeklyRecap } from "@/lib/extras";
+import { WeeklyRecap } from "@/components/trash/recap";
 
 export const metadata: Metadata = { title: "Live — Trash" };
 
@@ -18,6 +20,15 @@ export default function LivePage() {
       <Suspense fallback={<Standings rows={league.seasons[3].standings} live={false} week={null} />}>
         <LiveTable />
       </Suspense>
+      <section aria-labelledby="recap" className="py-24 md:py-32">
+        <SectionHead id="recap" title="Weekly recap">
+          Every finished week of the season in one place: blowouts, nail-biters, bench crimes and who carried who.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <WeeklyRecap {...weeklyRecap("s4")} players={players} managers={league.managers} />
+        </div>
+      </section>
+
       <section aria-labelledby="waivers" className="py-24 md:py-32">
         <SectionHead id="waivers" title="Waiver intel">
           Everyone on the wire, ranked for this league&apos;s scoring. Recent form, minutes, games left this week

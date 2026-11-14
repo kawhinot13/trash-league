@@ -162,8 +162,13 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
   const api = useRef<Api>({ peek: () => {}, duck: () => {} });
   useEffect(() => {
     api.current.peek = (line?: string) => {
-      if (document.hidden) {
-        later(() => api.current.peek(line), 8000);
+      // Stay out of the way: never peek while the tab is hidden or a game is on screen.
+      const busy = [...document.querySelectorAll("[data-no-rico]")].some((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > 0 && r.top < window.innerHeight;
+      });
+      if (document.hidden || busy) {
+        later(() => api.current.peek(line), 15000);
         return;
       }
       const vw = window.innerWidth;

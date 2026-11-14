@@ -16,10 +16,12 @@ type RawSeason = {
     gp: number;
   }[];
   rosters: Record<string, Record<string, string[]>>;
-  trades: { week: number; sides: Record<string, string[]> }[];
+  trades: { week: number; sides: Record<string, string[]>; gain?: Record<string, [number, number]> }[];
   adds: Record<string, number>;
   /** [week, actual, optimal] */
   lineups: Record<string, [number, number, number][]>;
+  /** week -> games [a, b, aPts, bPts], top starters [who, pid, pts], waiver adds [who, pid, pts that week] */
+  weekly?: Record<string, { games: [string, string, number, number][]; top: [string, string, number][]; adds: [string, string, number][] }>;
 };
 /** pid -> [name, positions, team, has headshot, height in inches (0 if unknown), birth date YYYY-MM-DD or ""] */
 export type Players = Record<string, [string, string[], string, number, number, string]>;
@@ -31,7 +33,7 @@ const raw = data as unknown as {
 export const players = raw.players;
 export const asOf = raw.asOf;
 
-const years: Record<string, string> = Object.fromEntries(
+export const years: Record<string, string> = Object.fromEntries(
   league.seasons.map((s) => [s.code, s.years]),
 );
 
@@ -315,4 +317,107 @@ export function myGuys(): GuysRow[] {
       };
     })
     .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+}
+
+/* ── Trade court ───────────────────────────────────────────── */
+export type GradedSide = { who: string; got: string[]; pts: number; held: number };
+export type GradedTrade = {
+  id: string;
+  code: string;
+  years: string;
+  week: number;
+  sides: GradedSide[];
+  /** null when it's close enough to call even */
+  winner: string | null;
+  margin: number;
+};
+/** Within this many points, a trade is called even. */
+export const EVEN = 60;
+
+/** Every trade, judged by what each side's incoming players scored for them afterwards. */
+export function tradeCourt(): { trades: GradedTrade[]; records: { id: string; w: number; l: number; e: number; net: number }[] } {
+  const trades: GradedTrade[] = [];
+  for (const s of raw.seasons) {
+    s.trades.forEach((t, i) => {
+      const sides = Object.entries(t.sides).map(([who, got]) => ({ who, got, pts: t.gain?.[who]?.[0] ?? 0, held: t.gain?.[who]?.[1] ?? 0 }));
+      const ranked = [...sides].sort((a, b) => b.pts - a.pts);
+      const margin = ranked.length > 1 ? ranked[0].pts - ranked[1].pts : 0;
+      trades.push({ id: `${s.code}-${i}`, code: s.code, years: years[s.code], week: t.week, sides, winner: margin >= EVEN ? ranked[0].who : null, margin });
+    });
+  }
+  const rec = new Map<string, { id: string; w: number; l: number; e: number; net: number }>();
+  for (const t of trades)
+    for (const sd of t.sides) {
+      const r = rec.get(sd.who) ?? { id: sd.who, w: 0, l: 0, e: 0, net: 0 };
+      if (!t.winner) r.e += 1;
+      else if (t.winner === sd.who) r.w += 1;
+      else r.l += 1;
+      const others = t.sides.filter((x) => x.who !== sd.who).reduce((a, x) => a + x.pts, 0);
+      r.net += sd.pts - others;
+      rec.set(sd.who, r);
+    }
+  return { trades, records: [...rec.values()].sort((a, b) => b.net - a.net) };
+}
+
+/** A manager's best steal and worst bust among their round 1–4 picks (completed seasons). */
+export function draftEye(id: string) {
+  const picks: { pid: string; code: string; no: number; redo: number; diff: number }[] = [];
+  for (const s of raw.seasons.filter((x) => x.status === "complete")) {
+    const pool = [...s.draft].sort((a, b) => b.value - a.value);
+    const rank = new Map(pool.map((p, i) => [p.pid, i + 1]));
+    for (const p of s.draft.filter((d) => d.by === id && d.round <= 4))
+      picks.push({ pid: p.pid, code: s.code, no: p.no, redo: rank.get(p.pid)!, diff: p.no - rank.get(p.pid)! });
+  }
+  const sorted = [...picks].sort((a, b) => b.diff - a.diff);
+  return { steal: sorted[0] ?? null, bust: sorted[sorted.length - 1] ?? null, avg: picks.length ? picks.reduce((t, p) => t + p.diff, 0) / picks.length : 0 };
+}
+
+/* ── Weekly recap ──────────────────────────────────────────── */
+export type RecapWeek = {
+  week: number;
+  blowout: { w: string; l: string; ws: number; ls: number } | null;
+  close: { w: string; l: string; ws: number; ls: number } | null;
+  high: { id: string; pts: number } | null;
+  low: { id: string; pts: number } | null;
+  crime: { id: string; act: number; opt: number } | null;
+  locked: { id: string; act: number; opt: number } | null;
+  top: { id: string; pid: string; pts: number }[];
+  steal: { id: string; pid: string; pts: number } | null;
+};
+
+/** One recap per finished week of a season, newest first. */
+export function weeklyRecap(code = "s4"): { years: string; weeks: RecapWeek[] } {
+  const s = raw.seasons.find((x) => x.code === code)!;
+  const out: RecapWeek[] = [];
+  for (const [wk, d] of Object.entries(s.weekly ?? {})) {
+    const week = Number(wk);
+    const games = d.games.map(([a, b, pa, pb]) => (pa >= pb ? { w: a, l: b, ws: pa, ls: pb } : { w: b, l: a, ws: pb, ls: pa }));
+    const byMargin = [...games].sort((x, y) => y.ws - y.ls - (x.ws - x.ls));
+    const scores = d.games.flatMap(([a, b, pa, pb]) => [
+      { id: a, pts: pa },
+      { id: b, pts: pb },
+    ]);
+    scores.sort((x, y) => y.pts - x.pts);
+    const lines = Object.entries(s.lineups)
+      .map(([id, ws]) => {
+        const r = ws.find(([w]) => w === week);
+        return r ? { id, act: r[1], opt: r[2] } : null;
+      })
+      .filter((x): x is { id: string; act: number; opt: number } => !!x);
+    const crime = [...lines].sort((x, y) => y.opt - y.act - (x.opt - x.act))[0] ?? null;
+    const locked = [...lines].sort((x, y) => y.act / y.opt - x.act / x.opt)[0] ?? null;
+    const steal = d.adds.find((a) => a[2] > 0);
+    out.push({
+      week,
+      blowout: byMargin[0] ?? null,
+      close: byMargin[byMargin.length - 1] ?? null,
+      high: scores[0] ?? null,
+      low: scores[scores.length - 1] ?? null,
+      crime,
+      locked,
+      top: d.top.slice(0, 3).map(([id, pid, pts]) => ({ id, pid, pts })),
+      steal: steal ? { id: steal[0], pid: steal[1], pts: steal[2] } : null,
+    });
+  }
+  return { years: years[code], weeks: out.sort((a, b) => b.week - a.week) };
 }

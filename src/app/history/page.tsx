@@ -6,7 +6,8 @@ import { PageIntro } from "@/components/trash/page-intro";
 import { RedraftBoard } from "@/components/trash/redraft";
 import { Banners, Crimes, SectionHead } from "@/components/trash/sections";
 import { TimeMachine } from "@/components/trash/time-machine";
-import { machine, players, redrafts } from "@/lib/extras";
+import { TradeCourt } from "@/components/trash/trade-court";
+import { machine, players, redrafts, tradeCourt } from "@/lib/extras";
 import { league } from "@/lib/league";
 import { mickeyCase, ringRun } from "@/lib/rings";
 import { STORY } from "@/lib/story";
@@ -31,6 +32,16 @@ export default function HistoryPage() {
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <MickeyRing run={oscar} exhibits={verdict.exhibits} mickey={verdict.mickey} players={players} />
+        </div>
+      </section>
+
+      <section aria-labelledby="court" className="py-24 md:py-32">
+        <SectionHead id="court" title="Trade court">
+          Every trade in league history, judged by what each side actually got out of it. Who won, who got fleeced,
+          and who&apos;s the best dealer in Trash.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <TradeCourt {...tradeCourt()} players={players} managers={league.managers} />
         </div>
       </section>
 

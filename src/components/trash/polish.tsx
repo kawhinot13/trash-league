@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
-const READY = "trash:ready";
 /** Run `fn` once the page has painted. (There used to be a preloader to wait for; it was
  * removed because it also popped up when navigating to Home from another page.) */
 export const onReady = (fn: () => void) => {
@@ -16,90 +15,12 @@ export const onReady = (fn: () => void) => {
   const id = requestAnimationFrame(() => fn());
   return () => cancelAnimationFrame(id);
 };
-const markReady = () => {
-  (window as unknown as { __trashReady?: boolean }).__trashReady = true;
-  window.dispatchEvent(new Event(READY));
-};
-
-/* ── Preloader: once per visit, ~1.5s, skipped for reduced motion ── */
-// Decided once per page load, so React's double-run of effects in development can't skip it.
-let skipPreloader: boolean | null = null;
-export function Preloader() {
-  const [show, setShow] = useState(true);
-  const [pct, setPct] = useState(0);
-  useEffect(() => {
-    // Decide once: skip for reduced motion or a repeat visit in this tab.
-    if (skipPreloader === null) {
-      const reduce = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-      let seen = false;
-      try {
-        seen = sessionStorage.getItem("trash-loaded") === "1";
-        sessionStorage.setItem("trash-loaded", "1");
-      } catch {}
-      skipPreloader = reduce || seen;
-    }
-    if (skipPreloader) {
-      const id = requestAnimationFrame(() => {
-        setShow(false);
-        markReady();
-      });
-      return () => cancelAnimationFrame(id);
-    }
-    const start = performance.now();
-    let raf = 0;
-    let done: ReturnType<typeof setTimeout> | undefined;
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / 1300);
-      setPct(Math.round(100 * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(tick);
-      else done = setTimeout(() => setShow(false), 180);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(done);
-    };
-  }, []);
-  return (
-    <AnimatePresence onExitComplete={markReady}>
-      {show ? (
-        <motion.div
-          key="loader"
-          aria-hidden
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--bin)]"
-          exit={{ clipPath: "inset(0 0 100% 0)" }}
-          transition={{ duration: 0.75, ease: [0.76, 0, 0.24, 1] }}
-          initial={{ clipPath: "inset(0 0 0% 0)" }}
-        >
-          <div className="relative font-display text-[clamp(5rem,22vw,16rem)] leading-none font-black tracking-[-0.03em]">
-            <span className="text-transparent [-webkit-text-stroke:2px_rgba(246,243,234,0.25)]">
-              TRASH
-            </span>
-            <span
-              className="absolute inset-0 text-[var(--gold)]"
-              style={{
-                clipPath: `inset(${100 - pct}% 0 0 0)`,
-                transition: "clip-path 80ms linear",
-              }}
-            >
-              TRASH
-            </span>
-          </div>
-          <p className="mt-6 font-display text-2xl font-bold text-[var(--muted)] tabular-nums">
-            {pct}
-          </p>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
-  );
-}
 
 /* ── Floating glass nav with a morphing pill on the active section ── */
 const LINKS = [
   ["/", "Home"],
   ["/live", "Live"],
+  ["/front-office", "Front office"],
   ["/managers", "Managers"],
   ["/rivals", "Rivals"],
   ["/history", "History"],
@@ -401,32 +322,5 @@ export function Ticker({ items }: { items: { tag: string; text: string }[] }) {
         {reduce ? null : row("b")}
       </div>
     </div>
-  );
-}
-
-/* ── Gold scroll-progress hairline (sits on the nav's bottom edge) ── */
-export function ScrollProgress() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    let raf = 0;
-    const on = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const max = document.documentElement.scrollHeight - innerHeight;
-        if (ref.current)
-          ref.current.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
-      });
-    };
-    on();
-    window.addEventListener("scroll", on, { passive: true });
-    return () => window.removeEventListener("scroll", on);
-  }, []);
-  return (
-    <div
-      ref={ref}
-      aria-hidden
-      className="fixed top-0 left-0 z-[55] h-[2px] w-full origin-left bg-gradient-to-r from-[var(--gold)]/40 via-[var(--gold)] to-[#fff1c2]"
-      style={{ transform: "scaleX(0)" }}
-    />
   );
 }

@@ -71,6 +71,10 @@ function Doors() {
   );
 }
 
+const PEOPLE = league.seasons
+  .find((s) => s.code === "s4")!
+  .standings.map((r) => ({ id: r.manager, nick: league.managers.find((m) => m.id === r.manager)?.nick ?? r.manager }));
+
 export default function Home() {
   return (
     <main id="top" className="overflow-x-clip">
@@ -95,7 +99,7 @@ export default function Home() {
           your pick, the more it scores. Same prompts for everyone, so the group chat can compare.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
-          <DumpsterDive pool={divePool()} players={players} />
+          <DumpsterDive pool={divePool()} players={players} people={PEOPLE} />
         </div>
       </section>
 
@@ -104,7 +108,7 @@ export default function Home() {
           A new mystery player every day. Guess the last name in six tries.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
-          <Trashle {...trashle()} players={players} />
+          <Trashle {...trashle()} players={players} people={PEOPLE} />
         </div>
       </section>
 
@@ -114,7 +118,7 @@ export default function Home() {
           in eight tries.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <Lineup {...lineup()} players={players} />
+          <Lineup {...lineup()} players={players} people={PEOPLE} />
         </div>
       </section>
 

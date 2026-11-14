@@ -8,6 +8,10 @@ live Season 4 table via `liveStandings()` in `src/lib/league.ts` ('use cache', m
 sandbox run `next dev`/`next build` with `NODE_USE_ENV_PROXY=1` so server fetches reach Sleeper.
 Head-to-head data is from Sleeper's weekly scores and is unreliable: always label it "per Sleeper".
 
+## Data
+- `src/data/extras.json` is rebuilt by `python3 scripts/build-extras.py <cache-dir> src/data/extras.json` (Sleeper lineups, box scores, transactions, live player bios). A daily scheduled task reruns it and pushes to `main`.
+- Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
+
 ## Shipping
 - The owner wants finished work live: after committing, always push it to `main` too (the site deploys from `main`). No need to ask first.
 
@@ -22,7 +26,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Scrolling is native. Lenis was removed after profiling: together with `backdrop-blur` it caused most dropped frames. Don't add smooth-scroll libraries or scroll pinning/scroll-jacking.
 - Performance: no `backdrop-blur` on content cards (only the fixed nav and mobile menu). Animate transform/opacity only. The hero trophy is a still render (`public/trophy.webp`), not live WebGL; keep heavy 3D off the critical path.
 - Motion (Framer Motion): `import { motion } from "motion/react"` for hover, tap, enter/exit and in-view fades.
-- 3D: react-three-fiber + drei. Load canvases with `next/dynamic` and `ssr: false`; cap `dpr` at ~1.75. Avoid drei `Environment` presets (they download HDRIs); build lighting with `Lightformer`.
+- 3D: the three.js / react-three-fiber stack was removed (it was the heaviest thing on the site). If 3D ever comes back, load it with `next/dynamic` + `ssr: false` and keep it off the critical path.
 - Palette tokens in `globals.css`: `--bin` (dumpster green page), `--bin-2/3`, `--paper`, `--muted`, `--gold` (champions only), `--wood` (the court), `--ticket` (scandals only). Fonts: Big Shoulders (`font-display`), Archivo (`font-sans`).
 
 ## Design resources (use these for every UI change)

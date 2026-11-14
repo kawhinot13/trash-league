@@ -7,6 +7,7 @@ import type { Players } from "@/lib/extras";
 import type { Suspect } from "@/lib/lineup";
 import { sfx } from "./dive/sfx";
 import { Face } from "./player";
+import { Leaderboard, type Person } from "./leaderboard";
 
 const TRIES = 8;
 const LAUNCH = Date.UTC(2026, 10, 14);
@@ -363,11 +364,13 @@ export function Lineup({
   answers,
   nicks,
   players,
+  people,
 }: {
   suspects: Suspect[];
   answers: string[];
   nicks: Record<string, string>;
   players: Players;
+  people: Person[];
 }) {
   const [day, setDay] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<string[]>([]);
@@ -445,14 +448,14 @@ export function Lineup({
     const sq = { hit: "🟩", close: "🟫", miss: "⬛" };
     const rows = guesses.map((g) => clues(byId.get(g)!, target, nick).map((c) => sq[c.mark]).join("")).join("\n");
     try {
-      await navigator.clipboard.writeText(`The Lineup #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${rows}`);
+      await navigator.clipboard.writeText(`The Lineup #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${rows}\n${location.origin}/#lineup`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
   };
 
   return (
-    <div ref={rootRef} className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_20%_0%,rgba(246,243,234,0.07),rgba(12,32,24,0.94)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+    <div data-no-rico ref={rootRef} className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_20%_0%,rgba(246,243,234,0.07),rgba(12,32,24,0.94)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
       <canvas ref={fx} className="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">
@@ -586,6 +589,15 @@ export function Lineup({
           ) : null}
 
           <Key />
+
+          {over ? (
+            <Leaderboard
+              game="lineup"
+              day={day}
+              people={people}
+              result={{ score: won ? (TRIES + 1 - guesses.length) * 15 : 0, label: won ? `Cracked in ${guesses.length}` : "Got away" }}
+            />
+          ) : null}
 
           {/* statements */}
           <div className="mt-5">

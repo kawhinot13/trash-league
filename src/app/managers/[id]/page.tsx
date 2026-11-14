@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { avatar, h2h, league, manager, record, seasonLabel } from "@/lib/league";
+import { draftEye, lockIn, myGuys, players, tradeCourt, years as seasonYears } from "@/lib/extras";
+import { Face, pname } from "@/components/trash/player";
 
 export function generateStaticParams() {
   return league.managers.map((m) => ({ id: m.id }));
@@ -31,11 +33,27 @@ async function Profile({ params }: { params: Promise<{ id: string }> }) {
   const owns = rivals.filter((r) => r.w > r.l).slice(0, 3);
   const ownedBy = [...rivals].reverse().filter((r) => r.l > r.w).slice(0, 3);
   const trades = league.seasons.flatMap((s) => s.trades.filter((t) => t.sides[m.id]).map((t) => ({ ...t, years: s.years })));
+  const lock = lockIn();
+  const lr = lock.rows.find((r) => r.id === m.id);
+  const lockRank = lock.rows.findIndex((r) => r.id === m.id) + 1;
+  const guys = myGuys().find((g) => g.id === m.id);
+  const eye = draftEye(m.id);
+  const court = tradeCourt();
+  const rec = court.records.find((r) => r.id === m.id);
+  const myTrades = court.trades.filter((t) => t.sides.some((x) => x.who === m.id));
+  const net = (t: (typeof myTrades)[number]) => {
+    const me = t.sides.find((x) => x.who === m.id)!.pts;
+    return me - t.sides.filter((x) => x.who !== m.id).reduce((a, x) => a + x.pts, 0);
+  };
+  const bestTrade = [...myTrades].sort((a, b) => net(b) - net(a))[0];
+  const worstTrade = [...myTrades].sort((a, b) => net(a) - net(b))[0];
+  const nickOf = (id: string) => league.managers.find((x) => x.id === id)?.nick ?? id;
+  const n0 = (x: number) => Math.round(x).toLocaleString();
   const finishTone = (f: string) => (f === "Champion" ? "text-[var(--gold)]" : f === "Missed playoffs" ? "text-[var(--muted)]" : "");
 
   return (
     <main className="min-h-screen pb-24">
-      <section className="relative overflow-hidden px-5 pt-8 pb-16 md:px-10" style={{ background: `linear-gradient(180deg, ${m.color}, var(--bin) 92%)` }}>
+      <section className="relative overflow-hidden px-5 pt-28 pb-16 md:px-10 md:pt-32" style={{ background: `linear-gradient(180deg, ${m.color}, var(--bin) 92%)` }}>
         <Link href="/managers" className="text-sm text-[var(--paper)]/80 hover:text-[var(--paper)]">
           Back to all managers
         </Link>
@@ -65,6 +83,97 @@ async function Profile({ params }: { params: Promise<{ id: string }> }) {
             </div>
           ))}
         </dl>
+
+        <h2 className="font-display mt-16 text-5xl font-black">Scouting report</h2>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <section className="rounded-3xl bg-[var(--bin-2)] p-6">
+            <h3 className="font-display text-3xl font-black">Lineups</h3>
+            {lr ? (
+              <>
+                <p className="font-display mt-3 text-6xl leading-none font-black tabular-nums">{(lr.eff * 100).toFixed(1)}%</p>
+                <p className="mt-2 text-[var(--muted)]">
+                  Lineup efficiency, #{lockRank} of {lock.rows.length} on the Lock-In Index. Leaves {n0(lr.left)} points on
+                  the bench a week. Worst week: {n0(lr.worst.opt - lr.worst.act)} left sitting in {seasonYears[lr.worst.code]} week{" "}
+                  {lr.worst.week}.
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-[var(--muted)]">No lineup history yet.</p>
+            )}
+          </section>
+          <section className="rounded-3xl bg-[var(--bin-2)] p-6">
+            <h3 className="font-display text-3xl font-black">Their guys</h3>
+            <ul className="mt-4 space-y-3">
+              {(guys?.best ?? []).slice(0, 3).map((g) => (
+                <li key={g.pid} className="flex items-center gap-3">
+                  <Face pid={g.pid} players={players} size={44} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{pname(players, g.pid)}</span>
+                    <span className="text-sm text-[var(--muted)]">
+                      {n0(g.pts)} points over {g.weeks} weeks
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="rounded-3xl bg-[var(--bin-2)] p-6">
+            <h3 className="font-display text-3xl font-black">Draft eye</h3>
+            {eye.steal ? (
+              <ul className="mt-4 space-y-3">
+                {[
+                  ["Best pick", eye.steal, "#7fd49a"],
+                  ["Worst pick", eye.bust, "#ff8a7a"],
+                ].map(([label, p, c]) => {
+                  const x = p as NonNullable<typeof eye.steal>;
+                  return (
+                    <li key={label as string} className="flex items-center gap-3">
+                      <Face pid={x.pid} players={players} size={44} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold" style={{ color: c as string }}>
+                          {label as string}
+                        </span>
+                        <span className="block truncate font-semibold">{pname(players, x.pid)}</span>
+                        <span className="text-sm text-[var(--muted)]">
+                          Taken #{x.no} in {seasonYears[x.code]}, re-drafted #{x.redo}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="mt-3 text-[var(--muted)]">No completed drafts yet.</p>
+            )}
+          </section>
+          <section className="rounded-3xl bg-[var(--bin-2)] p-6">
+            <h3 className="font-display text-3xl font-black">Trade record</h3>
+            {rec ? (
+              <>
+                <p className="font-display mt-3 text-6xl leading-none font-black tabular-nums">
+                  {rec.w}–{rec.l}
+                  {rec.e ? <span className="text-[var(--muted)]">–{rec.e}</span> : null}
+                </p>
+                <p className={`mt-2 font-semibold ${rec.net >= 0 ? "text-[#7fd49a]" : "text-[#ff8a7a]"}`}>
+                  {rec.net >= 0 ? "+" : ""}
+                  {n0(rec.net)} net points across all trades
+                </p>
+                {bestTrade ? (
+                  <p className="mt-3 text-sm text-[var(--muted)]">
+                    Best: {seasonYears[bestTrade.code]} week {bestTrade.week},{" "}
+                    {(bestTrade.sides.find((x) => x.who === m.id)?.got ?? []).map((p) => pname(players, p)).join(", ")} ({net(bestTrade) >= 0 ? "+" : ""}
+                    {n0(net(bestTrade))}).
+                    <br />
+                    Worst: {seasonYears[worstTrade.code]} week {worstTrade.week},{" "}
+                    {(worstTrade.sides.find((x) => x.who === m.id)?.got ?? []).map((p) => pname(players, p)).join(", ")} ({n0(net(worstTrade))}).
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="mt-3 text-[var(--muted)]">Has never made a trade.</p>
+            )}
+          </section>
+        </div>
 
         <h2 className="font-display mt-16 text-5xl font-black">Season by season</h2>
         <div className="mt-6 overflow-x-auto rounded-2xl bg-[var(--bin-2)]">
@@ -125,16 +234,32 @@ async function Profile({ params }: { params: Promise<{ id: string }> }) {
         </div>
 
         <h2 className="font-display mt-16 text-5xl font-black">Every trade</h2>
-        <p className="mt-2 text-[var(--muted)]">{trades.length ? `${trades.length} trades, oldest first.` : "Has never made a trade."}</p>
+        <p className="mt-2 text-[var(--muted)]">
+          {trades.length ? `${trades.length} trades, oldest first, with the trade court's verdict.` : "Has never made a trade."}
+        </p>
         <ol className="mt-6 space-y-3">
           {trades.map((t, i) => {
             const got = t.sides[m.id] ?? [];
             const gave = Object.entries(t.sides).filter(([k]) => k !== m.id);
             return (
               <li key={i} className="rounded-2xl bg-[var(--bin-2)] p-4 md:grid md:grid-cols-[10rem_1fr_1fr] md:gap-6">
-                <p className="text-sm text-[var(--muted)]">
-                  {seasonLabel[t.season]}, week {t.week}
-                </p>
+                <div>
+                  <p className="text-sm text-[var(--muted)]">
+                    {seasonLabel[t.season]}, week {t.week}
+                  </p>
+                  {(() => {
+                    const g = myTrades.find((x) => x.code === t.season && x.week === t.week && Object.keys(t.sides).every((k) => x.sides.some((y) => y.who === k)));
+                    if (!g) return null;
+                    const d = net(g);
+                    const tone = !g.winner ? "text-[var(--muted)]" : g.winner === m.id ? "text-[#7fd49a]" : "text-[#ff8a7a]";
+                    return (
+                      <p className={`mt-1 text-sm font-bold ${tone}`}>
+                        {!g.winner ? "Even" : g.winner === m.id ? "Won" : "Lost"} {d >= 0 ? "+" : ""}
+                        {n0(d)}
+                      </p>
+                    );
+                  })()}
+                </div>
                 <p className="mt-2 md:mt-0">
                   <span className="text-sm text-[var(--gold)]">Received </span>
                   {got.map((p) => p.name).join(", ") || "nothing"}
@@ -142,7 +267,7 @@ async function Profile({ params }: { params: Promise<{ id: string }> }) {
                 <p className="mt-2 md:mt-0">
                   {gave.map(([who, ps]) => (
                     <span key={who} className="block">
-                      <span className="text-sm text-[var(--muted)]">{who} got </span>
+                      <span className="text-sm text-[var(--muted)]">{nickOf(who)} got </span>
                       {ps.map((p) => p.name).join(", ")}
                     </span>
                   ))}
