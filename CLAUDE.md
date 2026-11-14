@@ -8,6 +8,9 @@ live Season 4 table via `liveStandings()` in `src/lib/league.ts` ('use cache', m
 sandbox run `next dev`/`next build` with `NODE_USE_ENV_PROXY=1` so server fetches reach Sleeper.
 Head-to-head data is from Sleeper's weekly scores and is unreliable: always label it "per Sleeper".
 
+## Shipping
+- The owner wants finished work live: after committing, always push it to `main` too (the site deploys from `main`). No need to ask first.
+
 ## Taste
 - Premium pro-franchise feel for a joke league: arena banners, hardwood, evidence lockers. Never generic AI-template looks.
 - Motion should feel smooth and intentional, never overdone. Respect `prefers-reduced-motion`.
