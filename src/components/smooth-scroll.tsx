@@ -1,42 +1,45 @@
 "use client";
 
-import { ReactLenis, type LenisRef } from "lenis/react";
-import { useEffect, useRef } from "react";
+import { ReactLenis, useLenis } from "lenis/react";
+import { useEffect, useState } from "react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 /**
- * Lenis smooth scroll, driven by GSAP's ticker so ScrollTrigger and Lenis
- * stay frame-locked. Respects prefers-reduced-motion.
+ * Drives Lenis from GSAP's ticker so ScrollTrigger and Lenis stay frame-locked.
+ * useLenis() hands us the instance only once it exists; wiring it up any
+ * earlier leaves Lenis eating wheel events without ever moving the page.
  */
-export function SmoothScroll({ children }: { children: React.ReactNode }) {
-  const lenisRef = useRef<LenisRef>(null);
-
+function GsapSync() {
+  const lenis = useLenis();
   useEffect(() => {
-    const lenis = lenisRef.current?.lenis;
     if (!lenis) return;
-
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      lenis.destroy();
-      return;
-    }
-
     lenis.on("scroll", ScrollTrigger.update);
     const tick = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
-
     return () => {
       gsap.ticker.remove(tick);
       lenis.off("scroll", ScrollTrigger.update);
     };
+  }, [lenis]);
+  return null;
+}
+
+/** Lenis smooth scroll. Skipped entirely for prefers-reduced-motion: native scrolling only. */
+export function SmoothScroll({ children }: { children: React.ReactNode }) {
+  const [smooth, setSmooth] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setSmooth(!mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
 
+  if (!smooth) return <>{children}</>;
   return (
-    <ReactLenis
-      root
-      ref={lenisRef}
-      options={{ autoRaf: false, lerp: 0.09, smoothWheel: true }}
-    >
+    <ReactLenis root options={{ autoRaf: false, lerp: 0.1, smoothWheel: true }}>
+      <GsapSync />
       {children}
     </ReactLenis>
   );
