@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { RevealTitle, Spotlight } from "./polish";
 import {
   avatar,
   headshot,
@@ -44,12 +45,7 @@ export function SectionHead({
 }) {
   return (
     <div className="mx-auto mb-10 max-w-6xl px-5 md:mb-14 md:px-10">
-      <h2
-        id={id}
-        className="font-display scroll-mt-24 text-[clamp(3.2rem,9vw,7.5rem)] leading-[0.85] font-black tracking-[-0.02em]"
-      >
-        {title}
-      </h2>
+      <RevealTitle id={id}>{title}</RevealTitle>
       {children ? (
         <div className="mt-5 max-w-[60ch] text-lg leading-relaxed text-[var(--muted)]">
           {children}
@@ -107,12 +103,7 @@ export function Standings({
       </svg>
       <div className="relative mx-auto max-w-6xl px-5 md:px-10">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-          <h2
-            id="standings"
-            className="font-display scroll-mt-24 text-[clamp(3.2rem,9vw,7.5rem)] leading-[0.85] font-black"
-          >
-            Season 4 table
-          </h2>
+          <RevealTitle id="standings">Season 4 table</RevealTitle>
           <p className="text-sm font-medium">
             {live
               ? `Live from Sleeper${week ? `, week ${week}` : ""}. Refreshes every few minutes.`
@@ -228,7 +219,7 @@ export function Banners() {
               </span>
               <Avatar id={m.id} size={96} ring="var(--gold)" />
               <span className="font-display mt-5 block text-[clamp(1.8rem,3.4vw,2.8rem)] leading-[0.9] font-black">
-                {m.nick}
+                <span className="shimmer-gold">{m.nick}</span>
               </span>
               <span className="mt-2 block text-sm text-[var(--muted)]">
                 {m.id}, “{st.team}”
@@ -324,65 +315,65 @@ export function Crimes() {
       </SectionHead>
       <div className="mx-auto grid max-w-6xl gap-6 px-5 md:px-10">
         {EXHIBITS.map((x) => (
-          <article
-            key={x.letter}
-            className="relative overflow-hidden rounded-3xl bg-[var(--bin-2)] p-6 md:p-10"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-sm text-[var(--muted)]">
-                  Exhibit {x.letter}, {x.when}
-                </p>
-                <h3 className="font-display mt-1 text-5xl leading-none font-black md:text-6xl">
-                  {x.title}
-                </h3>
-              </div>
-              <span
-                className="font-display rotate-[-6deg] rounded-lg border-4 border-[var(--ticket)] px-4 py-1 text-3xl font-black text-[var(--ticket)] md:text-4xl"
-                aria-label={`Verdict: ${x.verdict}`}
-              >
-                {x.verdict}
-              </span>
-            </div>
-            <p className="mt-4 max-w-[62ch] leading-relaxed text-[var(--muted)]">
-              {x.story}
-            </p>
-            <div className="mt-8 grid gap-6 md:grid-cols-2">
-              {Object.entries(x.trade.sides).map(([who, got]) => (
-                <div
-                  key={who}
-                  className="rounded-2xl border border-[var(--line)] p-4"
-                >
-                  <p className="flex items-center gap-3 text-sm">
-                    <Avatar id={who} size={32} ring={manager(who)?.color} />
-                    <span>
-                      <strong className="font-semibold">{who}</strong> received
-                    </span>
+          <Spotlight key={x.letter} className="rounded-3xl">
+            <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md md:p-10">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-[var(--muted)]">
+                    Exhibit {x.letter}, {x.when}
                   </p>
-                  <ul className="mt-4 flex flex-wrap gap-3">
-                    {got.map((p) => (
-                      <li key={p.name} className="w-[104px] text-center">
-                        <div className="relative h-[70px] overflow-hidden rounded-xl bg-[var(--bin-3)]">
-                          {p.pid ? (
-                            <Image
-                              src={headshot(p.pid)}
-                              alt=""
-                              fill
-                              sizes="104px"
-                              className="object-contain object-bottom"
-                            />
-                          ) : null}
-                        </div>
-                        <span className="mt-1 block text-xs leading-tight">
-                          {p.name}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <h3 className="font-display mt-1 text-5xl leading-none font-black md:text-6xl">
+                    {x.title}
+                  </h3>
                 </div>
-              ))}
-            </div>
-          </article>
+                <span
+                  className="font-display rotate-[-6deg] rounded-lg border-4 border-[var(--ticket)] px-4 py-1 text-3xl font-black text-[var(--ticket)] md:text-4xl"
+                  aria-label={`Verdict: ${x.verdict}`}
+                >
+                  {x.verdict}
+                </span>
+              </div>
+              <p className="mt-4 max-w-[62ch] leading-relaxed text-[var(--muted)]">
+                {x.story}
+              </p>
+              <div className="mt-8 grid gap-6 md:grid-cols-2">
+                {Object.entries(x.trade.sides).map(([who, got]) => (
+                  <div
+                    key={who}
+                    className="rounded-2xl border border-[var(--line)] p-4"
+                  >
+                    <p className="flex items-center gap-3 text-sm">
+                      <Avatar id={who} size={32} ring={manager(who)?.color} />
+                      <span>
+                        <strong className="font-semibold">{who}</strong>{" "}
+                        received
+                      </span>
+                    </p>
+                    <ul className="mt-4 flex flex-wrap gap-3">
+                      {got.map((p) => (
+                        <li key={p.name} className="w-[104px] text-center">
+                          <div className="relative h-[70px] overflow-hidden rounded-xl bg-[var(--bin-3)]">
+                            {p.pid ? (
+                              <Image
+                                src={headshot(p.pid)}
+                                alt=""
+                                fill
+                                sizes="104px"
+                                className="object-contain object-bottom"
+                              />
+                            ) : null}
+                          </div>
+                          <span className="mt-1 block text-xs leading-tight">
+                            {p.name}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </Spotlight>
         ))}
       </div>
     </section>
@@ -396,11 +387,58 @@ export function Footer() {
         <p className="font-display text-4xl font-black text-[var(--paper)]">
           Trash
         </p>
-        <p className="max-w-[56ch]">
-          Records, champions, drafts and trades come from Sleeper. Head-to-head
-          records come from Sleeper&apos;s weekly scores, which don&apos;t
-          always match the official standings, so treat them as league lore.
-        </p>
+        <div className="flex flex-col gap-4">
+          <p className="max-w-[56ch]">
+            Records, champions, drafts and trades come from Sleeper.
+            Head-to-head records come from Sleeper&apos;s weekly scores, which
+            don&apos;t always match the official standings, so treat them as
+            league lore.
+          </p>
+          <p className="flex flex-wrap items-center gap-x-5 gap-y-3 text-xs">
+            <span>Data from Sleeper. Built with</span>
+            <a
+              href="https://nextjs.org"
+              className="opacity-70 transition-opacity hover:opacity-100"
+              aria-label="Next.js"
+            >
+              <Image
+                src="/logos/nextjs_logo_dark.svg"
+                alt=""
+                width={64}
+                height={13}
+                className="h-3.5 w-auto"
+              />
+            </a>
+            <span>hosted on</span>
+            <a
+              href="https://vercel.com"
+              className="opacity-70 transition-opacity hover:opacity-100"
+              aria-label="Vercel"
+            >
+              <Image
+                src="/logos/vercel_wordmark_dark.svg"
+                alt=""
+                width={64}
+                height={14}
+                className="h-3.5 w-auto"
+              />
+            </a>
+            <span>code on</span>
+            <a
+              href="https://github.com/kawhinot13/trash-league"
+              className="opacity-70 transition-opacity hover:opacity-100"
+              aria-label="GitHub"
+            >
+              <Image
+                src="/logos/github_wordmark_dark.svg"
+                alt=""
+                width={64}
+                height={18}
+                className="h-4 w-auto"
+              />
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
