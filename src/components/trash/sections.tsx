@@ -260,6 +260,24 @@ export function Banners() {
       </SectionHead>
       <div
         aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-[14rem] mx-auto flex h-[38rem] max-w-6xl justify-around opacity-70"
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <span
+            key={i}
+            className="block h-full w-40 origin-top"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(255,241,194,0.22), rgba(233,196,106,0.06) 55%, transparent)",
+              clipPath: "polygon(42% 0, 58% 0, 100% 100%, 0 100%)",
+              transform: `rotate(${(i - 1.5) * 5}deg)`,
+              filter: "blur(6px)",
+            }}
+          />
+        ))}
+      </div>
+      <div
+        aria-hidden
         className="mx-auto h-3 max-w-6xl rounded-full bg-[#08190f]"
       />
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-5 md:grid-cols-4 md:px-10">
@@ -436,7 +454,7 @@ export function Crimes() {
 
 export function Footer() {
   return (
-    <footer className="border-t border-[var(--line)] px-5 py-12 text-sm text-[var(--muted)] md:px-10">
+    <footer className="relative overflow-hidden border-t border-[var(--line)] px-5 pt-12 text-sm text-[var(--muted)] md:px-10">
       <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-6">
         <p className="font-display text-4xl font-black text-[var(--paper)]">
           Trash
@@ -494,6 +512,18 @@ export function Footer() {
           </p>
         </div>
       </div>
+      <p
+        aria-hidden
+        className="font-display pointer-events-none mt-12 -mb-[0.18em] text-center text-[27vw] leading-[0.8] font-black tracking-[-0.04em] text-transparent select-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(180deg, rgba(246,243,234,0.16), rgba(246,243,234,0.02))",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+        }}
+      >
+        TRASH
+      </p>
     </footer>
   );
 }

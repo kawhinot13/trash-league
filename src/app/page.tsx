@@ -1,6 +1,12 @@
 import { Suspense } from "react";
 import { Hero } from "@/components/trash/hero";
-import { GlassNav, Preloader, StatStrip } from "@/components/trash/polish";
+import {
+  GlassNav,
+  Preloader,
+  ScrollProgress,
+  StatStrip,
+  Ticker,
+} from "@/components/trash/polish";
 import {
   Banners,
   Court,
@@ -126,6 +132,57 @@ async function LiveTable() {
     </Court>
   );
 }
+async function LiveTicker() {
+  const [live, wire] = await Promise.all([weekIfEndedToday(), waiverIntel()]);
+  const items: { tag: string; text: string }[] = [];
+  if (live) {
+    const up = [...live.rows].sort(
+      (a, b) => b.rankNow - b.rankProj - (a.rankNow - a.rankProj),
+    )[0];
+    const down = [...live.rows].sort(
+      (a, b) => a.rankNow - a.rankProj - (b.rankNow - b.rankProj),
+    )[0];
+    const close = [...live.rows].sort(
+      (a, b) => Math.abs(a.winProb - 0.5) - Math.abs(b.winProb - 0.5),
+    )[0];
+    if (up && up.rankNow > up.rankProj)
+      items.push({
+        tag: "Live",
+        text: `${up.manager} would climb ${up.rankNow - up.rankProj} spots if week ${live.week} ended now`,
+      });
+    if (down && down.rankNow < down.rankProj)
+      items.push({
+        tag: "Live",
+        text: `${down.manager} would drop ${down.rankProj - down.rankNow} spots`,
+      });
+    if (close)
+      items.push({
+        tag: "Closest",
+        text: `${close.manager} vs ${close.opp}: ${Math.round(close.winProb * 100)}% to ${Math.round((1 - close.winProb) * 100)}%`,
+      });
+  }
+  if (wire?.players[0])
+    items.push({
+      tag: "Waivers",
+      text: `Top pickup: ${wire.players[0].name}, ${wire.players[0].recentAvg.toFixed(1)} fantasy points a game lately`,
+    });
+  items.push(
+    {
+      tag: "Record",
+      text: `${league.totals.trades} trades since 2023. RI3O has been in ${league.managers.find((m) => m.id === "RI3O")?.trades ?? 0} of them`,
+    },
+    {
+      tag: "History",
+      text: "Three seasons, three different champions. Nobody has won it twice",
+    },
+    {
+      tag: "Ringless",
+      text: "jgood432: best record in league history, zero titles",
+    },
+  );
+  return <Ticker items={items} />;
+}
+
 async function Waivers() {
   const w = await waiverIntel();
   if (!w)
@@ -159,6 +216,7 @@ export default function Home() {
   return (
     <main className="overflow-x-clip">
       <Preloader />
+      <ScrollProgress />
       <GlassNav />
       <Suspense
         fallback={<Hero week={null} leaders={["LeBugger", "GreenBean69420"]} />}
@@ -178,6 +236,9 @@ export default function Home() {
         ]}
       />
 
+      <Suspense fallback={<div className="mt-14 h-12 md:mt-20" />}>
+        <LiveTicker />
+      </Suspense>
       <div className="h-16 md:h-24" />
       <Suspense
         fallback={

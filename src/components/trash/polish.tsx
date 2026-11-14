@@ -386,3 +386,72 @@ export function Spotlight({
     </div>
   );
 }
+
+/* ── Live broadcast ticker (sports-TV crawl built from league data) ── */
+export function Ticker({ items }: { items: { tag: string; text: string }[] }) {
+  const reduce = useReducedMotion();
+  const row = (k: string) => (
+    <ul
+      className="flex shrink-0 items-center gap-10 pr-10"
+      aria-hidden={k === "b"}
+    >
+      {items.map((it, i) => (
+        <li key={k + i} className="flex items-center gap-3 whitespace-nowrap">
+          <span className="rounded-full bg-[var(--gold)] px-2.5 py-0.5 text-xs font-bold text-[var(--bin)]">
+            {it.tag}
+          </span>
+          <span className="text-sm text-[var(--paper)]/90">{it.text}</span>
+          <span className="text-[var(--gold)]/50">✦</span>
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <div
+      className="group relative mt-14 overflow-hidden border-y border-white/10 bg-[rgba(8,24,17,0.7)] py-3 backdrop-blur-md md:mt-20"
+      aria-label="League headlines"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[var(--bin)] to-transparent"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[var(--bin)] to-transparent"
+      />
+      <div
+        className={`flex w-max ${reduce ? "overflow-x-auto" : "animate-[ticker_60s_linear_infinite] group-hover:[animation-play-state:paused]"}`}
+      >
+        {row("a")}
+        {reduce ? null : row("b")}
+      </div>
+    </div>
+  );
+}
+
+/* ── Gold scroll-progress hairline (sits on the nav's bottom edge) ── */
+export function ScrollProgress() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    const on = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        if (ref.current)
+          ref.current.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+      });
+    };
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      className="fixed top-0 left-0 z-[55] h-[2px] w-full origin-left bg-gradient-to-r from-[var(--gold)]/40 via-[var(--gold)] to-[#fff1c2]"
+      style={{ transform: "scaleX(0)" }}
+    />
+  );
+}

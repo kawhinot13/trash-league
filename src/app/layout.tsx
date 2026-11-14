@@ -31,7 +31,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} antialiased`}>
-      <body className="min-h-full bg-[var(--bin)] text-[var(--paper)]">
+      <body className="min-h-full bg-transparent text-[var(--paper)]">
         <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
