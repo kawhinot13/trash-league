@@ -9,6 +9,7 @@ import {
 } from "@/components/trash/polish";
 import {
   Banners,
+  Court,
   Crimes,
   Footer,
   SectionHead,
@@ -23,8 +24,14 @@ import {
   type StoryItem,
 } from "@/components/trash/interactive";
 import { league, liveStandings } from "@/lib/league";
-import { waiverIntel } from "@/lib/live";
-import { Almanac, Explain, WaiverWire } from "@/components/trash/intel";
+import { waiverIntel, weekIfEndedToday } from "@/lib/live";
+import {
+  Almanac,
+  Explain,
+  LiveWeek,
+  MatchupOfWeek,
+  WaiverWire,
+} from "@/components/trash/intel";
 
 const STORY: StoryItem[] = [
   {
@@ -120,12 +127,84 @@ const STORY: StoryItem[] = [
 ];
 
 async function LiveTable() {
-  const { rows, live, week } = await liveStandings();
-  return <Standings rows={rows} live={live} week={week} />;
+  const [{ rows: official, live: ok, week }, wk] = await Promise.all([
+    liveStandings(),
+    weekIfEndedToday(),
+  ]);
+  if (!ok || !week) return <Standings rows={official} live={ok} week={week} />;
+  // Matchup of the week: the two highest-ranked teams playing each other this week.
+  const seed = new Map(official.map((r) => [r.manager, r]));
+  const pairs = (wk?.rows ?? []).filter((r) => r.manager < r.opp);
+  const motw = pairs.sort(
+    (x, y) =>
+      seed.get(x.manager)!.seed +
+      seed.get(x.opp)!.seed -
+      (seed.get(y.manager)!.seed + seed.get(y.opp)!.seed),
+  )[0];
+  const side = (name: string) => {
+    const o = seed.get(name)!;
+    const l = wk!.rows.find((r) => r.manager === name)!;
+    return {
+      manager: name,
+      rec: `${o.w}–${o.l}${o.t ? `–${o.t}` : ""}`,
+      streak: o.streak,
+      now: l.now,
+      proj: l.proj,
+      winProb: l.winProb,
+      seed: o.seed,
+    };
+  };
+  return (
+    <Court id="standings" title="Season 4 table">
+      {motw ? (
+        <div className="mb-10">
+          <MatchupOfWeek
+            week={week}
+            a={side(motw.manager)}
+            b={side(motw.opp)}
+            h2hA={league.h2h[motw.manager]?.[motw.opp] ?? 0}
+            h2hB={league.h2h[motw.opp]?.[motw.manager] ?? 0}
+            why="The two highest-ranked teams facing each other."
+            asOf={wk!.asOf}
+          />
+        </div>
+      ) : null}
+      <LiveWeek
+        week={week}
+        rows={wk?.rows ?? null}
+        daysLeft={wk?.daysLeft ?? 0}
+        official={official}
+        asOf={wk?.asOf ?? new Date().toISOString()}
+      />
+    </Court>
+  );
 }
 async function LiveTicker() {
-  const wire = await waiverIntel();
+  const [wire, { rows: table, week }] = await Promise.all([
+    waiverIntel(),
+    liveStandings(),
+  ]);
   const items: { tag: string; text: string }[] = [];
+  const up = [...table].sort((a, b) => (b.move ?? 0) - (a.move ?? 0))[0];
+  const down = [...table].sort((a, b) => (a.move ?? 0) - (b.move ?? 0))[0];
+  const hot = [...table]
+    .filter((r) => r.streak?.endsWith("W"))
+    .sort((a, b) => parseInt(b.streak!) - parseInt(a.streak!))[0];
+  if (up?.move)
+    items.push({
+      tag: "Climber",
+      text: `${up.manager} rose ${up.move} spot${up.move > 1 ? "s" : ""} to #${up.seed} after week ${(week ?? 1) - 1}`,
+    });
+  if (down?.move)
+    items.push({
+      tag: "Faller",
+      text: `${down.manager} slid ${-down.move} spot${down.move < -1 ? "s" : ""} to #${down.seed}`,
+    });
+  if (hot)
+    items.push({
+      tag: "Streak",
+      text: `${hot.manager} has won ${parseInt(hot.streak!)} straight`,
+    });
   if (wire?.players[0])
     items.push({
       tag: "Waivers",
@@ -268,13 +347,16 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Explain>
             <p>
-              Each square is how many regular-season games the row manager won against the column manager, all four seasons
-              combined. Gold squares are winning matchups, red are losing ones. &ldquo;Owns&rdquo; means a winning record of
-              at least 5 games with no more than 1 loss.
+              Each square is how many regular-season games the row manager won
+              against the column manager, all four seasons combined. Gold
+              squares are winning matchups, red are losing ones.
+              &ldquo;Owns&rdquo; means a winning record of at least 5 games with
+              no more than 1 loss.
             </p>
             <p>
-              These come from Sleeper&apos;s week-by-week scores, which don&apos;t always match the official standings for
-              this league, so treat them as league lore rather than gospel.
+              These come from Sleeper&apos;s week-by-week scores, which
+              don&apos;t always match the official standings for this league, so
+              treat them as league lore rather than gospel.
             </p>
           </Explain>
         </div>
