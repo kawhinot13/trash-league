@@ -1,5 +1,5 @@
 import data from "@/data/extras.json";
-import { players } from "@/lib/extras";
+import { asOf, players } from "@/lib/extras";
 import { league } from "@/lib/league";
 
 /**
@@ -21,6 +21,8 @@ export type Suspect = {
   owners: string[];
   /** First Trash season he was on a roster, 1-4. */
   first: number;
+  /** Age in years as of the last data build (0 if unknown). */
+  age: number;
 };
 
 const EAST = new Set(["ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND", "MIA", "MIL", "NYK", "ORL", "PHI", "TOR", "WAS"]);
@@ -56,10 +58,13 @@ export function lineup(): { suspects: Suspect[]; answers: string[]; nicks: Recor
       owner: owners[0][0],
       owners: owners.map(([m]) => m),
       first: first.get(pid) ?? 1,
+      // Age as of the data build, so prerendering stays deterministic.
+      age: p[5] ? Math.floor((Date.parse(asOf) - Date.parse(p[5])) / (365.25 * 86400000)) : 0,
     });
   }
   suspects.sort((a, b) => a.name.localeCompare(b.name));
-  const answers = suspects.filter((s) => s.weeks >= 20 && players[s.pid][3]).map((s) => s.pid);
+  // Suspects are players the league really knows: 35+ weeks on Trash rosters, with a photo.
+  const answers = suspects.filter((s) => s.weeks >= 35 && players[s.pid][3] && s.age).map((s) => s.pid);
   const nicks = Object.fromEntries(league.managers.map((m) => [m.id, m.nick]));
   return { suspects, answers, nicks };
 }

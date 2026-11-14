@@ -45,10 +45,90 @@ function clues(g: Suspect, t: Suspect, nick: (id: string) => string): Clue[] {
     { label: "Team", value: g.team, mark: g.team === t.team ? "hit" : g.conf && g.conf === t.conf ? "close" : "miss" },
     { label: "Pos", value: g.pos.join("/") || "?", mark: posHit ? "hit" : posNear ? "close" : "miss" },
     { label: "Height", value: ft(g.height), ...num(g.height, t.height, 2) },
-    { label: "Trash weeks", value: String(g.weeks), ...num(g.weeks, t.weeks, 8) },
+    { label: "Age", value: g.age ? String(g.age) : "?", ...num(g.age, t.age, 2) },
+    { label: "Trash weeks", value: String(g.weeks), ...num(g.weeks, t.weeks, 15) },
+    { label: "Trash teams", value: String(g.owners.length), ...num(g.owners.length, t.owners.length, 1) },
     { label: "Top owner", value: nick(g.owner), mark: g.owner === t.owner ? "hit" : t.owners.includes(g.owner) ? "close" : "miss" },
     { label: "First season", value: YR[g.first], ...num(g.first, t.first, 1) },
   ];
+}
+
+/** What every column means, shown in the header popovers and the key. */
+const COLS: { label: string; info: string }[] = [
+  { label: "Team", info: "His NBA team right now. Brown means same conference." },
+  { label: "Pos", info: "Fantasy positions on Sleeper. Brown means at least one position in common." },
+  { label: "Height", info: "Brown means within 2 inches. The arrow points toward the suspect's height." },
+  { label: "Age", info: "Age today. Brown means within 2 years." },
+  { label: "Trash weeks", info: "Total weeks he's spent on any Trash roster, all seasons. Brown means within 15." },
+  { label: "Trash teams", info: "How many different Trash managers have rostered him. Brown means off by one." },
+  { label: "Top owner", info: "The manager who rostered him the longest. Brown means the suspect was on that manager's roster at some point." },
+  { label: "First season", info: "The first Trash season he was on a roster ('23 is 2023–24). Brown means one season off." },
+];
+const GRID = "md:grid-cols-8";
+
+function ColHead({ label, info }: { label: string; info: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="group relative flex items-center justify-center gap-1 text-center">
+      <span className="leading-tight">{label}</span>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setOpen(false)}
+        aria-label={`What ${label} means`}
+        aria-expanded={open}
+        className="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full border border-current text-[9px] leading-none font-bold opacity-70 hover:opacity-100"
+      >
+        i
+      </button>
+      <span
+        role="tooltip"
+        className={`pointer-events-none absolute top-full left-1/2 z-40 mt-2 w-52 -translate-x-1/2 rounded-xl border border-white/12 bg-[#0d241a] p-3 text-left text-xs leading-relaxed font-normal text-[var(--paper)] shadow-xl transition-opacity duration-150 group-hover:opacity-100 ${open ? "opacity-100" : "opacity-0"}`}
+      >
+        {info}
+      </span>
+    </span>
+  );
+}
+
+/** The color key, plus every category explained. Works on phones, where there are no headers. */
+function Key() {
+  return (
+    <details className="group mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
+      <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold select-none">
+        <span className="inline-flex size-5 items-center justify-center rounded-full border border-current text-xs transition-transform duration-200 group-open:rotate-45">
+          +
+        </span>
+        How to read the clues
+      </summary>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {[
+          ["hit", "Green", "Exact match with the suspect."],
+          ["close", "Brown", "Close. Each category says what close means."],
+          ["miss", "Dark", "Not close."],
+        ].map(([m, name, text]) => (
+          <div key={m} className="flex items-center gap-2">
+            <span className="size-6 shrink-0 rounded-md" style={{ background: BG[m as Mark] }} />
+            <span>
+              <span className="font-semibold">{name}:</span> <span className="text-[var(--muted)]">{text}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[var(--muted)]">
+        <span className="font-semibold text-[var(--paper)]">↑ ↓ Arrows</span> point toward the suspect: ↑ means the
+        suspect is taller, older, has more weeks, and so on.
+      </p>
+      <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+        {COLS.map((c) => (
+          <div key={c.label}>
+            <dt className="font-semibold">{c.label}</dt>
+            <dd className="text-[var(--muted)]">{c.info}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
 }
 
 function Chip({ c, i, fresh }: { c: Clue; i: number; fresh: boolean }) {
@@ -339,7 +419,7 @@ export function Lineup({
     if (day) store.set(`lineup:${day}`, next);
     const g = byId.get(pid);
     if (g && pid !== target.pid) setWalk({ pid, height: g.height, n: next.length });
-    const reveal = reduce ? 0 : 6 * 160 + 400;
+    const reveal = reduce ? 0 : 8 * 160 + 400;
     if (pid === target.pid)
       setTimeout(() => {
         setFlash(Date.now());
@@ -393,10 +473,36 @@ export function Lineup({
       <div className="grid gap-6 p-5 md:grid-cols-[300px_1fr] md:p-8">
         <div className="mx-auto w-full max-w-[300px]">
           <Wall solved={over ? won : null} suspect={target} players={players} flashKey={flash} walk={walk} />
-          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-            Name any player from Trash history. Each statement shows how close you are: green is a match, brown is close,
-            arrows point toward the suspect.
-          </p>
+          <div className="mt-3 space-y-1.5" aria-label="Tip line">
+            {target
+              ? [
+                  { at: 3, label: "Tip", text: target.conf ? `Plays in the ${target.conf}` : "Currently a free agent" },
+                  {
+                    at: 5,
+                    label: "Tip",
+                    text: `Initials ${target.name
+                      .split(" ")
+                      .map((w) => w[0])
+                      .join(".")}.`,
+                  },
+                  { at: 7, label: "Tip", text: target.team === "FA" ? "No current NBA team" : `Plays for ${target.team}` },
+                ].map((h) => {
+                  const misses = guesses.filter((g) => g !== target.pid).length;
+                  const open = misses >= h.at || over;
+                  return (
+                    <motion.div
+                      key={h.at}
+                      initial={false}
+                      animate={open && !reduce ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${open ? "border-[var(--wood)]/60 bg-[var(--wood)]/10" : "border-white/10"}`}
+                    >
+                      <span className="text-xs font-bold text-[var(--wood)]">{h.label}</span>
+                      <span className={open ? "" : "text-[var(--muted)]"}>{open ? h.text : `Unlocks after ${h.at} misses`}</span>
+                    </motion.div>
+                  );
+                })
+              : null}
+          </div>
         </div>
 
         <div className="min-w-0">
@@ -479,14 +585,13 @@ export function Lineup({
             </motion.div>
           ) : null}
 
+          <Key />
+
           {/* statements */}
           <div className="mt-5">
-            <div className="hidden grid-cols-[minmax(0,1.7fr)_repeat(6,minmax(0,1fr))] gap-1.5 px-1 pb-2 text-[11px] font-semibold text-[var(--muted)] md:grid">
-              <span>Statement</span>
-              {["Team", "Pos", "Height", "Trash weeks", "Top owner", "First season"].map((h) => (
-                <span key={h} className="text-center">
-                  {h}
-                </span>
+            <div className={`hidden gap-1.5 px-1.5 pb-2 text-[11px] font-semibold text-[var(--muted)] md:grid ${GRID}`}>
+              {COLS.map((c) => (
+                <ColHead key={c.label} {...c} />
               ))}
             </div>
             <ol className="space-y-2">
@@ -501,9 +606,9 @@ export function Lineup({
                     layout={!reduce}
                     initial={isNew && !reduce ? { opacity: 0, y: -10 } : false}
                     animate={{ opacity: 1, y: 0 }}
-                    className="grid grid-cols-3 gap-1.5 rounded-2xl bg-black/20 p-1.5 md:grid-cols-[minmax(0,1.7fr)_repeat(6,minmax(0,1fr))]"
+                    className={`grid grid-cols-4 gap-1.5 rounded-2xl bg-black/20 p-1.5 ${GRID}`}
                   >
-                    <div className="col-span-3 flex min-w-0 items-center gap-2 px-1 py-1 md:col-span-1">
+                    <div className="col-span-4 flex min-w-0 items-center gap-2 px-1 py-1 md:col-span-8">
                       <Face pid={pid} players={players} size={34} />
                       <span className="truncate text-sm font-semibold">{g.name}</span>
                     </div>

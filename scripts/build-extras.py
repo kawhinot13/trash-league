@@ -232,6 +232,7 @@ for pid, v in out["players"].items():
         v[1] = b.get("fantasy_positions") or v[1]
     h = (b or {}).get("height") or ""
     v.append(int(h) if str(h).isdigit() else 0)
+    v.append((b or {}).get("birth_date") or "")
 json.dump(out, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
 print("replay could not explain", len(MISFIT), "team-weeks", MISFIT[:8], file=sys.stderr)
 print("ok", {s["code"]: (s["weeks"], len(s["trades"]), len(s["draft"])) for s in out["seasons"]},
