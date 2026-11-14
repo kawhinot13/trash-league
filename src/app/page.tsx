@@ -4,6 +4,7 @@ import { LockInIndex } from "@/components/trash/lockin";
 import { RedraftBoard } from "@/components/trash/redraft";
 import { TimeMachine } from "@/components/trash/time-machine";
 import { ManagerQuiz } from "@/components/trash/quiz";
+import { RicoPeek } from "@/components/trash/rico-peek";
 import {
   lockIn,
   machine,
@@ -273,6 +274,13 @@ export default function Home() {
   return (
     <main className="overflow-x-clip">
       <Preloader />
+      <RicoPeek
+        trades={league.managers.find((m) => m.id === "RI3O")?.trades ?? 0}
+        record={(() => {
+          const r = league.managers.find((m) => m.id === "RI3O");
+          return r ? `${r.w}–${r.l}` : "";
+        })()}
+      />
       <ScrollProgress />
       <GlassNav />
       <Suspense
