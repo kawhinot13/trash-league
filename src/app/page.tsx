@@ -1,5 +1,16 @@
 import { Suspense } from "react";
 import { RivalryMachine } from "@/components/trash/rivalry";
+import { LockInIndex } from "@/components/trash/lockin";
+import { RedraftBoard } from "@/components/trash/redraft";
+import { TimeMachine } from "@/components/trash/time-machine";
+import { ManagerQuiz } from "@/components/trash/quiz";
+import {
+  lockIn,
+  machine,
+  players,
+  quizManagers,
+  redrafts,
+} from "@/lib/extras";
 import { Hero } from "@/components/trash/hero";
 import {
   GlassNav,
@@ -252,6 +263,7 @@ async function LiveHero() {
 }
 
 export default function Home() {
+  const lock = lockIn();
   const names = league.managers
     .filter((m) => m.id !== "charlesjames05")
     .map((m) => m.id);
@@ -377,12 +389,60 @@ export default function Home() {
         </div>
       </section>
 
+      <section aria-labelledby="lockin" className="py-24 md:py-32">
+        <SectionHead id="lockin" title="The Lock-In Index">
+          Who sets a lineup like a front office and who leaves 70-point nights
+          on the bench. Every manager&apos;s real score against the best lineup
+          they could have played.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <LockInIndex {...lock} managers={league.managers} />
+        </div>
+      </section>
+
+      <section aria-labelledby="redraft" className="py-24 md:py-32">
+        <SectionHead id="redraft" title="The re-draft">
+          Every first-round pick, done again knowing how the season actually
+          went.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <RedraftBoard
+            drafts={redrafts()}
+            players={players}
+            managers={league.managers}
+          />
+        </div>
+      </section>
+
+      <section aria-labelledby="machine" className="py-24 md:py-32">
+        <SectionHead id="machine" title="Trade time machine">
+          Drag through four seasons and watch every roster get built, traded
+          apart and rebuilt, week by week.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <TimeMachine
+            seasons={machine()}
+            players={players}
+            managers={league.managers}
+          />
+        </div>
+      </section>
+
       <section aria-labelledby="managers" className="py-24 md:py-32">
         <SectionHead id="managers" title="The managers">
           Thirteen people have played in Trash. Ranked by all-time win rate.
           Open a card for the full file.
         </SectionHead>
         <ManagerCards managers={league.managers} />
+      </section>
+
+      <section aria-labelledby="quiz" className="py-24 md:py-32">
+        <SectionHead id="quiz" title="Which Trash manager are you?">
+          Six questions. One match, picked from real Sleeper numbers.
+        </SectionHead>
+        <div className="mx-auto max-w-4xl px-5 md:px-10">
+          <ManagerQuiz managers={quizManagers()} />
+        </div>
       </section>
 
       <section aria-labelledby="story" className="py-24 md:pt-32 md:pb-0">

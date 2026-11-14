@@ -135,8 +135,10 @@ export async function weekIfEndedToday(): Promise<{
     for (const r of proj) {
       if (!r.date || r.date < today || played.has(`${r.player_id}|${r.date}`)) continue;
       if (r.player?.injury_status === "Out") continue;
+      // One game per slot counts, so a manager plays the best remaining game, not the last one.
       const cur = lastGame.get(r.player_id);
-      if (!cur || r.date > cur.date) lastGame.set(r.player_id, { date: r.date, proj: fp(r.stats, scoring) });
+      const pr = fp(r.stats, scoring);
+      if (!cur || pr > cur.proj) lastGame.set(r.player_id, { date: r.date, proj: pr });
     }
     const byUser = new Map(users.map((u) => [u.user_id, u]));
     const team = rosters.map((r) => {
@@ -301,9 +303,11 @@ export async function waiverIntel(): Promise<{
         meta.set(r.player_id, { ...r.player, team: r.team ?? r.player.team });
       if (!r.date || r.date < today || played.has(`${r.player_id}|${r.date}`))
         continue;
+      // Trash counts one locked-in game per player per week, so the rest of the week is
+      // worth his single best projected game, not the sum of his games.
       const x = left.get(r.player_id) ?? { n: 0, pts: 0 };
       x.n += 1;
-      x.pts += fp(r.stats, sc);
+      x.pts = Math.max(x.pts, fp(r.stats, sc));
       left.set(r.player_id, x);
     }
     const next = new Map<string, number>();
@@ -332,7 +336,7 @@ export async function waiverIntel(): Promise<{
       const score =
         0.45 * recentAvg +
         0.25 * seasonAvg +
-        0.2 * (lw.pts / 3) +
+        0.2 * lw.pts +
         6 * Math.log10(1 + t / 100) +
         0.6 * (minRecent - minSeason);
       const injuryPenalty: Record<string, number> = { Out: 0.5, Doubtful: 0.7, Questionable: 0.85, "Day-To-Day": 0.85 };

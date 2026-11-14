@@ -52,7 +52,7 @@ export function Explain({
 }
 
 /** Segmented control with a sliding glass thumb. */
-function Segmented<T extends string>({
+export function Segmented<T extends string>({
   value,
   options,
   onChange,
@@ -457,7 +457,7 @@ export function WaiverWire({
             "Best stream this week",
             best.stream,
             best.stream &&
-              `${n1(best.stream.projLeft)} projected pts over ${best.stream.gamesLeft} games`,
+              `Best game left projects ${n1(best.stream.projLeft)} pts (${best.stream.gamesLeft} game${best.stream.gamesLeft === 1 ? "" : "s"} to pick from)`,
           ],
           [
             "Heating up",
@@ -631,9 +631,10 @@ export function WaiverWire({
           season.
         </p>
         <p>
-          <strong>Rest of week:</strong> projected points from games still to
-          play this week, with the game count in brackets. Good for streaming an
-          open slot.
+          <strong>Rest of week:</strong> the projection for his best single game
+          still to play this week. Trash only counts one locked-in game per
+          player a week, so two average games aren&apos;t worth more than one
+          big one. The bracket shows how many games he has left to pick from.
         </p>
         <p>
           <strong>Minutes trend:</strong> minutes per game lately minus season

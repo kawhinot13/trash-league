@@ -105,9 +105,15 @@ const LINKS = [
   ["crimes", "Crimes"],
   ["owns", "Who owns who"],
   ["rivalry", "Rivalries"],
+  ["lockin", "Lock-In"],
+  ["redraft", "Re-draft"],
+  ["machine", "Time machine"],
   ["managers", "Managers"],
+  ["quiz", "Quiz"],
   ["story", "Story"],
 ] as const;
+/** Kept out of the desktop bar so it fits on one line; still in the full menu. */
+const BURGER_ONLY = new Set<string>(["owns", "story", "crimes"]);
 export function GlassNav() {
   const [active, setActive] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -159,8 +165,8 @@ export function GlassNav() {
           >
             Trash
           </a>
-          <ul className="hidden items-center gap-1 text-sm md:flex">
-            {LINKS.map(([id, label]) => {
+          <ul className="hidden items-center gap-0.5 text-sm whitespace-nowrap lg:flex">
+            {LINKS.filter(([id]) => !BURGER_ONLY.has(id)).map(([id, label]) => {
               const isOn = active === id;
               return (
                 <li key={id} className="relative">
@@ -178,7 +184,7 @@ export function GlassNav() {
                   <a
                     href={`#${id}`}
                     aria-current={isOn ? "true" : undefined}
-                    className={`relative block rounded-full px-3.5 py-2 transition-colors duration-200 ${isOn ? "text-[var(--paper)]" : "text-[var(--muted)] hover:text-[var(--paper)]"}`}
+                    className={`relative block rounded-full px-3 py-2 transition-colors duration-200 ${isOn ? "text-[var(--paper)]" : "text-[var(--muted)] hover:text-[var(--paper)]"}`}
                   >
                     {label}
                   </a>
@@ -198,7 +204,7 @@ export function GlassNav() {
               onClick={() => setOpen(true)}
               aria-label="Open menu"
               aria-expanded={open}
-              className="flex size-10 items-center justify-center rounded-full bg-white/8 md:hidden"
+              className="flex size-10 items-center justify-center rounded-full bg-white/8 lg:hidden"
             >
               <svg
                 width="18"
@@ -218,7 +224,7 @@ export function GlassNav() {
       <AnimatePresence>
         {open ? (
           <motion.div
-            className="fixed inset-0 z-[60] bg-[rgba(6,18,13,0.72)] backdrop-blur-xl md:hidden"
+            className="fixed inset-0 z-[60] bg-[rgba(6,18,13,0.72)] backdrop-blur-xl lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
