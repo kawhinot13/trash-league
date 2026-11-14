@@ -31,7 +31,9 @@ export function Preloader() {
   useEffect(() => {
     // Decide once: skip for reduced motion or a repeat visit in this tab.
     if (skipPreloader === null) {
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reduce = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
       let seen = false;
       try {
         seen = sessionStorage.getItem("trash-loaded") === "1";
@@ -98,11 +100,12 @@ export function Preloader() {
 /* ── Floating glass nav with a morphing pill on the active section ── */
 const LINKS = [
   ["standings", "Standings"],
-  ["champions", "Champions"],
-  ["story", "Story"],
+  ["waivers", "Waivers"],
+  ["almanac", "Almanac"],
   ["crimes", "Crimes"],
   ["owns", "Who owns who"],
   ["managers", "Managers"],
+  ["story", "Story"],
 ] as const;
 export function GlassNav() {
   const [active, setActive] = useState<string | null>(null);
@@ -111,7 +114,9 @@ export function GlassNav() {
   useEffect(() => {
     // Each link's id sits on a heading; watch the section that contains it.
     const owner = new Map<Element, string | null>();
-    document.querySelectorAll("main section").forEach((sec) => owner.set(sec, null));
+    document
+      .querySelectorAll("main section")
+      .forEach((sec) => owner.set(sec, null));
     for (const [id] of LINKS) {
       const sec = document.getElementById(id)?.closest("section");
       if (sec) owner.set(sec, id);
@@ -119,7 +124,8 @@ export function GlassNav() {
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries)
-          if (e.isIntersecting && owner.has(e.target)) setActive(owner.get(e.target) ?? null);
+          if (e.isIntersecting && owner.has(e.target))
+            setActive(owner.get(e.target) ?? null);
       },
       { rootMargin: "-45% 0px -50% 0px" },
     );

@@ -3,6 +3,7 @@ import { Hero } from "@/components/trash/hero";
 import { GlassNav, Preloader, StatStrip } from "@/components/trash/polish";
 import {
   Banners,
+  Court,
   Crimes,
   Footer,
   SectionHead,
@@ -17,6 +18,8 @@ import {
   type StoryItem,
 } from "@/components/trash/interactive";
 import { league, liveStandings } from "@/lib/league";
+import { waiverIntel, weekIfEndedToday } from "@/lib/live";
+import { Almanac, LiveWeek, WaiverWire } from "@/components/trash/intel";
 
 const STORY: StoryItem[] = [
   {
@@ -112,8 +115,31 @@ const STORY: StoryItem[] = [
 ];
 
 async function LiveTable() {
-  const { rows, live, week } = await liveStandings();
-  return <Standings rows={rows} live={live} week={week} />;
+  const live = await weekIfEndedToday();
+  if (!live) {
+    const { rows, live: ok, week } = await liveStandings();
+    return <Standings rows={rows} live={ok} week={week} />;
+  }
+  return (
+    <Court id="standings" title="Season 4 table">
+      <LiveWeek week={live.week} rows={live.rows} daysLeft={live.daysLeft} />
+    </Court>
+  );
+}
+async function Waivers() {
+  const w = await waiverIntel();
+  if (!w)
+    return (
+      <p className="mx-auto max-w-6xl px-5 text-[var(--muted)] md:px-10">
+        Waiver intel is unavailable right now because Sleeper did not respond.
+        Try again in a few minutes.
+      </p>
+    );
+  return (
+    <div className="mx-auto max-w-6xl px-5 md:px-10">
+      <WaiverWire players={w.players} week={w.week} />
+    </div>
+  );
 }
 async function LiveHero() {
   const { rows, week } = await liveStandings();
@@ -165,13 +191,44 @@ export default function Home() {
         <LiveTable />
       </Suspense>
 
+      <section aria-labelledby="waivers" className="py-24 md:py-32">
+        <SectionHead id="waivers" title="Waiver intel">
+          Everyone on the wire, ranked for this league&apos;s scoring. Recent
+          form, minutes, games left this week and what the rest of Sleeper is
+          grabbing.
+        </SectionHead>
+        <Suspense
+          fallback={
+            <p className="mx-auto max-w-6xl px-5 text-[var(--muted)] md:px-10">
+              Loading the wire…
+            </p>
+          }
+        >
+          <Waivers />
+        </Suspense>
+      </section>
+
       <Banners />
 
-      <section aria-labelledby="story" className="py-24 md:pt-32 md:pb-0">
-        <SectionHead id="story" title="The story so far">
-          Fifteen moments that made the league, drawn from the animated movie.
+      <section aria-labelledby="almanac" className="py-24 md:py-32">
+        <SectionHead id="almanac" title="The almanac">
+          Four seasons, sorted by the questions the league actually argues
+          about. Luck, playoff résumés, trade partners, waiver habits, drafts
+          and every final table.
         </SectionHead>
-        <Story items={STORY} />
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <Almanac
+            managers={league.managers}
+            seasons={league.seasons}
+            partners={
+              (
+                league as unknown as {
+                  partners: { a: string; b: string; n: number }[];
+                }
+              ).partners
+            }
+          />
+        </div>
       </section>
 
       <Crimes />
@@ -190,6 +247,13 @@ export default function Home() {
           Open a card for the full file.
         </SectionHead>
         <ManagerCards managers={league.managers} />
+      </section>
+
+      <section aria-labelledby="story" className="py-24 md:pt-32 md:pb-0">
+        <SectionHead id="story" title="The story so far">
+          Fifteen moments that made the league, drawn from the animated movie.
+        </SectionHead>
+        <Story items={STORY} />
       </section>
 
       <section aria-labelledby="movie" className="py-24 md:py-32">
