@@ -319,7 +319,6 @@ export function MatchupOfWeek({
   b,
   h2hA,
   h2hB,
-  why,
   asOf,
 }: {
   week: number;
@@ -343,7 +342,7 @@ export function MatchupOfWeek({
   };
   h2hA: number;
   h2hB: number;
-  why: string;
+  why?: string;
   asOf: string;
 }) {
   return (
@@ -353,9 +352,10 @@ export function MatchupOfWeek({
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(233,196,106,0.14),transparent_70%)]"
       />
       <div className="relative">
-        <p className="text-center text-sm text-[var(--gold)]">
-          Week {week}. {why}
-        </p>
+        <div className="text-center">
+          <p className="font-display text-4xl leading-none font-black text-[var(--gold)] md:text-5xl">Matchup of the Week</p>
+          <p className="mt-2 text-sm text-[var(--muted)]">Week {week}</p>
+        </div>
         <div className="mt-6 grid items-center gap-8 md:grid-cols-[1fr_auto_1fr]">
           <MatchSide x={a} />
           <div className="text-center">
