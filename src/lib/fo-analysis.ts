@@ -245,3 +245,43 @@ export function evaluateTrade(
     meBefore: meB,
   };
 }
+
+/* ── Buy low / sell high ───────────────────────────────────── */
+export type Mover = { pid: string; owner: string | null; gap: number; reasons: string[] };
+
+/**
+ * Compares what a player is locking in this season (his weekly best game) with what he should be
+ * worth (last season and Sleeper's projection, as a weekly ceiling). Hot well above it: sell high.
+ * Healthy and well below it: buy low. Recent games and minutes decide how loud the call is.
+ */
+export function market(P: Record<string, FOPlayer>, teams: FOTeam[]) {
+  const owner = (pid: string) => teams.find((t) => t.players.includes(pid))?.id ?? null;
+  const n0 = (x: number) => Math.round(x);
+  const sell: (Mover & { score: number })[] = [];
+  const buy: (Mover & { score: number })[] = [];
+  for (const t of teams)
+    for (const pid of t.players) {
+      const p = P[pid];
+      if (!p || p.onIR || p.injury === "Out" || p.weeks < 2 || p.expected < 30) continue;
+      const gap = (p.now - p.expected) / p.expected;
+      const reasons: string[] = [`Locking in ${n0(p.now)} a week; expected about ${n0(p.expected)}.`];
+      const recentCeil = p.recent * 1.3; // last 3 games, as a weekly-best estimate
+      const minDelta = p.minRecent - p.min;
+      if (gap >= 0.15 && p.now >= 35) {
+        if (recentCeil < p.now * 0.9) reasons.push(`Already cooling: last 3 games average ${n0(p.recent)}.`);
+        if (minDelta <= -3) reasons.push(`Minutes slipping (${n0(p.minRecent)} lately vs ${n0(p.min)}).`);
+        if (p.prev) reasons.push(`Averaged ${n0(p.prev)} a game last season.`);
+        const heat = recentCeil < p.now * 0.9 ? 1.25 : 1;
+        sell.push({ pid, owner: owner(pid), gap, reasons, score: gap * p.expected * heat });
+      } else if (gap <= -0.15) {
+        if (recentCeil > p.now) reasons.push(`Bouncing back: last 3 games average ${n0(p.recent)}.`);
+        if (minDelta >= 2) reasons.push(`Minutes rising (${n0(p.minRecent)} lately vs ${n0(p.min)}).`);
+        else if (minDelta > -2) reasons.push("Minutes are steady, so the role is still there.");
+        if (p.prev) reasons.push(`Averaged ${n0(p.prev)} a game last season.`);
+        const heat = recentCeil > p.now ? 1.25 : 1;
+        buy.push({ pid, owner: owner(pid), gap, reasons, score: -gap * p.expected * heat });
+      }
+    }
+  const top = (xs: (Mover & { score: number })[]) => xs.sort((a, b) => b.score - a.score).slice(0, 12).map((m) => ({ pid: m.pid, owner: m.owner, gap: m.gap, reasons: m.reasons }));
+  return { sell: top(sell), buy: top(buy) };
+}

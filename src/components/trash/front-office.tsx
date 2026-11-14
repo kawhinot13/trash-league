@@ -4,7 +4,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { FrontOffice } from "@/lib/front-office";
-import { METRICS, diagnose, evaluateTrade, profile, type Metric } from "@/lib/fo-analysis";
+import { METRICS, diagnose, evaluateTrade, market, profile, type Metric, type Mover } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 
@@ -48,7 +48,7 @@ function Picker({ ids, value, onChange, nick, label }: { ids: string[]; value: s
             className={`relative size-11 cursor-pointer rounded-full transition-[transform,opacity] duration-200 ${on ? "scale-110" : "opacity-50 hover:opacity-100"}`}
           >
             <Image src={`/avatars/${id}.jpg`} alt="" width={44} height={44} className="size-11 rounded-full object-cover" />
-            {on ? <motion.span layoutId={`fo-${label}`} className="absolute -inset-1 rounded-full ring-2 ring-[var(--paper)]" /> : null}
+            {on ? <span className="absolute -inset-1 rounded-full ring-2 ring-[var(--paper)]" /> : null}
           </button>
         );
       })}
@@ -61,9 +61,83 @@ function Injury({ p }: { p: { injury: string | null; onIR: boolean } }) {
   return <span className="rounded bg-[var(--ticket)] px-1 py-px text-[10px] font-bold text-white">{p.onIR ? "IR" : p.injury === "Questionable" ? "Q" : p.injury === "Out" ? "OUT" : (p.injury ?? "").slice(0, 3)}</span>;
 }
 
+function MoverList({
+  title,
+  tone,
+  items,
+  P,
+  nick,
+  me,
+  onAct,
+}: {
+  title: string;
+  tone: "buy" | "sell";
+  items: Mover[];
+  P: FrontOffice["players"];
+  nick: (id: string) => string;
+  me: string;
+  onAct: (m: Mover) => void;
+}) {
+  const reduce = useReducedMotion();
+  const color = tone === "buy" ? GOOD : "var(--wood)";
+  return (
+    <section className="rounded-2xl border border-white/10 bg-black/20 p-4">
+      <h3 className="font-display text-2xl font-black" style={{ color }}>
+        {title}
+      </h3>
+      <p className="text-xs text-[var(--muted)]">
+        {tone === "buy" ? "Playing below their level, likely to bounce back." : "Playing above their level, likely to cool off."}
+      </p>
+      {items.length ? (
+        <ul className="mt-3 space-y-2">
+          {items.map((m, i) => {
+            const p = P[m.pid];
+            const mine = m.owner === me;
+            return (
+              <motion.li
+                key={m.pid}
+                initial={reduce ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 0.04, 0.3) }}
+                className="rounded-xl bg-black/25 p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <Head pid={m.pid} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">
+                      {p?.name} <span className="font-normal text-[var(--muted)]">{p?.pos.join("/")}</span>
+                    </p>
+                    <p className="truncate text-xs text-[var(--muted)]">{m.owner ? (mine ? "Your team" : nick(m.owner)) : "Free agent"}</p>
+                  </div>
+                  <span className="rounded-md px-1.5 py-0.5 text-xs font-black tabular-nums" style={{ background: color, color: "#10141a" }}>
+                    {m.gap > 0 ? "+" : ""}
+                    {Math.round(m.gap * 100)}%
+                  </span>
+                </div>
+                <ul className="mt-2 space-y-0.5 text-xs leading-relaxed text-[var(--paper)]/80">
+                  {m.reasons.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+                {m.owner ? (
+                  <button type="button" onClick={() => onAct(m)} className="mt-2 cursor-pointer text-xs font-semibold text-[var(--wood)] underline-offset-4 hover:underline">
+                    {mine ? "Shop him in the trade analyzer" : "Analyze a trade for him"}
+                  </button>
+                ) : null}
+              </motion.li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm text-[var(--muted)]">Nobody stands out right now.</p>
+      )}
+    </section>
+  );
+}
+
 export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice; managers: Manager[]; local: string[] }) {
   const localSet = useMemo(() => new Set(local), [local]);
-  const [tab, setTab] = useState<"team" | "trade">("team");
+  const [tab, setTab] = useState<"team" | "trade" | "market">("team");
   const [me, setMe] = useState(data.teams[0].id);
   const [them, setThem] = useState(data.teams[1].id);
   const [give, setGive] = useState<string[]>([]);
@@ -93,10 +167,19 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
   const profiles = useMemo(() => data.teams.map((t) => profile(t, P, data.slots)), [data, P]);
   const mine = profiles.find((p) => p.id === me)!;
   const d = useMemo(() => diagnose(mine, profiles, P, data.teams, data.free, data.slots), [mine, profiles, P, data]);
+  // The trade partner can never be your own team (e.g. after your team is restored from a past
+  // visit); fall back to the first other team so the picker, titles and rosters always agree.
+  const partner = them !== me && ids.includes(them) ? them : ids.find((x) => x !== me)!;
   const meTeam = data.teams.find((t) => t.id === me)!;
-  const themTeam = data.teams.find((t) => t.id === them)!;
+  const themTeam = data.teams.find((t) => t.id === partner)!;
   const trade = give.length && get.length ? evaluateTrade(give, get, meTeam, themTeam, P, data.slots) : null;
 
+  const mk = useMemo(() => market(P, data.teams), [P, data]);
+  const sellMine = (pid: string) => {
+    setGive([pid]);
+    setGet([]);
+    setTab("trade");
+  };
   const loadTrade = (pid: string, owner: string | null) => {
     if (!owner) return;
     setThem(owner);
@@ -109,7 +192,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
     <LocalPhotos.Provider value={localSet}>
     <div data-no-rico className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["trade", "Trade analyzer"]]} />
+        <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"]]} />
         <p className="text-xs text-[var(--muted)]">Live Season 4 rosters, week {data.week}</p>
       </div>
       <div className="mt-6">
@@ -220,6 +303,23 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
               ))}
             </ul>
 
+            {/* this team's market calls */}
+            {(() => {
+              const sells = mk.sell.filter((m) => m.owner === me).slice(0, 3);
+              const buys = mk.buy.filter((m) => m.owner && m.owner !== me).slice(0, 3);
+              if (!sells.length && !buys.length) return null;
+              return (
+                <div className="mt-10 grid gap-4 md:grid-cols-2">
+                  {sells.length ? (
+                    <MoverList title="Sell high on your team" tone="sell" items={sells} P={P} nick={nick} me={me} onAct={(m) => sellMine(m.pid)} />
+                  ) : null}
+                  {buys.length ? (
+                    <MoverList title="Buy-low targets" tone="buy" items={buys} P={P} nick={nick} me={me} onAct={(m) => loadTrade(m.pid, m.owner)} />
+                  ) : null}
+                </div>
+              );
+            })()}
+
             {/* top nine + depth */}
             <div className="mt-10 grid gap-6 md:grid-cols-2">
               <section>
@@ -260,12 +360,23 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
               </section>
             </div>
           </motion.div>
+        ) : tab === "market" ? (
+          <motion.div key="market" initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">
+            <p className="max-w-[64ch] text-[var(--paper)]/85">
+              Who&apos;s running hot and who&apos;s in a slump, across every roster in the league. Hot stretches cool off and slumps
+              bounce back, so this is when prices are wrong.
+            </p>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <MoverList title="Sell high" tone="sell" items={mk.sell} P={P} nick={nick} me={me} onAct={(m) => (m.owner === me ? sellMine(m.pid) : loadTrade(m.pid, m.owner))} />
+              <MoverList title="Buy low" tone="buy" items={mk.buy} P={P} nick={nick} me={me} onAct={(m) => (m.owner === me ? sellMine(m.pid) : loadTrade(m.pid, m.owner))} />
+            </div>
+          </motion.div>
         ) : (
           <motion.div key="trade" initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-6">
             <p className="mb-2 text-sm text-[var(--muted)]">Trade with</p>
             <Picker
               ids={ids.filter((x) => x !== me)}
-              value={them}
+              value={partner}
               onChange={(v) => {
                 setThem(v);
                 setGet([]);
@@ -276,7 +387,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {[
                 { title: `${nick(me)} gives`, team: meTeam, sel: give, set: setGive },
-                { title: `${nick(them)} gives`, team: themTeam, sel: get, set: setGet },
+                { title: `${nick(partner)} gives`, team: themTeam, sel: get, set: setGet },
               ].map((col) => (
                 <section key={col.title} className="rounded-2xl bg-black/20 p-4">
                   <h3 className="font-display text-2xl font-black">{col.title}</h3>
@@ -332,7 +443,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                       {trade.verdict === "win" ? "Smash accept" : trade.verdict === "lose" ? "Hang up" : "Fair deal"}
                     </motion.p>
                     <p className="text-sm">
-                      {nick(them)} would{" "}
+                      {nick(partner)} would{" "}
                       <span className="font-bold" style={{ color: trade.accept === "likely" ? GOOD : trade.accept === "unlikely" ? BAD : "var(--wood)" }}>
                         {trade.accept === "likely" ? "probably say yes" : trade.accept === "maybe" ? "think about it" : "probably say no"}
                       </span>
@@ -341,7 +452,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     {[
                       { who: nick(me), d: trade.meDelta },
-                      { who: nick(them), d: trade.themDelta },
+                      { who: nick(partner), d: trade.themDelta },
                     ].map((x) => (
                       <div key={x.who} className="rounded-2xl bg-black/25 p-4">
                         <p className="text-sm text-[var(--muted)]">{x.who}&apos;s starting nine</p>
@@ -356,7 +467,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                   <p className="mt-4 text-sm text-[var(--muted)]">
                     Raw value: you send {n0(trade.valueOut)} a week, you get {n0(trade.valueIn)}.{" "}
                     {trade.meDrops.length ? `You'd have to drop ${trade.meDrops.map((id) => P[id].name).join(", ")}. ` : ""}
-                    {trade.themDrops.length ? `${nick(them)} would drop ${trade.themDrops.map((id) => P[id].name).join(", ")}.` : ""}
+                    {trade.themDrops.length ? `${nick(partner)} would drop ${trade.themDrops.map((id) => P[id].name).join(", ")}.` : ""}
                   </p>
                   <h4 className="mt-5 font-semibold">Your new starting nine</h4>
                   <ul className="mt-2 grid gap-1.5 sm:grid-cols-3">
