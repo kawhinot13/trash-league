@@ -74,7 +74,7 @@ export function MyGuys({
   const guy = [...row.best].sort((a, b) => b.weeks * b.pts - a.weeks * a.pts)[0];
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 backdrop-blur-xl md:p-10">
+    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="flex flex-wrap gap-2" role="group" aria-label="Pick a manager">
         {rows.map((r) => {
           const on = r.id === row.id;

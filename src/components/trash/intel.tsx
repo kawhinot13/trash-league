@@ -66,7 +66,7 @@ export function Segmented<T extends string>({
   return (
     <div
       role="tablist"
-      className="inline-flex flex-wrap gap-1 rounded-full border border-white/12 bg-black/25 p-1 backdrop-blur-md"
+      className="inline-flex flex-wrap gap-1 rounded-full border border-white/12 bg-black/25 p-1"
     >
       {options.map(([v, label]) => (
         <button
@@ -346,7 +346,7 @@ export function MatchupOfWeek({
   asOf: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-[var(--gold)]/30 bg-[#10241b] p-6 text-[var(--paper)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] backdrop-blur-xl md:p-10">
+    <div className="relative overflow-hidden rounded-[28px] border border-[var(--gold)]/30 bg-[#10241b] p-6 text-[var(--paper)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] md:p-10">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(233,196,106,0.14),transparent_70%)]"
@@ -475,7 +475,7 @@ export function WaiverWire({
           p ? (
             <div
               key={label as string}
-              className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-5 backdrop-blur-md"
+              className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-5"
             >
               <p className="text-sm text-[var(--gold)]">{label as string}</p>
               <div className="mt-3 flex items-center gap-4">
@@ -519,7 +519,7 @@ export function WaiverWire({
           {week}.
         </p>
       </div>
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[rgba(22,58,44,0.45)] backdrop-blur-md">
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[rgba(22,58,44,0.45)]">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="text-[var(--muted)]">
             <tr>
@@ -734,7 +734,7 @@ export function Almanac({
           ["seasons", "Every season"],
         ]}
       />
-      <div className="mt-8 rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.45)] p-5 backdrop-blur-md md:p-8">
+      <div className="mt-8 rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.45)] p-5 md:p-8">
         {tab === "luck" ? (
           <div className="grid gap-10 md:grid-cols-2">
             <div>

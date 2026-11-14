@@ -1,14 +1,27 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { onReady } from "./polish";
 
-const Trophy = dynamic(() => import("./trophy"), {
-  ssr: false,
-  loading: () => null,
-});
+/** The trophy: a still render of the old 3D model. WebGL was the single heaviest thing on the
+ * site (seconds of main-thread work on phones), and a gentle CSS float looks the same. */
+function Trophy() {
+  return (
+    <div className="trophy-float flex h-full w-full items-center justify-center">
+      <Image
+        src="/trophy.webp"
+        alt=""
+        width={839}
+        height={1068}
+        priority
+        sizes="(min-width: 768px) 480px, 240px"
+        className="h-[86%] w-auto drop-shadow-[0_30px_60px_rgba(0,0,0,0.45)]"
+      />
+    </div>
+  );
+}
 
 /** The opening: TRASH drops in once the preloader clears, the gold trophy floats in front
  * of a rim-lit court horizon (inspired by Frax's planet glow, drawn as a basketball). */
@@ -160,7 +173,7 @@ export function Hero({
         </p>
         <a
           href="/live"
-          className="group inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-[rgba(16,40,30,0.55)] px-5 py-3 text-sm backdrop-blur-xl transition-colors duration-200 hover:border-white/25 md:self-end"
+          className="group inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-[rgba(16,40,30,0.55)] px-5 py-3 text-sm transition-colors duration-200 hover:border-white/25 md:self-end"
         >
           <span className="relative flex size-2.5">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--gold)] opacity-60" />

@@ -1,19 +1,16 @@
 "use client";
 
-import Image from "next/image";
-import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Players } from "@/lib/extras";
-import type { Option, Question } from "@/lib/dive";
+import type { Prompt } from "@/lib/dive";
 import { Face } from "./player";
 
-const CLOCK = 15;
 const ROUNDS = 5;
 const LAUNCH = Date.UTC(2026, 10, 14);
-const SWISH = "#7fd49a";
 
-type Mark = "swish" | "brick" | "clock";
-type Saved = { score: number; marks: Mark[] };
+type Pick = { pid: string | null; typed: string; score: number | null };
+type Saved = { picks: Pick[] };
 
 const todayET = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -21,6 +18,8 @@ const rng = (seed: number) => () => {
   seed = (seed * 1664525 + 1013904223) % 4294967296;
   return seed / 4294967296;
 };
+const norm = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
 const store = {
   get<T>(k: string): T | null {
     try {
@@ -37,223 +36,266 @@ const store = {
   },
 };
 
-/** Today's five: one per kind where possible, options shuffled, same for everyone. */
-function todays(pool: Question[], day: string) {
+/** Today's five prompts, one per kind, identical for everyone on the same day. */
+function todays(pool: Prompt[], day: string) {
   const r = rng(Number(day.replaceAll("-", "")));
-  const kinds = [...new Set(pool.map((q) => q.kind))].sort(() => r() - 0.5);
-  const out: (Question & { answer: number })[] = [];
-  for (const k of kinds) {
-    if (out.length === ROUNDS) break;
+  const kinds = [...new Set(pool.map((q) => q.kind))].sort().sort(() => r() - 0.5);
+  return kinds.slice(0, ROUNDS).map((k) => {
     const of = pool.filter((q) => q.kind === k);
-    const q = of[Math.floor(r() * of.length)];
-    const order = q.options.map((_, i) => i).sort(() => r() - 0.5);
-    out.push({ ...q, options: order.map((i) => q.options[i]), answer: order.indexOf(0) });
-  }
-  return out;
+    return of[Math.floor(r() * of.length)];
+  });
 }
 
-/* ── The court strip: a ball that swishes or bricks ─────────── */
-function Hoop({ shot }: { shot: Mark | null }) {
+const tier = (s: number | null) =>
+  s === null
+    ? { label: "Not in the bin", color: "var(--ticket)", sq: "⬛" }
+    : s >= 90
+      ? { label: "Dumpster diver", color: "var(--wood)", sq: "🟫" }
+      : s >= 60
+        ? { label: "Deep cut", color: "#7fd49a", sq: "🟩" }
+        : s >= 25
+          ? { label: "Solid pull", color: "var(--paper)", sq: "🟨" }
+          : { label: "Everybody said that", color: "var(--muted)", sq: "🟥" };
+
+/* ── The dumpster depth gauge: your pick sinks as deep as it is niche ── */
+function Dumpster({ pick, players }: { pick: Pick | null; players: Players }) {
   const reduce = useReducedMotion();
-  const anim =
-    shot === "swish"
-      ? { x: ["0%", "180%", "330%", "330%"], y: ["0%", "-140%", "-95%", "40%"], rotate: [0, 200, 320, 360], opacity: [1, 1, 1, 0] }
-      : shot === "brick"
-        ? { x: ["0%", "180%", "322%", "420%"], y: ["0%", "-140%", "-110%", "70%"], rotate: [0, 200, 300, 520], opacity: [1, 1, 1, 0] }
-        : shot === "clock"
-          ? { x: ["0%", "60%", "110%"], y: ["0%", "-30%", "40%"], rotate: [0, 90, 160], opacity: [1, 1, 0] }
-          : { x: "0%", y: "0%", rotate: 0, opacity: 1 };
+  const top = 70;
+  const depth = 190;
+  const y = pick && pick.score !== null ? top + 14 + (pick.score / 100) * (depth - 40) : 0;
   return (
-    <div aria-hidden className="relative mx-auto h-28 w-full max-w-md">
-      {/* backboard, rim, net */}
-      <svg viewBox="0 0 120 110" className="absolute top-0 right-[6%] h-24 w-auto">
-        <rect x="70" y="4" width="44" height="34" rx="3" fill="rgba(246,243,234,0.08)" stroke="var(--paper)" strokeWidth="2.5" />
-        <rect x="84" y="16" width="16" height="12" fill="none" stroke="var(--paper)" strokeWidth="2" />
-        <motion.path
-          d="M66 52 L78 86 L90 52 M72 52 L82 84 M84 52 L80 84 M60 52 L74 84"
-          fill="none"
-          stroke="var(--paper)"
-          strokeOpacity=".6"
-          strokeWidth="1.6"
-          animate={shot === "swish" && !reduce ? { scaleY: [1, 1.25, 1] } : { scaleY: 1 }}
-          style={{ transformOrigin: "75px 52px" }}
-          transition={{ duration: 0.4, delay: 0.62 }}
-        />
-        <line x1="56" y1="52" x2="96" y2="52" stroke="var(--ticket)" strokeWidth="4" strokeLinecap="round" />
-        <line x1="92" y1="38" x2="92" y2="52" stroke="var(--paper)" strokeWidth="2" />
+    <div className="relative mx-auto w-full max-w-[260px]" aria-hidden>
+      <svg viewBox="0 0 260 300" className="block h-auto w-full">
+        {/* lid, propped open */}
+        <path d="M30 64 L222 20 L228 34 L36 78 Z" fill="var(--bin-3)" stroke="#10141a" strokeWidth="5" strokeLinejoin="round" />
+        {/* body */}
+        <path d="M34 70 H226 L214 266 H46 Z" fill="var(--bin-2)" stroke="#10141a" strokeWidth="6" strokeLinejoin="round" />
+        <path d="M34 70 H226 L214 266 H46 Z" fill="url(#dive-depth)" />
+        <defs>
+          <linearGradient id="dive-depth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#000" stopOpacity="0" />
+            <stop offset="1" stopColor="#000" stopOpacity=".55" />
+          </linearGradient>
+        </defs>
+        {/* depth ticks */}
+        {[0, 25, 50, 75, 100].map((t) => {
+          const ty = top + 14 + (t / 100) * (depth - 40);
+          return (
+            <g key={t}>
+              <line x1="50" x2="66" y1={ty} y2={ty} stroke="var(--paper)" strokeOpacity=".35" strokeWidth="2" />
+              <text x="72" y={ty + 4} fontSize="11" fill="var(--paper)" fillOpacity=".5">
+                {t}
+              </text>
+            </g>
+          );
+        })}
+        <rect x="56" y="268" width="26" height="14" rx="4" fill="#10141a" />
+        <rect x="178" y="268" width="26" height="14" rx="4" fill="#10141a" />
+        <text x="130" y="244" textAnchor="middle" className="font-display" fontSize="20" fontWeight="900" fill="var(--paper)" fillOpacity=".18">
+          TRASH
+        </text>
       </svg>
-      {/* the ball */}
-      <motion.div
-        key={shot ?? "idle"}
-        className="absolute bottom-1 left-[8%] size-9"
-        initial={false}
-        animate={reduce ? { opacity: shot ? 0 : 1 } : anim}
-        transition={{ duration: shot ? 0.9 : 0, ease: "easeOut", times: shot === "clock" ? [0, 0.5, 1] : [0, 0.45, 0.7, 1] }}
-      >
-        <svg viewBox="0 0 40 40" className="size-full">
-          <circle cx="20" cy="20" r="18" fill="var(--wood)" stroke="#10141a" strokeWidth="2.5" />
-          <path d="M2 20 H38 M20 2 V38 M7 8 C16 16 16 24 7 32 M33 8 C24 16 24 24 33 32" fill="none" stroke="#10141a" strokeWidth="2" />
-        </svg>
-      </motion.div>
+      <AnimatePresence>
+        {pick ? (
+          <motion.div
+            key={pick.typed}
+            className="absolute left-[58%] -translate-x-1/2"
+            initial={{ top: -10, opacity: 0, rotate: -20 }}
+            animate={
+              pick.score === null
+                ? reduce
+                  ? { top: 20, opacity: 0.6 }
+                  : { top: [-10, 26, -30, 60], left: ["58%", "58%", "82%", "110%"], rotate: [-20, 10, 140, 280], opacity: [1, 1, 1, 0] }
+                : { top: (y / 300) * 100 + "%", opacity: 1, rotate: 0 }
+            }
+            transition={
+              pick.score === null
+                ? { duration: reduce ? 0.2 : 1.1, ease: "easeOut" }
+                : reduce
+                  ? { duration: 0.2 }
+                  : { type: "spring", duration: 1.1, bounce: 0.35 }
+            }
+            style={{ marginTop: -22 }}
+          >
+            {pick.pid ? (
+              <span className="block rounded-full ring-4 ring-[#10141a]">
+                <Face pid={pick.pid} players={players} size={44} />
+              </span>
+            ) : (
+              <span className="block size-11 rounded-full bg-[var(--ticket)] ring-4 ring-[#10141a]" />
+            )}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
 
-function Clock({ left }: { left: number }) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const danger = left <= 5;
+function AnswerBox({
+  players,
+  onPick,
+  disabled,
+}: {
+  players: Players;
+  onPick: (pid: string | null, typed: string) => void;
+  disabled: boolean;
+}) {
+  const [q, setQ] = useState("");
+  const [hi, setHi] = useState(0);
+  const list = useId();
+  const all = useMemo(
+    () => Object.entries(players).map(([pid, p]) => ({ pid, name: p[0], n: norm(p[0]) })).filter((x) => x.name),
+    [players],
+  );
+  const nq = norm(q);
+  const hits =
+    nq.length < 2
+      ? []
+      : all
+          .filter((x) => x.n.split(" ").some((w) => w.startsWith(nq)) || x.n.startsWith(nq))
+          .slice(0, 6);
+  const submit = (pid?: string) => {
+    if (disabled || !q.trim()) return;
+    const exact = pid ?? all.find((x) => x.n === nq)?.pid ?? hits[hi]?.pid ?? null;
+    onPick(exact, exact ? players[exact][0] : q.trim());
+    setQ("");
+  };
   return (
-    <div className="relative size-16 shrink-0" aria-label={`${Math.ceil(left)} seconds left`}>
-      <svg viewBox="0 0 64 64" className="size-full -rotate-90">
-        <circle cx="32" cy="32" r={r} fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
-        <circle
-          cx="32"
-          cy="32"
-          r={r}
-          fill="none"
-          stroke={danger ? "var(--ticket)" : "var(--paper)"}
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - left / CLOCK)}
-          style={{ transition: "stroke-dashoffset 100ms linear, stroke 200ms" }}
-        />
-      </svg>
-      <span
-        className={`font-display absolute inset-0 flex items-center justify-center text-2xl font-black tabular-nums ${danger ? "text-[var(--ticket)]" : ""}`}
-      >
-        {Math.ceil(left)}
-      </span>
+    <div className="relative">
+      <input
+        value={q}
+        disabled={disabled}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setHi(0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setHi((h) => Math.min(h + 1, Math.max(0, hits.length - 1)));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHi((h) => Math.max(0, h - 1));
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        placeholder="Type a player's name"
+        aria-label="Your answer"
+        aria-autocomplete="list"
+        aria-controls={list}
+        autoComplete="off"
+        autoFocus
+        className="h-14 w-full rounded-2xl border-2 border-white/15 bg-black/30 px-5 text-lg font-semibold text-[var(--paper)] outline-none placeholder:font-normal placeholder:text-[var(--muted)] focus:border-[var(--paper)]/60"
+      />
+      {hits.length ? (
+        <ul id={list} role="listbox" className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-white/12 bg-[#0d241a] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          {hits.map((h, k) => (
+            <li key={h.pid} role="option" aria-selected={k === hi}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => submit(h.pid)}
+                className={`flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left ${k === hi ? "bg-white/10" : "hover:bg-white/5"}`}
+              >
+                <Face pid={h.pid} players={players} size={32} />
+                <span className="font-semibold">{h.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
 
-function OptionFace({ o, players }: { o: Option; players: Players }) {
-  if (o.mgr)
-    return (
-      <Image src={`/avatars/${o.mgr}.jpg`} alt="" width={36} height={36} className="size-9 shrink-0 rounded-full object-cover" />
-    );
-  if (o.pid) return <Face pid={o.pid} players={players} size={36} />;
-  return null;
-}
-
-export function DumpsterDive({ pool, players }: { pool: Question[]; players: Players }) {
+export function DumpsterDive({ pool, players }: { pool: Prompt[]; players: Players }) {
   const reduce = useReducedMotion();
   const [day, setDay] = useState<string | null>(null);
   const [phase, setPhase] = useState<"intro" | "play" | "done">("intro");
   const [i, setI] = useState(0);
-  const [left, setLeft] = useState(CLOCK);
-  const [chosen, setChosen] = useState<number | null>(null);
-  const [marks, setMarks] = useState<Mark[]>([]);
-  const [score, setScore] = useState(0);
+  const [picks, setPicks] = useState<Pick[]>([]);
   const [streak, setStreak] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [scope, animateRoot] = useAnimate();
-  const started = useRef(0);
+  const nextBtn = useRef<HTMLButtonElement>(null);
 
   // Date-dependent bits only after mount, so server and client render the same first frame.
   useEffect(() => {
     const d = todayET();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDay(d);
-    const saved = store.get<Saved>(`dive:${d}`);
-    const st = store.get<{ last: string; n: number }>("dive:streak");
-    setStreak(st?.n ?? 0);
-    if (saved) {
-      setMarks(saved.marks);
-      setScore(saved.score);
+    setStreak(store.get<{ last: string; n: number }>("dive:streak")?.n ?? 0);
+    const saved = store.get<Saved>(`dive2:${d}`);
+    if (saved?.picks?.length === ROUNDS) {
+      setPicks(saved.picks);
       setPhase("done");
     }
   }, []);
   const qs = useMemo(() => (day ? todays(pool, day) : []), [pool, day]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : null;
   const q = qs[i];
-  const mark: Mark | null = chosen === null ? null : chosen === -1 ? "clock" : chosen === q?.answer ? "swish" : "brick";
+  const current = picks[i] ?? null;
+  const total = picks.reduce((t, p) => t + (p.score ?? 0), 0);
 
-  const answer = useCallback(
-    (k: number) => {
-      if (chosen !== null || !q) return;
-      const secs = Math.max(0, CLOCK - (performance.now() - started.current) / 1000);
-      setChosen(k);
-      const m: Mark = k === -1 ? "clock" : k === q.answer ? "swish" : "brick";
-      setMarks((x) => [...x, m]);
-      if (m === "swish") setScore((s) => s + 100 + Math.round(secs * 4));
-      else if (!reduce && scope.current) animateRoot(scope.current, { x: [0, -8, 7, -4, 0] }, { duration: 0.35 });
-    },
-    [chosen, q, reduce, scope, animateRoot],
-  );
-
-  // Shot clock.
   useEffect(() => {
-    if (phase !== "play" || chosen !== null) return;
-    started.current = performance.now();
-    const t = setInterval(() => {
-      const l = Math.max(0, CLOCK - (performance.now() - started.current) / 1000);
-      setLeft(l);
-      if (l <= 0) answer(-1);
-    }, 100);
-    return () => clearInterval(t);
-  }, [phase, i, chosen, answer]);
+    if (current) nextBtn.current?.focus();
+  }, [current]);
 
-  const next = () => {
-    if (i + 1 < qs.length) {
-      setI(i + 1);
-      setChosen(null);
-      setLeft(CLOCK);
-      return;
-    }
-    setPhase("done");
-    if (day) {
-      store.set(`dive:${day}`, { score, marks } satisfies Saved);
-      const st = store.get<{ last: string; n: number }>("dive:streak");
-      const y = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
-      const n = st?.last === y ? st.n + 1 : st?.last === day ? st.n : 1;
-      store.set("dive:streak", { last: day, n });
-      setStreak(n);
-    }
+  const answer = (pid: string | null, typed: string) => {
+    if (!q || current) return;
+    const hit = pid ? q.answers.find(([p]) => p === pid) : undefined;
+    setPicks((x) => [...x.slice(0, i), { pid, typed, score: hit ? hit[1] : null }]);
   };
-
+  const next = () => {
+    if (i + 1 < qs.length) return setI(i + 1);
+    setPhase("done");
+    if (!day) return;
+    store.set(`dive2:${day}`, { picks } satisfies Saved);
+    const st = store.get<{ last: string; n: number }>("dive:streak");
+    const y = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
+    const n = st?.last === y ? st.n + 1 : st?.last === day ? st.n : 1;
+    store.set("dive:streak", { last: day, n });
+    setStreak(n);
+  };
   const share = async () => {
-    const sq = marks.map((m) => (m === "swish" ? "🟩" : m === "brick" ? "🟥" : "⬛")).join("");
-    const text = `Dumpster Dive #${edition} ${sq} ${score} pts`;
+    const text = `Dumpster Dive #${edition} ${picks.map((p) => tier(p.score).sq).join("")} ${total}/${ROUNDS * 100}`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
   };
-
-  const swishes = marks.filter((m) => m === "swish").length;
-  const rating = ["Dumpster fire", "Bench warmer", "Rotation guy", "Starter", "All-Trash team", "League commissioner"][swishes];
+  const name = (pid: string) => players[pid]?.[0] ?? pid;
+  const rating =
+    total >= 400 ? "Lives in the dumpster" : total >= 300 ? "Deep diver" : total >= 200 ? "Knows ball" : total >= 100 ? "Casual" : "Read the group chat sometimes";
 
   return (
-    <div
-      ref={scope}
-      className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(201,138,75,0.22),rgba(16,40,30,0.7)_60%)] p-5 backdrop-blur-xl md:p-10"
-    >
-      {/* jumbotron header */}
+    <div className="relative rounded-[28px] border border-white/10 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(201,138,75,0.2),rgba(16,40,30,0.75)_60%)] p-5 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="font-display text-[clamp(2.6rem,7vw,4.6rem)] leading-[0.85] font-black">Dumpster Dive</p>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            {edition ? `No. ${edition}` : "Daily"}, five questions, {CLOCK}-second shot clock
+            {edition ? `No. ${edition}` : "Daily"}, five prompts, the more niche the better
           </p>
         </div>
-        <div className="flex gap-1.5" aria-label="Today's shots">
+        <div className="flex gap-1.5" aria-label="Today's picks">
           {Array.from({ length: ROUNDS }, (_, k) => {
-            const m = marks[k];
+            const p = picks[k];
             return (
               <motion.span
-                key={`${k}-${m ?? "x"}`}
-                initial={m && !reduce ? { scale: 0.4 } : false}
+                key={`${k}-${p?.typed ?? ""}`}
+                initial={p && !reduce ? { scale: 0.4 } : false}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", duration: 0.4, bounce: 0.5 }}
-                className="size-7 rounded-md border border-white/15"
+                className="flex size-8 items-center justify-center rounded-md border border-white/15 text-xs font-bold tabular-nums"
                 style={{
-                  background: m === "swish" ? SWISH : m === "brick" ? "var(--ticket)" : m === "clock" ? "#3a3f3c" : "transparent",
+                  background: p ? tier(p.score).color : "transparent",
+                  color: p ? "var(--bin)" : undefined,
                 }}
-              />
+              >
+                {p ? (p.score ?? "×") : ""}
+              </motion.span>
             );
           })}
         </div>
@@ -265,13 +307,14 @@ export function DumpsterDive({ pool, players }: { pool: Question[]; players: Pla
             key="intro"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: reduce ? 0 : -10 }}
+            exit={{ opacity: 0 }}
             className="mt-10 grid gap-8 md:grid-cols-[1fr_auto] md:items-center"
           >
             <div>
               <p className="max-w-[46ch] text-lg leading-relaxed text-[var(--paper)]/85">
-                Trades, drafts, lockers, bench crimes and title runs. New questions every day at midnight Eastern. Answer
-                fast for bonus points.
+                Five prompts like &ldquo;name a player Rico has started.&rdquo; Any right answer counts, but the
+                deeper you dig the more it&apos;s worth. Name the guy nobody remembers and score 100. Say the obvious
+                star and score next to nothing.
               </p>
               <button
                 type="button"
@@ -279,142 +322,113 @@ export function DumpsterDive({ pool, players }: { pool: Question[]; players: Pla
                 onClick={() => setPhase("play")}
                 className="font-display mt-6 inline-flex h-14 cursor-pointer items-center rounded-full bg-[var(--paper)] px-8 text-2xl font-black text-[var(--bin)] transition-transform duration-150 active:scale-[0.97] disabled:opacity-50"
               >
-                Tip off
+                Start digging
               </button>
             </div>
-            <Hoop shot={null} />
+            <Dumpster pick={null} players={players} />
           </motion.div>
         ) : null}
 
         {phase === "play" && q ? (
           <motion.div
             key={`q-${i}`}
-            initial={{ opacity: 0, x: reduce ? 0 : 30 }}
+            initial={{ opacity: 0, x: reduce ? 0 : 24 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: reduce ? 0 : -30 }}
-            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-            className="mt-8"
+            exit={{ opacity: 0, x: reduce ? 0 : -24 }}
+            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+            className="mt-8 grid gap-8 md:grid-cols-[1fr_260px] md:items-start"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-[var(--wood)]">
-                  {q.kind}, question {i + 1} of {qs.length}
-                </p>
-                <h3 className="font-display mt-2 max-w-[24ch] text-[clamp(1.9rem,4.6vw,3rem)] leading-[0.98] font-black">
-                  {q.prompt}
-                </h3>
+            <div>
+              <p className="text-sm font-semibold text-[var(--wood)]">
+                {q.kind}, prompt {i + 1} of {qs.length}
+              </p>
+              <h3 className="font-display mt-2 max-w-[22ch] text-[clamp(2rem,4.8vw,3.2rem)] leading-[0.98] font-black">
+                {q.prompt}
+              </h3>
+              <p className="mt-2 text-sm text-[var(--muted)]">{q.answers.length} right answers in the bin.</p>
+              <div className="mx-auto mt-4 w-40 md:hidden">
+                <Dumpster pick={current} players={players} />
               </div>
-              <Clock left={left} />
-            </div>
 
-            {q.show?.length ? (
-              <div className="mt-5 flex flex-wrap gap-3">
-                {q.show.map((pid) => (
-                  <div key={pid} className="flex items-center gap-2 rounded-full bg-black/25 py-1 pr-4 pl-1">
-                    <Face pid={pid} players={players} size={40} />
-                    <span className="text-sm font-semibold">{players[pid]?.[0]}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="relative mt-6">
-              <Hoop shot={mark} />
-              <AnimatePresence>
-                {mark ? (
-                  <motion.p
-                    key={mark}
-                    initial={{ opacity: 0, scale: reduce ? 1 : 0.6, rotate: -6 }}
-                    animate={{ opacity: 1, scale: 1, rotate: -6 }}
-                    transition={{ type: "spring", duration: 0.5, bounce: 0.45, delay: reduce ? 0 : 0.55 }}
-                    className="font-display pointer-events-none absolute inset-0 flex items-center justify-center text-[clamp(3rem,10vw,5.5rem)] font-black"
-                    style={{
-                      color: mark === "swish" ? SWISH : mark === "brick" ? "var(--ticket)" : "var(--muted)",
-                      textShadow: "0 6px 30px rgba(0,0,0,0.5)",
-                    }}
+              <div className="mt-6">
+                {!current ? (
+                  <AnswerBox players={players} onPick={answer} disabled={!!current} />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: reduce ? 0 : 0.6 }}
+                    className="rounded-2xl bg-black/30 p-5"
                   >
-                    {mark === "swish" ? "SWISH" : mark === "brick" ? "BRICK" : "SHOT CLOCK"}
-                  </motion.p>
-                ) : null}
-              </AnimatePresence>
-            </div>
-
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {q.options.map((o, k) => {
-                const right = chosen !== null && k === q.answer;
-                const wrong = chosen === k && k !== q.answer;
-                return (
-                  <li key={o.label + k}>
+                    <p className="text-sm text-[var(--muted)]">You said {current.typed}</p>
+                    <p className="font-display mt-1 text-4xl font-black" style={{ color: tier(current.score).color }}>
+                      {current.score === null ? "Not in the bin" : `${current.score} pts, ${tier(current.score).label.toLowerCase()}`}
+                    </p>
+                    <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                      <p>
+                        <span className="text-[var(--muted)]">Deepest answer: </span>
+                        <span className="font-semibold">{name(q.answers[0][0])}</span>
+                      </p>
+                      <p>
+                        <span className="text-[var(--muted)]">What everyone says: </span>
+                        <span className="font-semibold">{name(q.answers[q.answers.length - 1][0])}</span>
+                      </p>
+                    </div>
                     <button
+                      ref={nextBtn}
                       type="button"
-                      disabled={chosen !== null}
-                      onClick={() => answer(k)}
-                      className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border-2 bg-black/25 px-4 py-3.5 text-left text-lg font-semibold transition-[transform,background-color,border-color,opacity] duration-150 enabled:hover:bg-black/35 enabled:active:scale-[0.98] disabled:cursor-default"
-                      style={{
-                        borderColor: right ? SWISH : wrong ? "var(--ticket)" : "rgba(255,255,255,0.12)",
-                        background: right ? "rgba(127,212,154,0.16)" : wrong ? "rgba(214,52,44,0.18)" : undefined,
-                        opacity: chosen !== null && !right && !wrong ? 0.45 : 1,
-                      }}
+                      onClick={next}
+                      className="mt-5 inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
                     >
-                      <OptionFace o={o} players={players} />
-                      <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                      {i + 1 < qs.length ? "Next prompt" : "See my dive"}
                     </button>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <AnimatePresence>
-              {chosen !== null ? (
-                <motion.div
-                  initial={{ opacity: 0, y: reduce ? 0 : 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: reduce ? 0 : 0.7 }}
-                  className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-black/25 p-4"
-                >
-                  <p className="max-w-[56ch] text-[var(--paper)]/90">{q.reveal}</p>
-                  <button
-                    type="button"
-                    onClick={next}
-                    autoFocus
-                    className="inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
-                  >
-                    {i + 1 < qs.length ? "Next question" : "See the scoreboard"}
-                  </button>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <Dumpster pick={current} players={players} />
+            </div>
           </motion.div>
         ) : null}
 
         {phase === "done" ? (
           <motion.div
             key="done"
-            initial={{ opacity: 0, scale: reduce ? 1 : 0.96 }}
+            initial={{ opacity: 0, scale: reduce ? 1 : 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-            className="mt-10 grid gap-8 md:grid-cols-[1fr_1fr] md:items-center"
+            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+            className="mt-10 grid gap-8 md:grid-cols-[1fr_1fr]"
           >
             <div className="rounded-3xl border-2 border-white/10 bg-black/40 p-6 text-center">
-              <p className="text-sm text-[var(--muted)]">Final score</p>
-              <p className="font-display text-[clamp(4rem,14vw,7rem)] leading-none font-black tabular-nums">{score}</p>
-              <p className="font-display mt-1 text-2xl font-black text-[var(--wood)]">{rating}</p>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                {swishes} of {ROUNDS} swished
-                {streak > 1 ? `, ${streak}-day streak` : ""}
+              <p className="text-sm text-[var(--muted)]">Today&apos;s dive</p>
+              <p className="font-display text-[clamp(4rem,14vw,7rem)] leading-none font-black tabular-nums">
+                {total}
+                <span className="text-[0.4em] text-[var(--muted)]">/{ROUNDS * 100}</span>
               </p>
+              <p className="font-display mt-1 text-2xl font-black text-[var(--wood)]">{rating}</p>
+              {streak > 1 ? <p className="mt-2 text-sm text-[var(--muted)]">{streak}-day streak</p> : null}
             </div>
             <div>
-              <p className="text-lg leading-relaxed text-[var(--paper)]/85">
-                Post your score in the group chat and make them dive too. New questions at midnight Eastern.
-              </p>
+              <ol className="space-y-2">
+                {picks.map((p, k) => (
+                  <li key={k} className="flex items-center gap-3 text-sm">
+                    {p.pid ? <Face pid={p.pid} players={players} size={32} /> : <span className="size-8 rounded-full bg-black/30" />}
+                    <span className="min-w-0 flex-1 truncate">{p.typed}</span>
+                    <span className="font-semibold tabular-nums" style={{ color: tier(p.score).color }}>
+                      {p.score ?? "miss"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
               <button
                 type="button"
                 onClick={share}
-                className="mt-5 inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
+                className="mt-6 inline-flex h-12 cursor-pointer items-center rounded-full bg-[var(--paper)] px-6 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
               >
                 {copied ? "Copied" : "Copy my result"}
               </button>
+              <p className="mt-3 text-sm text-[var(--muted)]">New prompts at midnight Eastern.</p>
             </div>
           </motion.div>
         ) : null}

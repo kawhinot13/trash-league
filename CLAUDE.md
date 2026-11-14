@@ -19,7 +19,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 
 ## Stack conventions
 - GSAP: always import from `@/lib/gsap` (plugins ScrollTrigger + SplitText + useGSAP are registered there). Use `useGSAP` with `gsap.matchMedia()` for reduced-motion handling.
-- Smooth scroll: Lenis lives in `src/components/smooth-scroll.tsx` (root layout), driven by the GSAP ticker. Don't add a second scroll loop.
+- Scrolling is native. Lenis was removed after profiling: together with `backdrop-blur` it caused most dropped frames. Don't add smooth-scroll libraries or scroll pinning/scroll-jacking.
+- Performance: no `backdrop-blur` on content cards (only the fixed nav and mobile menu). Animate transform/opacity only. The hero trophy is a still render (`public/trophy.webp`), not live WebGL; keep heavy 3D off the critical path.
 - Motion (Framer Motion): `import { motion } from "motion/react"` for hover, tap, enter/exit and in-view fades.
 - 3D: react-three-fiber + drei. Load canvases with `next/dynamic` and `ssr: false`; cap `dpr` at ~1.75. Avoid drei `Environment` presets (they download HDRIs); build lighting with `Lightformer`.
 - Palette tokens in `globals.css`: `--bin` (dumpster green page), `--bin-2/3`, `--paper`, `--muted`, `--gold` (champions only), `--wood` (the court), `--ticket` (scandals only). Fonts: Big Shoulders (`font-display`), Archivo (`font-sans`).

@@ -144,7 +144,7 @@ export function RivalryMachine({
   }, [a, b, A, B, h2h, seasons]);
   const leader = data.score > 0 ? A.id : data.score < 0 ? B.id : null;
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 backdrop-blur-xl md:p-10">
+    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="grid gap-6 md:grid-cols-2">
         <Picker
           managers={managers}

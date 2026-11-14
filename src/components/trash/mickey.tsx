@@ -134,7 +134,7 @@ export function MickeyRing({
         ? { head: "Half Mickey.", sub: "A real ring with mouse ears on it. Both sides of the chat get to be right." }
         : { head: "Legit ring.", sub: "The group chat owes Oscar an apology." };
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 backdrop-blur-xl md:p-10">
+    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
         <Ring share={mickey / exhibits.length} />
         <div>

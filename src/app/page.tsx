@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { DumpsterDive } from "@/components/trash/dive";
 import { Hero } from "@/components/trash/hero";
 import { LiveHero, LiveTicker } from "@/components/trash/live-blocks";
-import { Preloader, StatStrip } from "@/components/trash/polish";
+import { StatStrip } from "@/components/trash/polish";
 import { SectionHead } from "@/components/trash/sections";
 import { divePool } from "@/lib/dive";
 import { lockIn, players } from "@/lib/extras";
@@ -70,7 +70,6 @@ function Doors() {
 export default function Home() {
   return (
     <main id="top" className="overflow-x-clip">
-      <Preloader />
       <Suspense fallback={<Hero week={null} leaders={["LeBugger", "GreenBean69420"]} />}>
         <LiveHero />
       </Suspense>
@@ -88,8 +87,8 @@ export default function Home() {
 
       <section id="dive" aria-labelledby="dive-title" className="scroll-mt-24 py-24 md:py-32">
         <SectionHead id="dive-title" title="Today's dive">
-          Five questions from four seasons of league history, new every day. Same questions for everyone, so
-          the group chat can compare.
+          Five prompts a day from four seasons of league history. Any right answer counts, but the more niche
+          your pick, the more it scores. Same prompts for everyone, so the group chat can compare.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
           <DumpsterDive pool={divePool()} players={players} />

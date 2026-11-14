@@ -5,7 +5,6 @@ import { GlassNav } from "@/components/trash/polish";
 import { RicoPeek } from "@/components/trash/rico-peek";
 import { Footer } from "@/components/trash/sections";
 import { league } from "@/lib/league";
-import "lenis/dist/lenis.css";
 import "./globals.css";
 
 const display = Big_Shoulders({

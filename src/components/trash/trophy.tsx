@@ -23,7 +23,7 @@ function Cup({ start }: { start: number | null }) {
   const g = useRef<THREE.Group>(null);
   const glow = useRef<THREE.PointLight>(null);
   const pointer = useRef({ x: 0, y: 0 });
-  const lathe = useMemo(() => new THREE.LatheGeometry(profile(), 128), []);
+  const lathe = useMemo(() => new THREE.LatheGeometry(profile(), 96), []);
   const reduce = useMemo(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
   useEffect(() => {
     const on = (e: PointerEvent) => {
@@ -50,7 +50,7 @@ function Cup({ start }: { start: number | null }) {
     if (glow.current) glow.current.intensity = 6 * easeOutCubic(p) + Math.sin(t * 1.6) * 0.6;
   });
   const gold = (
-    <meshPhysicalMaterial color="#e2b552" metalness={1} roughness={0.14} clearcoat={1} clearcoatRoughness={0.06} side={THREE.DoubleSide} envMapIntensity={1.6} />
+    <meshStandardMaterial color="#e2b552" metalness={1} roughness={0.16} side={THREE.DoubleSide} envMapIntensity={1.7} />
   );
   return (
     <group ref={g}>
@@ -58,7 +58,7 @@ function Cup({ start }: { start: number | null }) {
       {/* handles */}
       {[-1, 1].map((sgn) => (
         <mesh key={sgn} position={[sgn * 1.02, 0.78, 0]} rotation={[0, 0, sgn * 0.2]}>
-          <torusGeometry args={[0.34, 0.065, 32, 96, Math.PI * 1.2]} />
+          <torusGeometry args={[0.34, 0.065, 20, 64, Math.PI * 1.2]} />
           {gold}
         </mesh>
       ))}
@@ -90,22 +90,29 @@ export default function Trophy() {
   // Only render while the hero is on screen: saves battery and CPU everywhere else.
   const box = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [start, setStart] = useState<number | null>(null);
   const clock = useRef<{ elapsedTime: number } | null>(null);
   useEffect(() => {
+    // Build the WebGL scene once the browser is idle so it never blocks the first interaction.
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    const idle = w.requestIdleCallback ? w.requestIdleCallback(() => setMounted(true), { timeout: 900 }) : window.setTimeout(() => setMounted(true), 200);
     const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting));
     io.observe(box.current!);
     const off = onReady(() => setStart(clock.current ? clock.current.elapsedTime + 0.25 : 0.25));
     return () => {
       io.disconnect();
       off();
+      if (w.cancelIdleCallback) w.cancelIdleCallback(idle);
+      else clearTimeout(idle);
     };
   }, []);
   return (
     <div ref={box} className="h-full w-full">
+      {mounted ? (
       <Canvas
         frameloop={visible ? "always" : "never"}
-        dpr={[1, 1.75]}
+        dpr={[1, 1.5]}
         camera={{ position: [0, 0.05, 5.6], fov: 38 }}
         gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
         onCreated={(s) => (clock.current = s.clock)}
@@ -127,6 +134,7 @@ export default function Trophy() {
           <Lightformer form="rect" intensity={0.8} color="#ffe7b8" position={[0, 0, -6]} scale={[12, 8, 1]} />
         </Environment>
       </Canvas>
+      ) : null}
     </div>
   );
 }

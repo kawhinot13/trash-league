@@ -167,7 +167,7 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
         return;
       }
       const vw = window.innerWidth;
-      const size = vw < 640 ? 118 : 160;
+      const size = vw < 640 ? 92 : 150;
       setW(size);
       const nx = rand(12, Math.max(14, vw - size - 76));
       setX(nx);
@@ -186,7 +186,7 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
       later(() => setBlink(false), 2230);
       later(() => setLook({ x: -1, y: 0.3 }), 2600);
       later(() => setLook({ x: 1, y: 0.3 }), 3400);
-      later(() => api.current.duck(rand(18000, 30000)), 5200);
+      later(() => api.current.duck(rand(35000, 55000)), 5200);
     };
     api.current.duck = (next: number, line?: string) => {
       clear();
@@ -202,7 +202,7 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
     const go = () => {
       if (started || window.scrollY < window.innerHeight * 1.2) return;
       started = true;
-      later(() => api.current.peek(), reduce ? 9000 : 5000);
+      later(() => api.current.peek(), reduce ? 15000 : 10000);
     };
     window.addEventListener("scroll", go, { passive: true });
     go();
@@ -215,20 +215,35 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
   // Desktop: track the cursor with his eyes, and duck if it gets close.
   useEffect(() => {
     if (!up) return;
+    // At most one update per frame: pointermove can fire far faster than the screen refreshes.
+    let queued = false;
+    let last: PointerEvent | null = null;
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType !== "mouse" || !head.current) return;
+      if (e.pointerType !== "mouse") return;
+      last = e;
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        if (last) check(last);
+      });
+    };
+    const check = (e: PointerEvent) => {
+      if (!head.current) return;
       const r = head.current.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
       const dx = e.clientX - cx;
       const dy = e.clientY - cy;
       const d = Math.hypot(dx, dy);
-      setLook({ x: Math.max(-1, Math.min(1, dx / 300)), y: Math.max(-1, Math.min(1, dy / 300)) });
+      const nx = Math.round(Math.max(-1, Math.min(1, dx / 300)) * 10) / 10;
+      const ny = Math.round(Math.max(-1, Math.min(1, dy / 300)) * 10) / 10;
+      setLook((l) => (l.x === nx && l.y === ny ? l : { x: nx, y: ny }));
       if (d < r.width * 0.95) {
         dodges.current += 1;
         const tired = dodges.current >= 3;
         if (tired) dodges.current = 0;
-        api.current.duck(tired ? 45000 : rand(2500, 4000), tired ? undefined : "Too slow.");
+        api.current.duck(tired ? 45000 : rand(5000, 8000), tired ? undefined : "Too slow.");
       }
     };
     window.addEventListener("pointermove", onMove);
@@ -284,7 +299,7 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
             ref={head}
             className="pointer-events-auto absolute inset-x-0 top-0 cursor-pointer"
             onPointerDown={(e) => {
-              if (e.pointerType !== "mouse") api.current.duck(rand(15000, 25000));
+              if (e.pointerType !== "mouse") api.current.duck(rand(30000, 45000));
             }}
             animate={up && !reduce ? { rotate: [0, -4, 3, 0] } : { rotate: 0 }}
             transition={{ duration: 3.2, delay: 1.4, ease: "easeInOut" }}

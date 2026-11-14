@@ -9,16 +9,12 @@ import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
 const READY = "trash:ready";
-/** Run `fn` once the preloader has cleared (or immediately when there is none). */
+/** Run `fn` once the page has painted. (There used to be a preloader to wait for; it was
+ * removed because it also popped up when navigating to Home from another page.) */
 export const onReady = (fn: () => void) => {
   if (typeof window === "undefined") return () => {};
-  const w = window as unknown as { __trashReady?: boolean };
-  if (w.__trashReady) {
-    fn();
-    return () => {};
-  }
-  window.addEventListener(READY, fn, { once: true });
-  return () => window.removeEventListener(READY, fn);
+  const id = requestAnimationFrame(() => fn());
+  return () => cancelAnimationFrame(id);
 };
 const markReady = () => {
   (window as unknown as { __trashReady?: boolean }).__trashReady = true;
@@ -126,7 +122,7 @@ export function GlassNav() {
           aria-label="Sections"
           className={`pointer-events-auto flex w-full max-w-5xl items-center justify-between gap-2 rounded-full border px-2 py-2 pl-5 transition-[background-color,border-color,box-shadow] duration-500 ${
             scrolled
-              ? "border-white/12 bg-[rgba(10,30,22,0.62)] shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+              ? "border-white/12 bg-[rgba(10,30,22,0.86)] shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
               : "border-transparent bg-transparent"
           }`}
         >
@@ -258,7 +254,7 @@ export function StatStrip({
 }) {
   return (
     <div className="relative z-10 mx-auto -mt-10 max-w-5xl px-4 md:-mt-14">
-      <dl className="grid grid-cols-2 overflow-hidden rounded-[28px] border border-white/12 bg-[rgba(16,40,30,0.55)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] backdrop-blur-xl md:grid-cols-4">
+      <dl className="grid grid-cols-2 overflow-hidden rounded-[28px] border border-white/12 bg-[rgba(16,40,30,0.55)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] md:grid-cols-4">
         {stats.map((s, i) => (
           <div
             key={s.label}
@@ -387,7 +383,7 @@ export function Ticker({ items }: { items: { tag: string; text: string }[] }) {
   );
   return (
     <div
-      className="group relative mt-14 overflow-hidden border-y border-white/10 bg-[rgba(8,24,17,0.7)] py-3 backdrop-blur-md md:mt-20"
+      className="group relative mt-14 overflow-hidden border-y border-white/10 bg-[rgba(8,24,17,0.7)] py-3 md:mt-20"
       aria-label="League headlines"
     >
       <div

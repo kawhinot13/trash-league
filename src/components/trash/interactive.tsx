@@ -10,7 +10,6 @@ import {
   useTransform,
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import type { Manager } from "@/lib/league";
 
 /** Reduced-motion preference, read after hydration so server and client HTML always match. */
@@ -31,45 +30,15 @@ export type StoryItem = {
   text: string;
 };
 export function Story({ items }: { items: StoryItem[] }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const track = useRef<HTMLOListElement>(null);
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-      mm.add(
-        "(min-width: 768px) and (prefers-reduced-motion: no-preference)",
-        () => {
-          const el = track.current!;
-          const dist = () => el.scrollWidth - window.innerWidth + 80;
-          gsap.to(el, {
-            x: () => -dist(),
-            ease: "none",
-            scrollTrigger: {
-              trigger: wrap.current,
-              start: "top top",
-              end: () => `+=${dist()}`,
-              pin: true,
-              scrub: 0.6,
-              invalidateOnRefresh: true,
-            },
-          });
-        },
-      );
-      return () => ScrollTrigger.refresh();
-    },
-    { scope: wrap },
-  );
   return (
-    <div
-      ref={wrap}
-      className="relative md:flex md:h-[100svh] md:items-center md:overflow-hidden"
-    >
+    // A plain swipeable row with snap points: no scroll pinning, so the page never fights the user.
+    <div className="relative">
       <ol
-        ref={track}
-        className="flex flex-col gap-10 px-5 md:flex-row md:gap-8 md:px-10"
+        className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-px-5 px-5 pb-6 [scrollbar-width:thin] md:gap-8 md:scroll-px-10 md:px-10"
+        aria-label="The story so far, swipe for more"
       >
         {items.map((it, i) => (
-          <li key={it.title} className="md:w-[340px] md:shrink-0">
+          <li key={it.title} className="w-[78vw] max-w-[340px] shrink-0 snap-start">
             <div className="relative aspect-[3/4] overflow-hidden rounded-3xl bg-[var(--bin-2)]">
               <Image
                 src={it.img}

@@ -388,7 +388,7 @@ export function Crimes() {
       <div className="mx-auto grid max-w-6xl gap-6 px-5 md:px-10">
         {EXHIBITS.map((x) => (
           <Spotlight key={x.letter} className="rounded-3xl">
-            <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md md:p-10">
+            <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-10">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-sm text-[var(--muted)]">

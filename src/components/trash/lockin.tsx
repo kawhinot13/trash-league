@@ -49,7 +49,7 @@ export function LockInIndex({
   const totalLeft = rows.reduce((t, r) => t + (r.opt - r.act), 0);
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 backdrop-blur-xl md:p-10">
+    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="grid gap-8 md:grid-cols-[1.1fr_1fr] md:items-end">
         <div>
           <p className="font-display text-[clamp(3.2rem,9vw,6.5rem)] leading-[0.85] font-black tabular-nums">

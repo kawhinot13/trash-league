@@ -110,7 +110,7 @@ export function ManagerQuiz({ managers }: { managers: QuizManager[] }) {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 backdrop-blur-xl md:p-10">
+    <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="flex items-center gap-1.5" aria-hidden>
         {QUESTIONS.map((_, k) => (
           <span
