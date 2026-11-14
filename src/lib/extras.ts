@@ -275,3 +275,44 @@ export function quizManagers(): QuizManager[] {
     facts: b.facts,
   }));
 }
+
+/* ── My Guys ───────────────────────────────────────────────── */
+export type Guy = {
+  pid: string;
+  weeks: number;
+  starts: number;
+  pts: number;
+  seasons: string[];
+};
+export type GuysRow = { id: string; most: Guy[]; best: Guy[] };
+
+/** Every manager's most-rostered and most productive players, all seasons, playoffs included.
+ * Points are what the player actually put up in that manager's starting lineup. */
+export function myGuys(): GuysRow[] {
+  const by = new Map<string, Map<string, Guy>>();
+  for (const s of raw.seasons as (RawSeason & { guys: Record<string, Record<string, [number, number, number]>> })[]) {
+    for (const [who, ps] of Object.entries(s.guys ?? {})) {
+      const m = by.get(who) ?? new Map<string, Guy>();
+      for (const [pid, [weeks, starts, pts]] of Object.entries(ps)) {
+        const g = m.get(pid) ?? { pid, weeks: 0, starts: 0, pts: 0, seasons: [] };
+        g.weeks += weeks;
+        g.starts += starts;
+        g.pts += pts;
+        if (!g.seasons.includes(s.code)) g.seasons.push(s.code);
+        m.set(pid, g);
+      }
+      by.set(who, m);
+    }
+  }
+  const order = league.managers.map((m) => m.id);
+  return [...by.entries()]
+    .map(([id, m]) => {
+      const all = [...m.values()];
+      return {
+        id,
+        most: [...all].sort((a, b) => b.weeks - a.weeks || b.pts - a.pts).slice(0, 6),
+        best: [...all].sort((a, b) => b.pts - a.pts).slice(0, 6),
+      };
+    })
+    .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+}

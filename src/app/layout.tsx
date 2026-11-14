@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, Big_Shoulders } from "next/font/google";
 import { SmoothScroll } from "@/components/smooth-scroll";
+import { GlassNav } from "@/components/trash/polish";
+import { RicoPeek } from "@/components/trash/rico-peek";
+import { Footer } from "@/components/trash/sections";
+import { league } from "@/lib/league";
 import "lenis/dist/lenis.css";
 import "./globals.css";
 
@@ -29,10 +33,16 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  const rico = league.managers.find((m) => m.id === "RI3O");
   return (
     <html lang="en" className={`${display.variable} ${body.variable} antialiased`}>
       <body className="min-h-full bg-transparent text-[var(--paper)]">
-        <SmoothScroll>{children}</SmoothScroll>
+        <SmoothScroll>
+          <GlassNav />
+          {children}
+          <Footer />
+          <RicoPeek trades={rico?.trades ?? 0} record={rico ? `${rico.w}–${rico.l}` : ""} />
+        </SmoothScroll>
       </body>
     </html>
   );

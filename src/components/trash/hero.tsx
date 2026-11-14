@@ -159,7 +159,7 @@ export function Hero({
           ninety-three trades, and nobody has won it twice.
         </p>
         <a
-          href="#standings"
+          href="/live"
           className="group inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-[rgba(16,40,30,0.55)] px-5 py-3 text-sm backdrop-blur-xl transition-colors duration-200 hover:border-white/25 md:self-end"
         >
           <span className="relative flex size-2.5">

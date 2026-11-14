@@ -91,14 +91,16 @@ for s in LEAGUE["seasons"]:
     done = REG_WEEKS if s["status"] == "complete" else max(0, state["week"] - 1)
     weeks = list(range(1, done + 1))
     live = s["status"] != "complete"
+    # Playoff weeks (22-24) count for My Guys and the title-run breakdowns, never for the regular-season numbers.
+    allweeks = weeks + ([22, 23, 24] if not live else [])
     with cf.ThreadPoolExecutor(8) as ex:
-        mus = dict(zip(weeks, ex.map(lambda w: get(f"/v1/league/{lid}/matchups/{w}", fresh=live), weeks)))
-        txs = dict(zip(weeks, ex.map(lambda w: get(f"/v1/league/{lid}/transactions/{w}", fresh=live), weeks)))
-        sts = dict(zip(weeks, ex.map(lambda w: get(f"/stats/nba/{season}/{w}?season_type=regular", fresh=live), weeks)))
+        mus = dict(zip(allweeks, ex.map(lambda w: get(f"/v1/league/{lid}/matchups/{w}", fresh=live), allweeks)))
+        txs = dict(zip(allweeks, ex.map(lambda w: get(f"/v1/league/{lid}/transactions/{w}", fresh=live), allweeks)))
+        sts = dict(zip(allweeks, ex.map(lambda w: get(f"/stats/nba/{season}/{w}?season_type=regular", fresh=live), allweeks)))
 
     # Per-game fantasy points, by week.
-    games = {w: collections.defaultdict(list) for w in weeks}
-    for w in weeks:
+    games = {w: collections.defaultdict(list) for w in allweeks}
+    for w in allweeks:
         for r in sts[w]:
             remember(r["player_id"], r.get("player"), r.get("team"))
             if not r.get("date") or r["player_id"].startswith("TEAM"):
@@ -132,8 +134,22 @@ for s in LEAGUE["seasons"]:
         rost[0][d["by"]].append(d["pid"])
     trades, adds = [], collections.Counter()
     lineups = collections.defaultdict(list)
-    for w in weeks:
-        rost[w] = {r2n[m["roster_id"]]: m.get("players") or [] for m in mus[w]}
+    playoffs = []
+    guys = collections.defaultdict(lambda: collections.defaultdict(lambda: [0, 0, 0.0]))  # who -> pid -> [weeks, starts, pts]
+    for w in allweeks:
+        po = w > REG_WEEKS
+        for m in mus[w]:
+            who = r2n[m["roster_id"]]
+            if po and m.get("matchup_id") is None:
+                continue
+            for pid in m.get("players") or []:
+                guys[who][pid][0] += 1
+            for pid, pts in zip(m.get("starters") or [], m.get("starters_points") or []):
+                if pid and pid != "0":
+                    guys[who][pid][1] += 1
+                    guys[who][pid][2] += pts or 0
+        if not po:
+            rost[w] = {r2n[m["roster_id"]]: m.get("players") or [] for m in mus[w]}
         ev = collections.defaultdict(list)  # manager -> [(ts, pid, +1 add / -1 drop)]
         for t in txs[w]:
             if t["status"] != "complete":
@@ -173,7 +189,12 @@ for s in LEAGUE["seasons"]:
             if act > opt + 0.05:
                 MISFIT.append((s['code'], w, who, act, round(opt, 1)))
             opt = max(opt, act)
-            lineups[who].append([w, round(act, 1), round(opt, 1)])
+            if po:
+                if m.get("matchup_id") is not None:
+                    playoffs.append({"week": w, "who": who, "mid": m["matchup_id"], "act": round(act, 1), "opt": round(opt, 1),
+                                     "starters": [[p, round(x or 0, 1)] for p, x in zip(m.get("starters") or [], m.get("starters_points") or [])]})
+            else:
+                lineups[who].append([w, round(act, 1), round(opt, 1)])
     for t in trades:
         for pids in t["sides"].values():
             for pid in pids:
@@ -182,11 +203,13 @@ for s in LEAGUE["seasons"]:
     out["seasons"].append({"code": s["code"], "season": season, "weeks": done, "status": s["status"],
                            "draft": draft, "rosters": {str(k): v for k, v in rost.items()},
                            "trades": [{k: v for k, v in t.items() if k != "ts"} for t in sorted(trades, key=lambda t: t["ts"])],
-                           "adds": dict(adds), "lineups": dict(lineups)})
+                           "adds": dict(adds), "lineups": dict(lineups), "playoffs": playoffs,
+                           "guys": {who: {pid: [v[0], v[1], round(v[2], 1)] for pid, v in ps.items()} for who, ps in guys.items()}})
 
 # Names for anyone still missing (dropped before ever logging a stat, etc).
 need = {pid for s in out["seasons"] for r in s["rosters"].values() for ps in r.values() for pid in ps}
 need |= {d["pid"] for s in out["seasons"] for d in s["draft"]}
+need |= {pid for s in out["seasons"] for ps in s["guys"].values() for pid in ps}
 miss = [p for p in need if p not in players or not players[p][0]]
 if miss:
     allp = get("/v1/players/nba")

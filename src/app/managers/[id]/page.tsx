@@ -36,7 +36,7 @@ async function Profile({ params }: { params: Promise<{ id: string }> }) {
   return (
     <main className="min-h-screen pb-24">
       <section className="relative overflow-hidden px-5 pt-8 pb-16 md:px-10" style={{ background: `linear-gradient(180deg, ${m.color}, var(--bin) 92%)` }}>
-        <Link href="/#managers" className="text-sm text-[var(--paper)]/80 hover:text-[var(--paper)]">
+        <Link href="/managers" className="text-sm text-[var(--paper)]/80 hover:text-[var(--paper)]">
           Back to all managers
         </Link>
         <div className="mx-auto mt-10 flex max-w-6xl flex-wrap items-end gap-8">

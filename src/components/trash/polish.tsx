@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
@@ -99,55 +102,23 @@ export function Preloader() {
 
 /* ── Floating glass nav with a morphing pill on the active section ── */
 const LINKS = [
-  ["standings", "Standings"],
-  ["waivers", "Waivers"],
-  ["almanac", "Almanac"],
-  ["crimes", "Crimes"],
-  ["owns", "Who owns who"],
-  ["rivalry", "Rivalries"],
-  ["lockin", "Lock-In"],
-  ["redraft", "Re-draft"],
-  ["machine", "Time machine"],
-  ["managers", "Managers"],
-  ["quiz", "Quiz"],
-  ["story", "Story"],
+  ["/", "Home"],
+  ["/live", "Live"],
+  ["/managers", "Managers"],
+  ["/rivals", "Rivals"],
+  ["/history", "History"],
 ] as const;
-/** Kept out of the desktop bar so it fits on one line; still in the full menu. */
-const BURGER_ONLY = new Set<string>(["owns", "story", "crimes"]);
 export function GlassNav() {
-  const [active, setActive] = useState<string | null>(null);
+  const path = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    // Each link's id sits on a heading; watch the section that contains it.
-    const owner = new Map<Element, string | null>();
-    document
-      .querySelectorAll("main section")
-      .forEach((sec) => owner.set(sec, null));
-    for (const [id] of LINKS) {
-      const sec = document.getElementById(id)?.closest("section");
-      if (sec) owner.set(sec, id);
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries)
-          if (e.isIntersecting && owner.has(e.target))
-            setActive(owner.get(e.target) ?? null);
-      },
-      { rootMargin: "-45% 0px -50% 0px" },
-    );
-    owner.forEach((_, el) => io.observe(el));
-    const onScroll = () => {
-      setScrolled(window.scrollY > 40);
-      if (window.scrollY < 200) setActive(null);
-    };
+    const onScroll = () => setScrolled(window.scrollY > 40);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      io.disconnect();
-      window.removeEventListener("scroll", onScroll);
-    };
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  const isOn = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   return (
     <>
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-3 md:pt-4">
@@ -159,18 +130,15 @@ export function GlassNav() {
               : "border-transparent bg-transparent"
           }`}
         >
-          <a
-            href="#top"
-            className="font-display text-2xl font-black tracking-tight"
-          >
+          <Link href="/" className="font-display text-2xl font-black tracking-tight">
             Trash
-          </a>
-          <ul className="hidden items-center gap-0.5 text-sm whitespace-nowrap lg:flex">
-            {LINKS.filter(([id]) => !BURGER_ONLY.has(id)).map(([id, label]) => {
-              const isOn = active === id;
+          </Link>
+          <ul className="hidden items-center gap-0.5 text-sm whitespace-nowrap md:flex">
+            {LINKS.map(([href, label]) => {
+              const on = isOn(href);
               return (
-                <li key={id} className="relative">
-                  {isOn ? (
+                <li key={href} className="relative">
+                  {on ? (
                     <motion.span
                       layoutId="nav-pill"
                       className="absolute inset-0 rounded-full bg-white/10 ring-1 ring-white/15"
@@ -181,30 +149,30 @@ export function GlassNav() {
                       }}
                     />
                   ) : null}
-                  <a
-                    href={`#${id}`}
-                    aria-current={isOn ? "true" : undefined}
-                    className={`relative block rounded-full px-3 py-2 transition-colors duration-200 ${isOn ? "text-[var(--paper)]" : "text-[var(--muted)] hover:text-[var(--paper)]"}`}
+                  <Link
+                    href={href}
+                    aria-current={on ? "page" : undefined}
+                    className={`relative block rounded-full px-4 py-2 transition-colors duration-200 ${on ? "text-[var(--paper)]" : "text-[var(--muted)] hover:text-[var(--paper)]"}`}
                   >
                     {label}
-                  </a>
+                  </Link>
                 </li>
               );
             })}
           </ul>
           <div className="flex items-center gap-2">
-            <a
-              href="#movie"
-              className="rounded-full bg-[var(--gold)] px-4 py-2 text-sm font-semibold text-[var(--bin)] transition-transform duration-200 hover:scale-[1.04] active:scale-[0.97]"
+            <Link
+              href="/#dive"
+              className="rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97]"
             >
-              Watch the movie
-            </a>
+              Play the Dive
+            </Link>
             <button
               type="button"
               onClick={() => setOpen(true)}
               aria-label="Open menu"
               aria-expanded={open}
-              className="flex size-10 items-center justify-center rounded-full bg-white/8 lg:hidden"
+              className="flex size-10 items-center justify-center rounded-full bg-white/8 md:hidden"
             >
               <svg
                 width="18"
@@ -224,7 +192,7 @@ export function GlassNav() {
       <AnimatePresence>
         {open ? (
           <motion.div
-            className="fixed inset-0 z-[60] bg-[rgba(6,18,13,0.72)] backdrop-blur-xl lg:hidden"
+            className="fixed inset-0 z-[60] bg-[rgba(6,18,13,0.72)] backdrop-blur-xl md:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -261,19 +229,18 @@ export function GlassNav() {
                 </button>
               </div>
               <ul className="mt-1">
-                {[...LINKS, ["movie", "The movie"] as const].map(
-                  ([id, label]) => (
-                    <li key={id}>
-                      <a
-                        href={`#${id}`}
-                        onClick={() => setOpen(false)}
-                        className="block rounded-2xl px-3 py-3.5 font-display text-3xl font-bold active:bg-white/8"
-                      >
-                        {label}
-                      </a>
-                    </li>
-                  ),
-                )}
+                {LINKS.map(([href, label]) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      onClick={() => setOpen(false)}
+                      aria-current={isOn(href) ? "page" : undefined}
+                      className={`block rounded-2xl px-3 py-3.5 font-display text-3xl font-bold active:bg-white/8 ${isOn(href) ? "text-[var(--paper)]" : "text-[var(--paper)]/70"}`}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </motion.nav>
           </motion.div>
