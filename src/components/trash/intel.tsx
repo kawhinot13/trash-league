@@ -118,7 +118,7 @@ export function LiveWeek({
         <p className="text-sm font-medium">
           Week {week}.{" "}
           {mode === "proj"
-            ? `Sleeper's live score, plus the best projected remaining game for any lineup slot still open (${daysLeft} day${daysLeft === 1 ? "" : "s"} left).`
+            ? `Every matchup decided on points locked in right now. Ties broken by points for, including this week. Projections and win chances show where it's heading (${daysLeft} day${daysLeft === 1 ? "" : "s"} left).`
             : "Completed weeks only, straight from Sleeper."}
         </p>
       </div>

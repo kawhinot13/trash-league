@@ -178,7 +178,9 @@ export async function weekIfEndedToday(): Promise<{
       const o = team.find((y) => y.mid === x.mid && y.rid !== x.rid)!;
       const sd = Math.sqrt(x.sd ** 2 + o.sd ** 2) || 1;
       const winProb = phi((x.proj - o.proj) / sd);
-      const win = x.proj > o.proj;
+      // "If the week ended today" = locked-in points only: whoever leads right now wins.
+      const win = x.now > o.now;
+      const tie = x.now === o.now;
       return {
         manager: x.manager,
         team: x.team,
@@ -193,8 +195,8 @@ export async function weekIfEndedToday(): Promise<{
         pending: x.pending,
         winProb,
         pw: x.w + (win ? 1 : 0),
-        pl: x.l + (win ? 0 : 1),
-        pt: x.t,
+        pl: x.l + (win || tie ? 0 : 1),
+        pt: x.t + (tie ? 1 : 0),
         rankNow: 0,
         rankProj: 0,
         pf: x.pf,
@@ -207,7 +209,7 @@ export async function weekIfEndedToday(): Promise<{
       .sort(
         (a, b) =>
           b.pw + b.pt / 2 - (a.pw + a.pt / 2) ||
-          b.pf + b.proj - (a.pf + a.proj),
+          b.pf + b.now - (a.pf + a.now),
       )
       .forEach((r, i) => (r.rankProj = i + 1));
     rows.sort((a, b) => a.rankProj - b.rankProj);
