@@ -222,6 +222,11 @@ out["players"] = {p: v for p, v in players.items() if p in need or any(
 HS = os.path.join(ROOT, "public/players")
 for pid, v in out["players"].items():
     v.append(1 if os.path.exists(os.path.join(HS, pid + ".jpg")) else 0)
+# Height in inches (for The Lineup game), from Sleeper's player bios.
+BIO = get("/v1/players/nba")
+for pid, v in out["players"].items():
+    h = (BIO.get(pid) or {}).get("height") or ""
+    v.append(int(h) if str(h).isdigit() else 0)
 json.dump(out, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
 print("replay could not explain", len(MISFIT), "team-weeks", MISFIT[:8], file=sys.stderr)
 print("ok", {s["code"]: (s["weeks"], len(s["trades"]), len(s["draft"])) for s in out["seasons"]},

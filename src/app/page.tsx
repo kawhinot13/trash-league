@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DumpsterDive } from "@/components/trash/dive";
 import { Trashle } from "@/components/trash/trashle";
+import { Lineup } from "@/components/trash/lineup";
 import { Hero } from "@/components/trash/hero";
 import { LiveHero, LiveTicker } from "@/components/trash/live-blocks";
 import { StatStrip } from "@/components/trash/polish";
 import { SectionHead } from "@/components/trash/sections";
 import { divePool } from "@/lib/dive";
 import { trashle } from "@/lib/trashle";
+import { lineup } from "@/lib/lineup";
 import { lockIn, players } from "@/lib/extras";
 import { league } from "@/lib/league";
 
@@ -103,6 +105,16 @@ export default function Home() {
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
           <Trashle {...trashle()} players={players} />
+        </div>
+      </section>
+
+      <section id="lineup" aria-labelledby="lineup-title" className="scroll-mt-24 pb-24 md:pb-32">
+        <SectionHead id="lineup-title" title="The Lineup">
+          Somebody from Trash history is in the lineup. Name suspects, read the witness statements and pick them out
+          in eight tries.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <Lineup {...lineup()} players={players} />
         </div>
       </section>
 

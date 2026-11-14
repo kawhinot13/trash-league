@@ -21,8 +21,8 @@ type RawSeason = {
   /** [week, actual, optimal] */
   lineups: Record<string, [number, number, number][]>;
 };
-/** pid -> [name, positions, team, has headshot] */
-export type Players = Record<string, [string, string[], string, number]>;
+/** pid -> [name, positions, team, has headshot, height in inches (0 if unknown)] */
+export type Players = Record<string, [string, string[], string, number, number]>;
 const raw = data as unknown as {
   asOf: string;
   seasons: RawSeason[];
