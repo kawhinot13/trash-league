@@ -70,7 +70,7 @@ export async function LeagueGate({
     <>
       <AppNav league={{ name: p.view.name, id: leagueId, live: p.view.current.status === "in_season" }} />
       <BrandProvider config={p.brand}>{children(p)}</BrandProvider>
-      {p.db ? <Freshen leagueId={leagueId} /> : null}
+      {p.db ? <Freshen leagueId={leagueId} mine={{ id: p.view.current.leagueId, name: p.view.name }} /> : null}
     </>
   );
 }

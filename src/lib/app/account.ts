@@ -95,7 +95,10 @@ export async function saveSleeper(s: Session, username: string | null) {
   await sql`update accounts set sleeper = ${v}, seen_at = now() where id = ${s.id} and session_v = ${s.v}`;
 }
 
-/** Remember a league the person opened: most recent first, at most 12 (one atomic update). */
+/** Leagues kept on an account ("Your leagues"): every league opened, until removed. */
+export const MAX_LEAGUES = 30;
+
+/** Remember a league the person opened: most recent first, at most MAX_LEAGUES (one atomic update). */
 export async function rememberLeague(s: Session, league: SavedLeague) {
   if (!isSleeperId(league.id)) return;
   const sql = await db();
@@ -105,10 +108,15 @@ export async function rememberLeague(s: Session, league: SavedLeague) {
       select coalesce(jsonb_agg(x order by n), '[]'::jsonb) from (
         select x, n from jsonb_array_elements(${entry}::jsonb || coalesce(
           (select jsonb_agg(e) from jsonb_array_elements(leagues) e where e->>'id' <> ${league.id}), '[]'::jsonb)
-        ) with ordinality as t(x, n) limit 12
+        ) with ordinality as t(x, n) limit ${MAX_LEAGUES}
       ) kept
     )
     where id = ${s.id} and session_v = ${s.v}`;
+}
+
+/** Add leagues saved in a browser before signing in (oldest first, so the newest ends up on top). */
+export async function addLeagues(s: Session, leagues: SavedLeague[]) {
+  for (const l of [...leagues].reverse().slice(-MAX_LEAGUES)) await rememberLeague(s, l);
 }
 
 export async function forgetLeague(s: Session, leagueId: string) {

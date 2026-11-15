@@ -2,15 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { FoundLeague } from "@/lib/app/find";
 import { Avatar } from "@/components/app/avatar";
-import { updateMe, useMe } from "@/components/app/account";
+import { updateMe, useMe, useMyLeagues } from "@/components/app/account";
 
 type Result = { user: { name: string; avatar: string | null }; leagues: FoundLeague[] };
 
-/** Username in, leagues out. Also takes a pasted league id or Sleeper league link. */
+const subscribeNothing = () => () => {};
+
+/**
+ * Rafterlore's home. Returning visitors see "Your leagues" (every league they've opened here) and
+ * add another on purpose; first-timers get the search: username in, leagues out, or a pasted
+ * league id or Sleeper league link.
+ */
 export function Finder() {
+  const mounted = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  const mine = useMyLeagues();
+  const [adding, setAdding] = useState(false);
   const router = useRouter();
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,14 +55,13 @@ export function Finder() {
     if (new URLSearchParams(window.location.search).get("signin") === "failed") setErr("Sign-in didn't go through. Try again.");
   }, []);
 
-  // Signed in with a saved username: show that person's leagues straight away.
-  const auto = useRef(false);
+  // Signed in with a saved username: have it ready in the search box.
+  const prefilled = useRef(false);
   useEffect(() => {
-    if (auto.current || !account?.sleeper) return;
-    auto.current = true;
+    if (prefilled.current || !account?.sleeper) return;
+    prefilled.current = true;
     setQ(account.sleeper);
-    void lookup(account.sleeper, false);
-  }, [account, lookup]);
+  }, [account]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,8 +74,58 @@ export function Finder() {
     await lookup(v, true);
   };
 
+  // Before the browser has read your saved leagues, keep the space without flashing the search.
+  if (!mounted) return <div className="min-h-[140px]" aria-hidden />;
+  const showMine = mine.leagues.length > 0 && !adding;
+  if (showMine)
+    return (
+      <div>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 className="font-display text-4xl font-black md:text-5xl">Your leagues</h2>
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="h-11 rounded-full bg-[var(--paper)] px-6 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
+          >
+            Add a league
+          </button>
+        </div>
+        <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+          {mine.leagues.map((l) => (
+            <li key={l.id} className="group relative">
+              <Link
+                href={`/l/${l.id}`}
+                className="flex min-h-20 items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--bin-2)] p-4 pr-14 transition-colors hover:border-[var(--wood)]"
+              >
+                <Avatar src={null} name={l.name} size={44} />
+                <span className="font-display min-w-0 truncate text-2xl font-black">{l.name}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => mine.remove(l.id)}
+                aria-label={`Remove ${l.name} from your leagues`}
+                title="Remove from your leagues"
+                className="absolute top-1/2 right-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-xl text-[var(--muted)] transition-colors hover:bg-white/8 hover:text-[var(--paper)]"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-sm text-[var(--muted)]">
+          Every league you open on Rafterlore stays here until you remove it.
+          {me?.configured && !account ? " Sign in to keep them on every device." : ""}
+        </p>
+      </div>
+    );
+
   return (
     <div>
+      {mine.leagues.length ? (
+        <button type="button" onClick={() => setAdding(false)} className="mb-5 text-sm font-semibold text-[var(--muted)] hover:text-[var(--paper)]">
+          ← Back to your leagues
+        </button>
+      ) : null}
       <form onSubmit={submit} className="flex max-w-xl flex-col gap-3 sm:flex-row">
         <label htmlFor="u" className="sr-only">
           Sleeper username or league id
@@ -93,25 +151,8 @@ export function Finder() {
       </form>
       <p className="mt-3 text-sm text-[var(--muted)]">
         A league id or Sleeper league link works too.
-        {me?.configured && !account ? " Sign in to have Rafterlore remember your leagues." : ""}
+        {me?.configured && !account ? " Sign in to keep your leagues on every device." : ""}
       </p>
-      {account?.leagues.length ? (
-        <div className="mt-10">
-          <p className="font-semibold">Recently opened</p>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {account.leagues.map((l) => (
-              <li key={l.id}>
-                <Link
-                  href={`/l/${l.id}`}
-                  className="inline-block rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--wood)]"
-                >
-                  {l.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
       {err ? (
         <p role="alert" className="mt-6 text-[var(--paper)]">
           {err}

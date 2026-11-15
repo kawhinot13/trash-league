@@ -74,9 +74,14 @@ export function AccountButton() {
     return (
       <a
         href={`/api/auth/google?next=${encodeURIComponent(next)}`}
-        className="rounded-full border border-white/15 px-3.5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--paper)] transition-colors hover:bg-white/8"
+        aria-label="Sign in"
+        className="flex size-10 items-center justify-center rounded-full border border-white/15 text-sm font-semibold whitespace-nowrap text-[var(--paper)] transition-colors hover:bg-white/8 sm:size-auto sm:px-3.5 sm:py-2"
       >
-        Sign in
+        <svg aria-hidden viewBox="0 0 24 24" className="size-5 sm:hidden" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+        </svg>
+        <span className="hidden sm:inline">Sign in</span>
       </a>
     );
   }
@@ -127,4 +132,71 @@ export function AccountButton() {
       ) : null}
     </div>
   );
+}
+
+/* ── Your leagues ──────────────────────────────────────────── */
+/**
+ * Leagues you've opened through Rafterlore, kept until you remove them. Signed in: on the account
+ * (every device). Signed out: in this browser; signing in moves them onto the account.
+ */
+type Saved = { id: string; name: string };
+const LOCAL = "rl:my-leagues";
+const MAX = 30;
+let local: Saved[] | null = null;
+const localSubs = new Set<() => void>();
+const readLocal = (): Saved[] => {
+  if (local) return local;
+  try {
+    const v = JSON.parse(localStorage.getItem(LOCAL) ?? "[]") as Saved[];
+    local = Array.isArray(v) ? v.filter((l) => l && typeof l.id === "string" && typeof l.name === "string") : [];
+  } catch {
+    local = [];
+  }
+  return local;
+};
+const writeLocal = (next: Saved[]) => {
+  local = next.slice(0, MAX);
+  try {
+    localStorage.setItem(LOCAL, JSON.stringify(local));
+  } catch {}
+  localSubs.forEach((f) => f());
+};
+
+/** Called on every league page: keep it in "Your leagues" (newest first). */
+export function rememberLocal(l: Saved) {
+  writeLocal([l, ...readLocal().filter((x) => x.id !== l.id)]);
+}
+
+const EMPTY: Saved[] = [];
+export function useMyLeagues() {
+  const me = useMe();
+  const mine = useSyncExternalStore(
+    (f) => {
+      localSubs.add(f);
+      return () => localSubs.delete(f);
+    },
+    readLocal,
+    () => EMPTY,
+  );
+  const account = me?.account ?? null;
+  // Signing in: move this browser's leagues onto the account, once.
+  const merged = useRef(false);
+  useEffect(() => {
+    if (!account || merged.current || !mine.length) return;
+    merged.current = true;
+    const missing = mine.filter((l) => !account.leagues.some((a) => a.id === l.id));
+    void (async () => {
+      if (missing.length) {
+        const r = await fetch("/api/me", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ add: missing }) });
+        if (!r.ok) return;
+        setMe({ configured: true, account: ((await r.json()) as { account: Me["account"] }).account });
+      }
+      writeLocal([]);
+    })();
+  }, [account, mine]);
+  return {
+    ready: me !== null,
+    leagues: account ? account.leagues : mine,
+    remove: (id: string) => (account ? void updateMe({ forget: id }) : writeLocal(readLocal().filter((l) => l.id !== id))),
+  };
 }

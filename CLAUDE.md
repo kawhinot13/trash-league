@@ -39,8 +39,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   import API; the client pings `/api/l/[id]/refresh` for in-season Sleeper refreshes and regrades. Call
   `invalidateFamily()` whenever stored data changes (`saveFamily` also drops `league:<id>`). Routine updates use
   "soon" (stale-while-revalidate, nobody waits); "now" only for first import/grade, removal and restore. Live features use the remote cache too.
+- "Your leagues" (Rafterlore home): every league opened through Rafterlore, kept until removed (×); searching is
+  behind "Add a league". Saved in the browser (`rl:my-leagues`), or on the account when signed in (moved on sign-in).
 - Accounts (optional, Sign in with Google; `src/lib/app/account.ts`, `/api/auth/*`, `/api/me`): remember a Sleeper
-  username and recently opened leagues. Stores Google's account id, first name, that username and up to 12 leagues;
+  username and your leagues. Stores Google's account id, first name, that username and up to 30 leagues;
   no email or password. Needs `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET` (32+ chars) in Vercel; without
   them sign-in is hidden. Sessions are HMAC-signed cookies with a per-account version (sign-out ends every session).
   Read only in API routes and the browser (`useMe`), never in page renders, so pages stay pre-built.

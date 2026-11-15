@@ -1,5 +1,6 @@
 import { connection } from "next/server";
-import { SESSION_COOKIE, sessionFrom, authConfigured, cookieFlags, deleteAccount, forgetLeague, getAccount, sameOrigin, saveSleeper } from "@/lib/app/account";
+import { MAX_LEAGUES, SESSION_COOKIE, addLeagues, authConfigured, cookieFlags, deleteAccount, forgetLeague, getAccount, sameOrigin, saveSleeper, sessionFrom } from "@/lib/app/account";
+import { isSleeperId } from "@/lib/app/validate";
 import { logError } from "@/lib/app/safe";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -23,11 +24,18 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   const id = sessionFrom(req);
   if (!id || !sameOrigin(req)) return json({ error: "Not signed in." }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { sleeper?: string | null; forget?: string } | null;
+  const body = (await req.json().catch(() => null)) as { sleeper?: string | null; forget?: string; add?: unknown } | null;
   if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "Bad request." }, { status: 400 });
   try {
     if ("sleeper" in body) await saveSleeper(id, body.sleeper ?? null);
     if (typeof body.forget === "string") await forgetLeague(id, body.forget);
+    if (Array.isArray(body.add))
+      await addLeagues(
+        id,
+        body.add
+          .filter((l): l is { id: string; name: string } => !!l && typeof l === "object" && isSleeperId((l as { id?: unknown }).id) && typeof (l as { name?: unknown }).name === "string")
+          .slice(0, MAX_LEAGUES),
+      );
     const a = await getAccount(id);
     return json({ account: a && { name: a.name, sleeper: a.sleeper, leagues: a.leagues } });
   } catch (e) {
