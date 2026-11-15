@@ -410,26 +410,11 @@ body {
 @keyframes music-eq { 0% { height: 4px; } 50% { height: 14px; } 100% { height: 7px; } }
 @media (prefers-reduced-motion: reduce) { .music-bar { animation: none; height: 9px; } }
 
-/* ── Multi-league app (/l) ─────────────────────────────────────────────
- * Arena steel instead of Trash's dumpster green; gold stays champions-only. */
-.rafterlore {
-  --bin: #111a2c;      /* the arena ceiling: the page */
-  --bin-2: #18233a;    /* raised surfaces */
-  --bin-3: #22304d;
-  --line: #26344f;
-  --paper: #f3efe6;
-  --muted: #98a4b9;
-  --gold: #e9c46a;
-  --wood: #c98a4b;
-  --wood-2: #b5793f;
-  background:
-    radial-gradient(120% 60% at 50% -10%, #1d2b48 0%, transparent 60%),
-    var(--bin);
-  color: var(--paper);
-  min-height: 100dvh;
-}
-html:has(.rafterlore) { background-color: #111a2c; }
-.rafterlore ::selection { background: var(--gold); color: var(--bin); }
+/* ── Rafterlore (/l) ───────────────────────────────────────────────────
+ * Same palette and atmosphere as the Trash site (the tokens on :root); only the holiday
+ * decorations are switched off inside Rafterlore pages. */
+.rafterlore { min-height: 100dvh; }
+.rafterlore .xmas-drift::after { display: none; }
 
 /* Hardwood: the floor under the current table. */
 .hardwood {
@@ -455,22 +440,3 @@ html:has(.rafterlore) { background-color: #111a2c; }
   to { transform: none; opacity: 1; }
 }
 
-/* Rafterlore reuses the Trash site's components, some of which tint panels dumpster-green with
- * fixed colors. Inside Rafterlore pages those tints become arena navy; the Trash site is untouched. */
-.rafterlore .bg-\[rgba\(16\,40\,30\,0\.55\)\] { background-color: rgba(24, 35, 58, 0.55); }
-.rafterlore .bg-\[rgba\(16\,40\,30\,0\.85\)\] { background-color: rgba(24, 35, 58, 0.85); }
-.rafterlore .hover\:bg-\[rgba\(16\,40\,30\,0\.8\)\]:hover { background-color: rgba(24, 35, 58, 0.8); }
-.rafterlore .bg-\[rgba\(22\,58\,44\,0\.55\)\] { background-color: rgba(30, 44, 72, 0.55); }
-.rafterlore .bg-\[rgba\(22\,58\,44\,0\.45\)\] { background-color: rgba(30, 44, 72, 0.45); }
-.rafterlore .bg-\[rgba\(8\,24\,17\,0\.7\)\] { background-color: rgba(12, 19, 33, 0.7); }
-.rafterlore .bg-\[rgba\(6\,18\,13\,0\.72\)\] { background-color: rgba(10, 16, 28, 0.72); }
-.rafterlore .bg-\[\#0d241a\] { background-color: #121c30; }
-.rafterlore .bg-\[\#163a2c\] { background-color: var(--bin-2); }
-.rafterlore .bg-\[\#0b1d15\] { background-color: #0f1828; }
-.rafterlore .bg-\[\#07130e\] { background-color: #0b1220; }
-/* The daily-game panels: arena navy instead of dumpster green, and no holiday snow on Rafterlore. */
-.rafterlore .xmas-drift[data-no-rico] {
-  background: radial-gradient(120% 70% at 50% 0%, rgba(159, 195, 255, 0.10), transparent 60%), linear-gradient(180deg, #18233a, #111a2c);
-}
-.rafterlore .xmas-drift::after { display: none; }
-.rafterlore .bg-\[radial-gradient\(circle_at_50\%_30\%\,\#2a5a45\,\#0d241a\)\] { background: radial-gradient(circle at 50% 30%, #2a3a5c, #121c30); }

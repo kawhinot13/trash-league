@@ -71,7 +71,7 @@ export function Notice({ title, children }: { title: string; children: React.Rea
   return (
     <>
       <AppNav />
-      <main className="mx-auto max-w-6xl px-4 py-24 md:px-10">
+      <main className="mx-auto max-w-6xl px-5 pt-36 pb-24 md:px-10">
         <h1 className="font-display text-5xl font-black md:text-7xl">{title}</h1>
         <p className="mt-4 max-w-[56ch] text-lg text-[var(--muted)]">{children}</p>
         <Link href="/l" className="mt-8 inline-block rounded-full bg-[var(--paper)] px-6 py-3 font-semibold text-[var(--bin)]">
@@ -87,7 +87,7 @@ export function LeagueLoading() {
   return (
     <>
       <AppNav />
-      <main className="mx-auto max-w-6xl px-4 pt-24 md:px-10" aria-busy>
+      <main className="mx-auto max-w-6xl px-5 pt-36 md:px-10" aria-busy>
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="banner h-52 w-32 shrink-0 animate-pulse bg-[var(--bin-2)] md:h-60 md:w-36" />

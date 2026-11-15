@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: { default: `${PRODUCT}: fantasy basketball league history`, template: `%s · ${PRODUCT}` },
   description: TAGLINE,
 };
-export const viewport: Viewport = { themeColor: "#111a2c" };
+export const viewport: Viewport = { themeColor: "#0b2419" };
 
 /** Rafterlore' shell (/l, /privacy, /terms). None of the Trash site's chrome (nav, Rico, the pig, music) is here. */
 export default function RafterloreLayout({ children }: { children: React.ReactNode }) {

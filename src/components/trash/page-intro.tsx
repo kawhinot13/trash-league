@@ -4,15 +4,17 @@ import { HOLIDAY } from "@/lib/holiday";
 export function PageIntro({
   title,
   children,
+  holiday = HOLIDAY,
 }: {
   title: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  holiday?: boolean;
 }) {
   return (
     <header className="mx-auto max-w-6xl px-5 pt-32 pb-6 md:px-10 md:pt-40">
       <h1 className="font-display flex items-start gap-3 text-[clamp(3.6rem,11vw,8rem)] leading-[0.82] font-black">
         {title}
-        {HOLIDAY ? (
+        {holiday ? (
           <svg viewBox="0 0 60 50" className="mt-1 w-[0.42em] shrink-0" aria-hidden>
             <path d="M30 26 C 18 10 6 14 2 6 C 12 4 14 14 22 12 C 20 4 28 2 30 0 C 32 10 26 16 30 26 Z" fill="#2f8a4a" stroke="#10141a" strokeWidth="2.5" strokeLinejoin="round" />
             <path d="M30 26 C 42 10 54 14 58 6 C 48 4 46 14 38 12 C 40 4 32 2 30 0" fill="#3fae5a" stroke="#10141a" strokeWidth="2.5" strokeLinejoin="round" />
@@ -22,9 +24,11 @@ export function PageIntro({
           </svg>
         ) : null}
       </h1>
-      <p className="mt-5 max-w-[56ch] text-lg leading-relaxed text-[var(--muted)]">
-        {children}
-      </p>
+      {children ? (
+        <p className="mt-5 max-w-[56ch] text-lg leading-relaxed text-[var(--muted)]">
+          {children}
+        </p>
+      ) : null}
     </header>
   );
 }

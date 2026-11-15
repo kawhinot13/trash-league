@@ -4,7 +4,8 @@ import { Suspense } from "react";
 import { cacheLife } from "next/cache";
 import { ImportStatus } from "@/components/app/import-status";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
-import { Banners, PackSection, Section } from "@/components/app/league";
+import { PackSection, Section } from "@/components/app/league";
+import { Hero } from "@/components/trash/hero";
 import { Doors, Pending } from "@/components/app/site";
 import { DumpsterDive } from "@/components/trash/dive";
 import { Lineup } from "@/components/trash/lineup";
@@ -22,7 +23,7 @@ import type { Dataset } from "@/lib/core/types";
 
 /** Tab title from Sleeper's public league name (cached; no database or rate limit involved). */
 export async function leagueName(id: string) {
-  "use cache";
+  "use cache: remote";
   cacheLife("hours");
   if (!isSleeperId(id)) return null;
   return (await sleeper<SLeague | null>(`/v1/league/${id}`).catch(() => null))?.name ?? null;
@@ -68,6 +69,48 @@ function tickerItems(d: Dataset): { tag: string; text: string }[] {
   return items;
 }
 
+/** The line under the giant name: the league's story in one sentence. */
+function blurb(p: LeaguePage) {
+  const { view } = p;
+  const n = view.seasons.length;
+  const champs = view.seasons.filter((s) => s.champion);
+  const distinct = new Set(champs.map((s) => s.champion?.ownerId)).size;
+  const trades = p.dataset?.league.totals.trades;
+  return `A fantasy basketball league since ${view.seasons[0].years.slice(0, 4)}. ${n} season${n === 1 ? "" : "s"}${
+    champs.length ? `, ${distinct} champion${distinct === 1 ? "" : "s"}` : ""
+  }${trades ? `, ${trades} trades` : ""}${champs.length && distinct === champs.length && champs.length > 1 ? ", and nobody has won it twice" : ""}.`;
+}
+
+/** The pill under the hero: the season in progress and who leads, or last season's champion. */
+function livePill(p: LeaguePage) {
+  const { view, leagueId } = p;
+  const cur = view.current;
+  if (cur.status === "in_season") {
+    const top = cur.teams.filter((t) => t.w === cur.teams[0]?.w && t.l === cur.teams[0]?.l).slice(0, 2);
+    return {
+      href: `/l/${leagueId}/live`,
+      text: (
+        <>
+          {cur.years}
+          {cur.weeksDone ? `, week ${cur.weeksDone + 1}` : ""} is live.{" "}
+          <span className="text-[var(--muted)]">{top.map((t) => p.nameOf(t.ownerId)).join(" and ")} lead the table.</span>
+        </>
+      ),
+    };
+  }
+  const last = [...view.seasons].reverse().find((s) => s.champion);
+  return last
+    ? {
+        href: `/l/${leagueId}/history`,
+        text: (
+          <>
+            {last.years} champion: <span className="text-[var(--muted)]">{p.nameOf(last.champion!.ownerId)}.</span>
+          </>
+        ),
+      }
+    : null;
+}
+
 function Home({ p }: { p: LeaguePage }) {
   const { view, leagueId, dataset: d } = p;
   const n = view.seasons.length;
@@ -81,25 +124,25 @@ function Home({ p }: { p: LeaguePage }) {
   const court = d ? tradeCourt(d) : null;
   return (
     <main id="top" className="overflow-x-clip">
-      <header className="pt-6 md:pt-10">
-        <Banners p={p} />
-        <div className="mx-auto max-w-6xl px-5 pt-6 md:px-10">
-          <h1 className="font-display text-[clamp(3rem,10vw,7.5rem)] leading-[0.86] font-black break-words">{view.name}</h1>
-          <p className="mt-4 max-w-[60ch] text-lg text-[var(--muted)]">
-            {n} season{n === 1 ? "" : "s"} since {view.seasons[0].years}, {view.careers.length} managers. {p.format.label}.
-          </p>
-          {!p.format.supported ? <p className="mt-3 text-[var(--paper)]">{p.format.reason} Records still come straight from Sleeper.</p> : null}
-          {p.db && p.format.supported ? (
-            <div className="mt-6">
-              <ImportStatus leagueId={leagueId} initial={p.progress} hasResults={!!d && !!p.analysis} />
-            </div>
-          ) : null}
+      <Hero
+        title={view.name}
+        week={null}
+        leaders={[]}
+        holiday={false}
+        blurb={blurb(p)}
+        live={livePill(p)}
+      />
+      {p.db && p.format.supported && !(d && p.analysis) ? (
+        <div className="mx-auto max-w-6xl px-5 pb-10 md:px-10">
+          <ImportStatus leagueId={leagueId} initial={p.progress} hasResults={!!d && !!p.analysis} />
         </div>
-      </header>
+      ) : null}
+      {!p.format.supported ? (
+        <p className="mx-auto max-w-6xl px-5 pb-10 text-[var(--paper)] md:px-10">{p.format.reason} Records still come straight from Sleeper.</p>
+      ) : null}
 
       {d ? (
         <>
-          <div className="pt-16 md:pt-24" />
           <StatStrip
             stats={[
               { value: d.league.totals.seasons, label: "Seasons played" },

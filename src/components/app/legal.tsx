@@ -5,7 +5,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
   return (
     <>
       <AppNav />
-      <main className="mx-auto max-w-3xl px-4 py-16 md:px-10 md:py-24">
+      <main className="mx-auto max-w-3xl px-5 pt-32 pb-16 md:px-10 md:pt-40 md:pb-24">
         <h1 className="font-display text-6xl leading-[0.9] font-black md:text-8xl">{title}</h1>
         <p className="mt-4 text-sm text-[var(--muted)]">Last updated {updated}</p>
         <div className="mt-10 space-y-10 text-lg leading-relaxed [&_h2]:font-display [&_h2]:text-3xl [&_h2]:font-black [&_li]:mt-2 [&_p]:mt-3 [&_p]:text-[var(--paper)]/85 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:text-[var(--paper)]/85">

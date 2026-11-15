@@ -15,7 +15,7 @@ export type LiveSide = {
 export type LiveWeek = { week: number; asOf: string; games: [LiveSide, LiveSide][] } | null;
 
 export async function liveWeek(leagueId: string, season: string): Promise<LiveWeek> {
-  "use cache";
+  "use cache: remote";
   cacheLife("minutes");
   const state = await nbaState();
   const inSeason = state.season_type === "regular" || state.season_type === "post";

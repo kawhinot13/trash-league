@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Rafterlore looks exactly like Trash, and is fast
+- Owner wants Trash's exact look: dropped the navy "arena" palette; Rafterlore uses Trash's tokens, glass nav,
+  hero (league name centered; trophy behind names longer than 8 characters so every word stays readable),
+  page intros and footer, with holiday decor off.
+- Pages were slow because every visit hit Neon (cold starts) and sometimes Sleeper. Now one shared remote-cache
+  read per page (warm loads ~30-100 ms locally), invalidated on new data; Sleeper refreshes in the background.
+
 ## 2026-11-15: Rafterlore = the Trash site for any league
 - Reuse, don't rewrite: Trash's features moved into `src/lib/core` as pure functions over a dataset;
   Rafterlore produces the same dataset shape per league (checked against Trash: identical champions,

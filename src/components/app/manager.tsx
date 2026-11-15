@@ -55,7 +55,7 @@ export function ManagerProfile({ p, ownerId }: { p: LeaguePage; ownerId: string 
 
   return (
     <main>
-      <header className="mx-auto max-w-6xl px-4 pt-10 md:px-10 md:pt-16">
+      <header className="mx-auto max-w-6xl px-5 pt-32 md:px-10 md:pt-40">
         <div className="flex items-center gap-4">
           <Avatar src={c.avatar} name={name} size={64} />
           <div className="min-w-0">

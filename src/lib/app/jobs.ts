@@ -3,6 +3,7 @@ import { db, hasDb } from "@/lib/app/db";
 import type { SeasonBundle } from "@/lib/app/family";
 import { analyse, seasonWeeks } from "@/lib/app/analysis";
 import { buildDataset } from "@/lib/app/dataset";
+import { invalidateFamily } from "@/lib/app/store";
 import { REPLAY_VERSION, replayWeek, type WeekData } from "@/lib/app/replay";
 import { consensusMatchups, nbaState, sleeper, type STransaction } from "@/lib/app/sleeper";
 import { playerDirectory, weekStats, type PlayerDir } from "@/lib/app/sleeper-cache";
@@ -179,6 +180,7 @@ async function grade(familyId: string) {
       insert into analyses (family_id, kind, data) values (${familyId}, 'dataset', ${tx.json(ds as never)})
       on conflict (family_id, kind) do update set data = excluded.data, computed_at = now()`;
   });
+  invalidateFamily(familyId);
 }
 
 /** Work one job until `deadline`. Returns true when the job has more to do. */

@@ -2,12 +2,12 @@ import "server-only";
 import { after } from "next/server";
 import { ANALYSIS_VERSION } from "@/lib/app/analysis";
 import { hasDb } from "@/lib/app/db";
-import { enqueueImport, kick, latestJob, progress, runJobs } from "@/lib/app/jobs";
+import { enqueueImport, kick, latestJob, runJobs, type Progress } from "@/lib/app/jobs";
 import { familyView } from "@/lib/app/model";
 import { formatOf } from "@/lib/app/family";
 import { clientIp } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
-import { analysisOf, datasetOf, getFamily, snapshots, type Snapshot } from "@/lib/app/store";
+import { analysisOf, datasetOf, getFamily, refreshStale, snapshots, storedLeague, type Snapshot, type StoredLeague } from "@/lib/app/store";
 import type { BrandConfig } from "@/components/trash/brand";
 import type { Dataset } from "@/lib/core/types";
 import { packIdFor } from "@/packs/ids";
@@ -22,27 +22,45 @@ export type LoadResult =
 
 /** Everything a league's pages show, in one load. */
 export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; dataset?: boolean } = {}): Promise<LoadResult> {
-  let got;
+  // Fast path: the league is stored. One read from the shared cache, no database round trips;
+  // in-season data is refreshed from Sleeper in the background.
+  let stored: StoredLeague | null = null;
   try {
-    got = await getFamily(leagueId, await clientIp());
+    stored = await storedLeague(leagueId);
   } catch (e) {
-    logError(`league ${leagueId}`, e);
-    return { status: "error" };
+    logError(`cached league ${leagueId}`, e);
   }
-  if (got.status === "not_found") return { status: "not_found" };
-  if (got.status === "limited") return { status: "limited", minutes: got.minutes };
-  if (got.status === "removed") return { status: "removed", purgeAfter: got.purgeAfter?.toISOString() ?? null };
-  const view = familyView(got.family);
-  const ids = got.family.seasons.map((s) => s.league.league_id);
+  let family;
+  if (stored) {
+    if (stored.removed) return { status: "removed", purgeAfter: stored.removed.purgeAfter };
+    family = stored.family;
+    const fam = family;
+    after(() => refreshStale(fam).catch((e) => logError(`refresh ${fam.id}`, e)));
+  } else {
+    // First visit (or no database): discover the league, within the import rate limits.
+    let got;
+    try {
+      got = await getFamily(leagueId, await clientIp());
+    } catch (e) {
+      logError(`league ${leagueId}`, e);
+      return { status: "error" };
+    }
+    if (got.status === "not_found") return { status: "not_found" };
+    if (got.status === "limited") return { status: "limited", minutes: got.minutes };
+    if (got.status === "removed") return { status: "removed", purgeAfter: got.purgeAfter?.toISOString() ?? null };
+    family = got.family;
+  }
+  const view = familyView(family);
+  const ids = family.seasons.map((s) => s.league.league_id);
   const [analysis, snaps, job, pack, dataset] = await Promise.all([
-    analysisOf(view.id).catch(() => null),
-    opts.snapshots ? snapshots(view.current.leagueId).catch(() => [] as Snapshot[]) : Promise.resolve([] as Snapshot[]),
-    latestJob(view.id).catch(() => null),
+    stored ? stored.analysis : analysisOf(view.id).catch(() => null),
+    !opts.snapshots ? [] : stored ? stored.snapshots : snapshots(view.current.leagueId).catch(() => [] as Snapshot[]),
+    stored ? stored.job : latestJob(view.id).then((j) => (j ? { status: j.status, phase: j.state.phase, i: j.state.i ?? 0, total: j.state.total ?? 0 } : null)).catch(() => null),
     loadPack(packIdFor(ids)),
-    opts.dataset ? datasetOf(view.id).catch(() => null) : Promise.resolve(null),
+    !opts.dataset ? null : stored ? stored.dataset : datasetOf(view.id).catch(() => null),
   ]);
   // Results from an older version of the grading: regrade in the background (no new weeks to fetch).
-  const open = job && (job.status === "queued" || job.status === "running");
+  const open = !!job && (job.status === "queued" || job.status === "running");
   if (hasDb() && analysis && (analysis.version ?? 1) < ANALYSIS_VERSION && !open)
     after(async () => {
       await enqueueImport(view.id);
@@ -59,12 +77,12 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
     page: {
       leagueId,
       view,
-      format: formatOf(got.family.seasons[got.family.seasons.length - 1].league),
+      format: formatOf(family.seasons[family.seasons.length - 1].league),
       analysis: analysis && (analysis.version ?? 1) >= 1 ? { ...analysis, games: analysis.games ?? [] } : null,
       weekly: exactWeekly(snaps),
       nights: new Set(snaps.map((s) => s.day)).size,
       firstNight: snaps[0]?.day ?? null,
-      progress: progress(job),
+      progress: progressOf(job),
       db: hasDb(),
       pack,
       nameOf,
@@ -105,7 +123,7 @@ export type LeaguePage = {
   weekly: Map<number, Map<number, number>>;
   nights: number;
   firstNight: string | null;
-  progress: ReturnType<typeof progress>;
+  progress: Progress | null;
   db: boolean;
   pack: Awaited<ReturnType<typeof loadPack>>;
   nameOf: (who: string | null | undefined) => string;
@@ -113,6 +131,19 @@ export type LeaguePage = {
   dataset: Dataset | null;
   brand: BrandConfig;
 };
+
+/** The import progress bar's starting state, from the latest job. */
+function progressOf(j: StoredLeague["job"]): Progress | null {
+  if (!j) return null;
+  return {
+    status: j.status as Progress["status"],
+    phase: j.phase as Progress["phase"],
+    done: j.i,
+    total: j.total,
+    pct: j.status === "done" ? 1 : j.total ? Math.min(0.97, j.i / j.total) : 0.02,
+    error: j.status === "failed" ? "Sleeper didn't answer" : null,
+  };
+}
 
 /** roster id -> week number (1-based count of finished weeks) -> exact official score. */
 function exactWeekly(snaps: Snapshot[]) {

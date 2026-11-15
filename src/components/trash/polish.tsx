@@ -28,7 +28,22 @@ const LINKS = [
   ["/rivals", "Rivals"],
   ["/history", "History"],
 ] as const;
-export function GlassNav() {
+export function GlassNav({
+  logo = "Trash",
+  home = "/",
+  links = LINKS,
+  cta = { href: "/#dive", label: "Daily games" },
+  holiday = HOLIDAY,
+}: {
+  /** Wordmark at the left (the league's name). */
+  logo?: string;
+  /** Where the wordmark and the "Home" section point. */
+  home?: string;
+  links?: readonly (readonly [string, string])[];
+  /** The bright button at the right; null hides it. */
+  cta?: { href: string; label: string } | null;
+  holiday?: boolean;
+} = {}) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -38,7 +53,7 @@ export function GlassNav() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-  const isOn = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const isOn = (href: string) => (href === home ? path === home : path.startsWith(href));
   return (
     <>
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-3 md:pt-4">
@@ -50,12 +65,15 @@ export function GlassNav() {
               : "border-transparent bg-transparent"
           }`}
         >
-          {HOLIDAY && scrolled ? <StringLights /> : null}
-          <Link href="/" className="font-display text-2xl font-black tracking-tight">
-            Trash
+          {holiday && scrolled ? <StringLights /> : null}
+          <Link
+            href={home}
+            className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[52vw] truncate md:max-w-[16rem]"}`}
+          >
+            {logo}
           </Link>
           <ul className="hidden items-center gap-0.5 text-sm whitespace-nowrap md:flex">
-            {LINKS.map(([href, label]) => {
+            {links.map(([href, label]) => {
               const on = isOn(href);
               return (
                 <li key={href} className="relative">
@@ -82,13 +100,15 @@ export function GlassNav() {
             })}
           </ul>
           <div className="flex items-center gap-2">
-            {HOLIDAY ? <MusicToggle /> : null}
-            <Link
-              href="/#dive"
-              className="rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97]"
-            >
-              Daily games
-            </Link>
+            {holiday ? <MusicToggle /> : null}
+            {cta ? (
+              <Link
+                href={cta.href}
+                className="rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97]"
+              >
+                {cta.label}
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -130,7 +150,7 @@ export function GlassNav() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-3 py-2">
-                <span className="font-display text-2xl font-black">Trash</span>
+                <span className={`font-display text-2xl font-black${logo === "Trash" ? "" : " truncate"}`}>{logo}</span>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
@@ -151,7 +171,7 @@ export function GlassNav() {
                 </button>
               </div>
               <ul className="mt-1">
-                {LINKS.map(([href, label]) => (
+                {links.map(([href, label]) => (
                   <li key={href}>
                     <Link
                       href={href}

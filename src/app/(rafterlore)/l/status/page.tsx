@@ -90,7 +90,7 @@ export default function StatusPage() {
   return (
     <>
       <AppNav />
-      <main className="mx-auto max-w-6xl px-4 py-16 md:px-10 md:py-24">
+      <main className="mx-auto max-w-6xl px-5 pt-32 pb-16 md:px-10 md:pt-40 md:pb-24">
         <h1 className="font-display text-6xl font-black md:text-8xl">Status</h1>
         <div className="mt-10">
           <Suspense fallback={<p className="text-[var(--muted)]">Checking…</p>}>

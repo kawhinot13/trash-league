@@ -45,7 +45,7 @@ export function ogCard(title: string, line: string, banners: { label: string; go
 
 /** What a preview needs: the stored dataset if the league is on Rafterlore, else Sleeper's name. */
 export async function ogLeague(leagueId: string): Promise<{ name: string; d: Dataset | null } | null> {
-  "use cache";
+  "use cache: remote";
   cacheLife("hours");
   if (!isSleeperId(leagueId)) return null;
   if (hasDb()) {

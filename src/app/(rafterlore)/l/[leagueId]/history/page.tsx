@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
 import { Archive, Pickups } from "@/components/app/league";
-import { Intro, Pending, TradeCrimes } from "@/components/app/site";
+import { ChampionBanners, Intro, Pending, TradeCrimes } from "@/components/app/site";
 import { Almanac } from "@/components/trash/intel";
 import { RedraftBoard } from "@/components/trash/redraft";
 import { SectionHead } from "@/components/trash/section-head";
@@ -44,6 +44,8 @@ function History({ p }: { p: LeaguePage }) {
         {n} season{n === 1 ? "" : "s"} of rings, heists, re-drafts and arguments. Everything here is pulled from the
         Sleeper record.
       </Intro>
+
+      <ChampionBanners d={d} />
 
       <section aria-labelledby="seasons" className="py-16 md:py-24">
         <SectionHead id="seasons" title="Season by season" />

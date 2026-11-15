@@ -1,5 +1,5 @@
 import "server-only";
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { db, hasDb, todayET } from "@/lib/app/db";
 import { discoverFamily, refreshSeason, sanitizeBundle, walkForward, type Family, type SeasonBundle } from "@/lib/app/family";
 import { take } from "@/lib/app/ratelimit";
@@ -54,6 +54,82 @@ export async function familyIdOf(leagueId: string): Promise<string | null> {
   const sql = await db();
   const [row] = await sql<{ family_id: string }[]>`select family_id from leagues where league_id = ${leagueId}`;
   return row?.family_id ?? null;
+}
+
+/** Cache tag for everything stored about one league family. */
+export const familyTag = (familyId: string) => `family:${familyId}`;
+
+/** Drop a family's cached pages so the next visit reads fresh data (after an import, a removal...). */
+export function invalidateFamily(familyId: string) {
+  try {
+    revalidateTag(familyTag(familyId), { expire: 0 });
+  } catch {
+    // Outside a request (a script or test): nothing cached to drop.
+  }
+}
+
+export type StoredLeague = {
+  family: Family;
+  analysis: Analysis | null;
+  dataset: Dataset | null;
+  snapshots: Snapshot[];
+  removed: { purgeAfter: string | null } | null;
+  /** Latest import job, reduced to what pages show. */
+  job: { status: string; phase: string; i: number; total: number } | null;
+};
+
+/**
+ * Everything stored about the league `leagueId` belongs to, in one read, kept in the shared remote
+ * cache (every server instance, all visitors) so league pages don't wait on the database. Cleared by
+ * invalidateFamily when new data lands; otherwise refreshed in the background every few minutes.
+ * Returns null for a league Rafterlore hasn't stored (the caller discovers it).
+ */
+export async function storedLeague(leagueId: string): Promise<StoredLeague | null> {
+  "use cache: remote";
+  cacheLife({ stale: 60, revalidate: 300, expire: 86_400 });
+  if (!hasDb() || !isSleeperId(leagueId)) return null;
+  const fid = await familyIdOf(leagueId);
+  if (!fid) return null;
+  cacheTag(familyTag(fid));
+  const sql = await db();
+  const family = await readFamily(fid);
+  if (!family) return null;
+  const current = family.seasons[family.seasons.length - 1].league.league_id;
+  const [analysis, dataset, snaps, gone, jobs] = await Promise.all([
+    analysisOf(fid),
+    datasetOf(fid),
+    snapshots(current),
+    removalOf([leagueId], fid),
+    sql<{ status: string; state: { phase?: string; i?: number; total?: number } }[]>`
+      select status, state from jobs where family_id = ${fid} and kind = 'import' order by id desc limit 1`,
+  ]);
+  const j = jobs[0];
+  return {
+    family,
+    analysis,
+    dataset,
+    snapshots: snaps,
+    removed: gone ? { purgeAfter: gone.purgeAfter?.toISOString() ?? null } : null,
+    job: j ? { status: j.status, phase: j.state.phase ?? "plan", i: j.state.i ?? 0, total: j.state.total ?? 0 } : null,
+  };
+}
+
+const refreshing = new Set<string>();
+/** Refresh in-progress seasons from Sleeper in the background (visits never wait for it). */
+export async function refreshStale(family: Family) {
+  const stale = family.seasons.filter((s) => live(s) && Date.now() - Date.parse(s.fetchedAt) > STALE_MS);
+  if (!stale.length || refreshing.has(family.id)) return;
+  refreshing.add(family.id);
+  try {
+    const fresh = await Promise.all(stale.map((s) => refreshSeason(s.league.league_id).catch(() => null)));
+    const byId = new Map(fresh.filter(Boolean).map((b) => [b!.league.league_id, b!]));
+    if (byId.size) {
+      await saveFamily({ ...family, seasons: family.seasons.map((s) => byId.get(s.league.league_id) ?? s) });
+      invalidateFamily(family.id);
+    }
+  } finally {
+    refreshing.delete(family.id);
+  }
 }
 
 export type FamilyResult =
@@ -131,6 +207,7 @@ export async function removeFamily(familyId: string): Promise<Date> {
         on conflict (league_id) do update set requested_at = now(), purge_after = excluded.purge_after, purged = false`;
     await tx`update jobs set status = 'done', state = ${tx.json({ phase: "done" })} where family_id = ${familyId} and status in ('queued','running')`;
   });
+  invalidateFamily(familyId);
   return purge;
 }
 
@@ -138,6 +215,7 @@ export async function removeFamily(familyId: string): Promise<Date> {
 export async function restoreFamily(familyId: string): Promise<boolean> {
   const sql = await db();
   const rows = await sql`delete from removals where family_id = ${familyId} and not purged returning league_id`;
+  invalidateFamily(familyId);
   return rows.length > 0;
 }
 

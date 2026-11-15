@@ -42,26 +42,26 @@ async function snapshotTotals(leagueId: string): Promise<Record<number, Record<s
 }
 
 export async function liveTable(leagueId: string, fallback: Standing[]) {
-  "use cache";
+  "use cache: remote";
   cacheLife("minutes");
   const totals = await snapshotTotals(leagueId).catch(() => ({}) as Record<number, Record<string, number>>);
   return coreStandings.liveStandings(source(leagueId), fallback, (k) => totals[k] ?? null);
 }
 
 export async function pairings(leagueId: string) {
-  "use cache";
+  "use cache: remote";
   cacheLife("minutes");
   return coreLive.weekPairings(source(leagueId));
 }
 
 export async function waivers(leagueId: string) {
-  "use cache";
+  "use cache: remote";
   cacheLife("minutes");
   return coreLive.waiverIntel(source(leagueId));
 }
 
 export async function frontOffice(leagueId: string) {
-  "use cache";
+  "use cache: remote";
   cacheLife("hours");
   return coreFO.frontOffice(source(leagueId));
 }

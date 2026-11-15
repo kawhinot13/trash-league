@@ -5,7 +5,7 @@ export default function FindPage() {
   return (
     <>
       <AppNav />
-      <main className="mx-auto max-w-6xl px-4 pt-16 pb-24 md:px-10 md:pt-28">
+      <main className="mx-auto max-w-6xl px-5 pt-32 pb-24 md:px-10 md:pt-44">
         <h1 className="font-display max-w-[14ch] text-[clamp(3.4rem,11vw,8.5rem)] leading-[0.84] font-black">
           Hang your league&apos;s history in the rafters
         </h1>

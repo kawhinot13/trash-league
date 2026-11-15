@@ -18,7 +18,7 @@ export default function RemovePage({ params }: PageProps<"/l/[leagueId]/remove">
         return (
           <>
             <AppNav />
-            <main className="mx-auto max-w-3xl px-4 py-16 md:px-10 md:py-24">
+            <main className="mx-auto max-w-3xl px-5 pt-32 pb-16 md:px-10 md:pt-40 md:pb-24">
               <h1 className="font-display text-5xl leading-[0.9] font-black md:text-7xl">Remove this league from Rafterlore</h1>
               <p className="mt-6 text-lg text-[var(--muted)]">
                 Any manager with a team in the league&apos;s latest season can do this, after proving it&apos;s
