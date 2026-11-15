@@ -404,3 +404,8 @@ body {
 .pig-wing { animation: pig-flap 0.32s ease-in-out infinite alternate; }
 .pig-wing-back { animation-delay: -0.16s; }
 @keyframes pig-flap { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
+
+/* Music toggle equalizer */
+.music-bar { height: 4px; animation: music-eq 0.9s ease-in-out infinite alternate; }
+@keyframes music-eq { 0% { height: 4px; } 50% { height: 14px; } 100% { height: 7px; } }
+@media (prefers-reduced-motion: reduce) { .music-bar { animation: none; height: 9px; } }

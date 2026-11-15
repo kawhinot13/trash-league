@@ -9,6 +9,7 @@ import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { StringLights } from "@/components/holiday/lights";
 import { HOLIDAY } from "@/lib/holiday";
+import { MusicToggle } from "@/components/holiday/music";
 
 /** Run `fn` once the page has painted. (There used to be a preloader to wait for; it was
  * removed because it also popped up when navigating to Home from another page.) */
@@ -81,6 +82,7 @@ export function GlassNav() {
             })}
           </ul>
           <div className="flex items-center gap-2">
+            {HOLIDAY ? <MusicToggle /> : null}
             <Link
               href="/#dive"
               className="rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97]"
