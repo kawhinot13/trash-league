@@ -22,6 +22,7 @@ import { lineup } from "@/lib/core/lineup";
 import { trashle } from "@/lib/core/trashle";
 import type { Dataset } from "@/lib/core/types";
 import { SPORT } from "@/lib/core/sport";
+import { HOLIDAY } from "@/lib/holiday";
 import { lineupTerms } from "@/lib/core/lineup-terms";
 
 /** Tab title from Sleeper's public league name (cached; no database or rate limit involved). */
@@ -156,7 +157,8 @@ function Home({ p }: { p: LeaguePage }) {
         title={view.name}
         week={null}
         leaders={[]}
-        holiday={false}
+        holiday={HOLIDAY}
+        greeting="Merry Christmas"
         blurb={blurb(p)}
         live={livePill(p)}
       />

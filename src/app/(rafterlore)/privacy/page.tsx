@@ -11,7 +11,7 @@ export default function Privacy() {
         <p>
           Rafterlore has no ads and no tracking cookies, and you never need an account. It shows fantasy basketball and
           football league history built from data Sleeper already makes public, and it keeps only what it needs to do that.
-          The leagues you open are remembered in your browser. If you choose to sign in with Google, they're kept on your
+          The leagues you open are remembered in your browser. If you choose to sign in with Google, they&apos;re kept on your
           account instead, with your Sleeper username.
         </p>
       </section>

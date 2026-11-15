@@ -37,9 +37,12 @@ export function GlassNav({
   product,
   extra,
   mark,
+  music = holiday,
 }: {
   /** Wordmark at the left (the league's name). */
   logo?: string;
+  /** The holiday song's toggle. Follows `holiday` unless set (Rafterlore: decor without the Trash song). */
+  music?: boolean;
   /** A logo mark before the wordmark (Rafterlore's R; Trash has none). */
   mark?: React.ReactNode;
   /** Extra controls before the bright button (Rafterlore's account menu; Trash has none). */
@@ -133,7 +136,7 @@ export function GlassNav({
             })}
           </ul>
           <div className="flex items-center gap-2">
-            {holiday ? <MusicToggle /> : null}
+            {holiday && music ? <MusicToggle /> : null}
             {extra}
             {cta ? (
               <Link

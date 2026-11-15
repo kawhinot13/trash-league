@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { AppFooter } from "@/components/app/chrome";
 import { PRODUCT, TAGLINE } from "@/lib/app/brand";
+import { Snowfall } from "@/components/holiday/snowfall";
+import { HOLIDAY } from "@/lib/holiday";
 
 export const metadata: Metadata = {
   title: { default: `${PRODUCT}: fantasy league history`, template: `%s · ${PRODUCT}` },
@@ -22,6 +24,7 @@ export const viewport: Viewport = { themeColor: "#0b2419" };
 export default function RafterloreLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="rafterlore flex flex-col overflow-x-clip">
+      {HOLIDAY ? <Snowfall /> : null}
       <div className="flex-1">{children}</div>
       <AppFooter />
     </div>

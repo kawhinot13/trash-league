@@ -75,6 +75,7 @@ export function Hero({
   blurb,
   live,
   holiday = HOLIDAY,
+  greeting = "Merry Trashmas",
 }: {
   week: number | null;
   leaders: string[];
@@ -86,6 +87,8 @@ export function Hero({
   live?: { href: string; text: React.ReactNode } | null;
   /** Holiday decorations (snow, santa hat, the Trashmas line). */
   holiday?: boolean;
+  /** The holiday line under the title ("Merry Trashmas" on the Trash site). */
+  greeting?: string;
 }) {
   const ref = useRef<HTMLElement>(null);
   useGSAP(
@@ -239,7 +242,7 @@ export function Hero({
         {holiday ? (
           <div className="flex flex-wrap items-center gap-3">
             <SparklesText className="font-display text-4xl font-black md:text-5xl" colors={{ first: "#e9c46a", second: "#d93a3a" }} sparklesCount={8}>
-              Merry Trashmas
+              {greeting}
             </SparklesText>
             <XmasCountdown />
           </div>

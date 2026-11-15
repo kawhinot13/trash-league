@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HOLIDAY } from "@/lib/holiday";
 import { ImportStatus } from "@/components/app/import-status";
 import { Handle, MgrPhoto, PlayerPhoto } from "@/components/trash/brand";
 import { Spotlight } from "@/components/trash/polish";
@@ -8,10 +9,10 @@ import type { LeaguePage } from "@/lib/app/league-page";
 import { tradeCourt } from "@/lib/core/extras";
 import type { Dataset } from "@/lib/core/types";
 
-/** The top of every inner league page: the Trash site's page intro, minus its holiday decor. */
+/** The top of every inner league page: the Trash site's page intro (holiday decor follows HOLIDAY). */
 export function Intro({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <PageIntro title={title} holiday={false}>
+    <PageIntro title={title} holiday={HOLIDAY}>
       {children}
     </PageIntro>
   );

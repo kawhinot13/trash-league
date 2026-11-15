@@ -4,10 +4,11 @@ import { AccountButton } from "@/components/app/account";
 import { RMark } from "@/components/app/mark";
 import { GlassNav } from "@/components/trash/polish";
 import { PRODUCT } from "@/lib/app/brand";
+import { HOLIDAY } from "@/lib/holiday";
 
 /**
  * Rafterlore's chrome is the Trash site's: the same floating glass nav and footer, pointed at
- * the league being viewed (no holiday decor, no music).
+ * the league being viewed. Holiday decor follows the site-wide switch (HOLIDAY); never the Trash song.
  */
 /** The nav reads the URL (active section), so it renders inside Suspense on dynamic routes. */
 export function AppNav(props: { league?: { name: string; id: string; live: boolean } }) {
@@ -26,7 +27,8 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
         home="/l"
         links={[]}
         cta={{ href: "/l", label: "Find a league" }}
-        holiday={false}
+        holiday={HOLIDAY}
+        music={false}
         extra={<AccountButton />}
         mark={<RMark className="h-8 w-auto text-[var(--paper)]" />}
       />
@@ -47,7 +49,8 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
         [`${home}/history`, "History"],
       ]}
       cta={{ href: `${home}#dive`, label: "Daily games" }}
-      holiday={false}
+      holiday={HOLIDAY}
+      music={false}
       extra={<AccountButton />}
     />
   );

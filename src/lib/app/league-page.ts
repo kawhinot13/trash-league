@@ -8,6 +8,7 @@ import { logError } from "@/lib/app/safe";
 import { analysisOf, datasetOf, getFamily, snapshots, storedLeague, type Snapshot, type StoredLeague } from "@/lib/app/store";
 import type { BrandConfig } from "@/components/trash/brand";
 import { initialsOf } from "@/lib/core/names";
+import { HOLIDAY } from "@/lib/holiday";
 import type { Dataset } from "@/lib/core/types";
 import { packIdFor } from "@/packs/ids";
 import { loadPack } from "@/packs";
@@ -116,6 +117,7 @@ function brandFor(
   return {
     name: view.name,
     tag: "League",
+    holiday: HOLIDAY,
     sport: view.sport,
     lineup: lineup ?? undefined,
     since: view.seasons[0]?.years.slice(0, 4),

@@ -414,7 +414,6 @@ body {
  * Same palette and atmosphere as the Trash site (the tokens on :root); only the holiday
  * decorations are switched off inside Rafterlore pages. */
 .rafterlore { min-height: 100dvh; }
-.rafterlore .xmas-drift::after { display: none; }
 
 /* Hardwood: the floor under the current table. */
 .hardwood {

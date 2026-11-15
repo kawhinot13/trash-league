@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, type ComponentPropsWithoutRef } from "react"
-import { useInView, useMotionValue, useSpring } from "motion/react"
+import { animate, useInView, useMotionValue, useReducedMotion } from "motion/react"
 
 import { cn } from "@/lib/utils"
 
@@ -24,18 +24,21 @@ export function NumberTicker({
 }: NumberTickerProps) {
   const ref = useRef<HTMLSpanElement>(null)
   const motionValue = useMotionValue(direction === "down" ? value : startValue)
-  const springValue = useSpring(motionValue, {
-    damping: 60,
-    stiffness: 100,
-  })
   const isInView = useInView(ref, { once: true, margin: "0px" })
+  const reduce = useReducedMotion()
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
 
+    let run: ReturnType<typeof animate> | null = null
+    const target = direction === "down" ? startValue : value
+
     if (isInView) {
       timer = setTimeout(() => {
-        motionValue.set(direction === "down" ? startValue : value)
+        // A fixed one-second count that lands on the real number (a spring coasted for seconds,
+        // and half-finished counts read as wrong stats). Every ticker finishes together.
+        if (reduce) motionValue.set(target)
+        else run = animate(motionValue, target, { duration: 1, ease: [0.16, 1, 0.3, 1] })
       }, delay * 1000)
     }
 
@@ -43,12 +46,13 @@ export function NumberTicker({
       if (timer !== null) {
         clearTimeout(timer)
       }
+      run?.stop()
     }
-  }, [motionValue, isInView, delay, value, direction, startValue])
+  }, [motionValue, isInView, delay, value, direction, startValue, reduce])
 
   useEffect(
     () =>
-      springValue.on("change", (latest) => {
+      motionValue.on("change", (latest) => {
         if (ref.current) {
           ref.current.textContent = Intl.NumberFormat("en-US", {
             minimumFractionDigits: decimalPlaces,
@@ -56,7 +60,7 @@ export function NumberTicker({
           }).format(Number(latest.toFixed(decimalPlaces)))
         }
       }),
-    [springValue, decimalPlaces]
+    [motionValue, decimalPlaces]
   )
 
   return (
