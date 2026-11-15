@@ -7,12 +7,26 @@ import { seasonYears } from "@/lib/app/sleeper";
 const fmt = (x: number, d = 1) => x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 
-export function Section({ id, title, lede, children }: { id: string; title: string; lede?: React.ReactNode; children: React.ReactNode }) {
+/** A page section. `level={1}` when it's the page's main heading (pages without their own header). */
+export function Section({
+  id,
+  title,
+  lede,
+  children,
+  level = 2,
+}: {
+  id: string;
+  title: string;
+  lede?: React.ReactNode;
+  children: React.ReactNode;
+  level?: 1 | 2;
+}) {
+  const H = level === 1 ? "h1" : "h2";
   return (
     <section aria-labelledby={id} className="mx-auto max-w-6xl scroll-mt-20 px-4 py-14 md:px-10 md:py-20">
-      <h2 id={id} className="font-display text-4xl leading-none font-black md:text-6xl">
+      <H id={id} className="font-display text-4xl leading-none font-black md:text-6xl">
         {title}
-      </h2>
+      </H>
       {lede ? <div className="mt-4 max-w-[62ch] text-[var(--muted)] md:text-lg">{lede}</div> : null}
       <div className="mt-8 md:mt-10">{children}</div>
     </section>

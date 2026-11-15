@@ -40,6 +40,18 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Never put league-specific features in the generic components.
 - Local testing: Postgres binaries in `/usr/lib/postgresql/16/bin`; run `DATABASE_URL=... NODE_USE_ENV_PROXY=1 next dev`.
 
+## Workflow (memory, agents, hooks)
+- Memory: read `docs/memory/status.md` at the start of a task instead of re-exploring; update it and
+  `docs/memory/decisions.md` (dated, why + rejected options) when significant work ships. Public repo:
+  never put secrets or personal data there.
+- Agents (`.claude/agents/`): `mobile-qa` (Haiku) only after layout/visual changes, on the touched pages;
+  `rules-reviewer` (Sonnet) only after significant changes. Never for trivial edits; no background agents.
+- Hooks (`.claude/settings.json`): a guard blocks reading .env/key files and printing secret env vars;
+  a Stop hook typechecks + lints changed TypeScript and blocks with the errors.
+- Models: project default is Sonnet (`.claude/settings.json`); Haiku for simple delegated checks; switch to
+  Opus with `/model` only for hard architecture or debugging. Claude Code's own connection only: no routing
+  proxies, external providers, paid services or cloud memory (see decisions.md).
+
 ## Shipping
 - The owner wants finished work live: after committing, always push it to `main` too (the site deploys from `main`). No need to ask first.
 

@@ -13,7 +13,7 @@ export default function LivePage({ params }: PageProps<"/l/[leagueId]/live">) {
         <LeagueGate leagueId={leagueId}>
           {(p) => (
             <main>
-              <Section
+              <Section level={1}
                 id="live"
                 title="This week"
                 lede="Live matchup scores, per Sleeper. They update through the week and don't always match the official totals, which are saved every night."

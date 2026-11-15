@@ -47,7 +47,7 @@ function RivalsView({ p, a, b }: { p: LeaguePage; a: string; b: string }) {
   const href = (r: { a: string; b: string }) => `/l/${p.leagueId}/rivals?a=${r.a}&b=${r.b}`;
   return (
     <main>
-      <Section
+      <Section level={1}
         id="rivals"
         title="Rivals"
         lede="Any two managers, every time they've met. Built from Sleeper's weekly matchup scores, so it's per Sleeper: those don't always match the official totals."

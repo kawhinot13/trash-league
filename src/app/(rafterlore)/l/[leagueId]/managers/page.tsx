@@ -12,7 +12,7 @@ export default function ManagersPage({ params }: PageProps<"/l/[leagueId]/manage
         <LeagueGate leagueId={leagueId}>
           {(p) => (
             <main>
-              <Section id="managers" title="Managers" lede="Everyone who has run a team in the league. Tap a name for their profile.">
+              <Section level={1} id="managers" title="Managers" lede="Everyone who has run a team in the league. Tap a name for their profile.">
                 <Careers p={p} />
               </Section>
             </main>
