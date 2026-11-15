@@ -1,5 +1,5 @@
 import { authorized } from "@/lib/app/auth";
-import { hasDb } from "@/lib/app/db";
+import { db, hasDb } from "@/lib/app/db";
 import { enqueueImport, kick, runJobs } from "@/lib/app/jobs";
 import { logError, safeMessage } from "@/lib/app/safe";
 import { pruneCache } from "@/lib/app/sleeper-cache";
@@ -17,6 +17,8 @@ export async function GET(req: Request) {
   if (!authorized(req)) return new Response("unauthorized", { status: 401 });
   if (!hasDb()) return Response.json({ ok: false, reason: "no database" }, { status: 503 });
   const started = Date.now();
+  const sql = await db();
+  const [run] = await sql<{ id: number }[]>`insert into cron_runs default values returning id`;
   const house = await housekeeping().catch((e) => ({ error: safeMessage(e) }));
   await pruneCache().catch(() => {});
   for (const id of ALWAYS_TRACKED) await getFamily(id, null).catch(() => null);
@@ -38,6 +40,10 @@ export async function GET(req: Request) {
         }
       }),
     );
+  await sql`
+    update cron_runs set finished_at = now(), leagues = ${ids.length}, snapshots = ${snaps}, failed = ${failed.length}
+    where id = ${run.id}`;
+  await sql`delete from cron_runs where started_at < now() - interval '60 days'`;
   const left = 280_000 - (Date.now() - started);
   const r = left > 20_000 ? await runJobs(left - 10_000) : { ran: 0, more: true };
   if (r.more) await kick();

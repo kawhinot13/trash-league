@@ -42,7 +42,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Background jobs: `jobs` table, started after an import, by the page's progress poll, `/api/jobs/tick` and the
   nightly cron. Grading output is versioned (`ANALYSIS_VERSION`); older results regrade on the next visit.
 - Nightly cron (`vercel.json`, 10:17 UTC, needs `CRON_SECRET`): housekeeping and purges, refresh every league, save
-  official points for into `pf_snapshots`, queue the incremental import.
+  official points for into `pf_snapshots`, queue the incremental import. Each run is logged in `cron_runs`;
+  `/l/status` shows whether last night ran and failures.
 - Numbers: season efficiency uses official totals; anything from weekly matchups (H2H, live, single weeks) says "per Sleeper".
 - Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.
   Never put league-specific features in the generic components.

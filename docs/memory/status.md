@@ -9,7 +9,8 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
   stats, ticker, Deep Cut / Rosterdle / The Lineup with per-league leaderboards), live (table, matchup
   of the week, this week, power rankings, recap, waiver wire), managers (cards, all-time, my guys,
   Lock-In, quiz, profiles), rivals (machine, who owns who), history (seasons, trade court, generated
-  trade crimes, almanac, re-draft, time machine, pickups), front office; verified removal; /privacy, /terms.
+  trade crimes, almanac, re-draft, time machine, pickups), front office; verified removal; /privacy, /terms;
+  share cards (league, manager, rivals); "see an example league" link; /l/status (nightly runs, queue, budget).
 - Infrastructure: Neon Postgres in production, nightly cron (10:17 UTC), job queue, shared Sleeper
   throttle, caches, rate limits, redacted logging.
 - Claude Code setup: secret guard and TypeScript stop hooks, mobile-qa (Haiku) and rules-reviewer

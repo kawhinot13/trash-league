@@ -64,7 +64,13 @@ export function Finder() {
           {busy ? "Looking…" : "Find my leagues"}
         </button>
       </form>
-      <p className="mt-3 text-sm text-[var(--muted)]">A league id or Sleeper league link works too.</p>
+      <p className="mt-3 text-sm text-[var(--muted)]">
+        A league id or Sleeper league link works too. Or{" "}
+        <Link href="/l/1400952185902120960" className="font-semibold text-[var(--paper)] underline underline-offset-4">
+          see an example league
+        </Link>
+        .
+      </p>
       {err ? (
         <p role="alert" className="mt-6 text-[var(--paper)]">
           {err}

@@ -154,6 +154,17 @@ create table if not exists removal_challenges (
 );
 create index if not exists removal_challenges_family on removal_challenges(family_id, user_id);
 
+-- One row per nightly run, for the status page.
+create table if not exists cron_runs (
+  id           bigserial primary key,
+  started_at   timestamptz not null default now(),
+  finished_at  timestamptz,
+  leagues      int not null default 0,
+  snapshots    int not null default 0,
+  failed       int not null default 0,
+  note         text
+);
+
 -- Daily-game leaderboards (honor system, like the Trash site's). Kept 40 days.
 create table if not exists game_scores (
   family_id   text not null references families(id) on delete cascade,
