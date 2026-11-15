@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import type { LiveRow, Pickup } from "@/lib/live";
+import type { Pickup } from "@/lib/live";
 import type { Manager, Season, Standing } from "@/lib/league";
 
 const n1 = (x: number) =>
@@ -90,13 +90,7 @@ export function Segmented<T extends string>({
   );
 }
 
-/* ── Live table: official vs "if the week ended today" ───────────────── */
-const fmtTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "America/New_York",
-  });
+/* ── Season table: official results only ─────────────────────────────── */
 const Move = ({ m, label }: { m: number; label: string }) =>
   m ? (
     <span
@@ -107,177 +101,91 @@ const Move = ({ m, label }: { m: number; label: string }) =>
       {Math.abs(m)}
     </span>
   ) : null;
-export function LiveWeek({
+
+/**
+ * The official table. Only Sleeper's completed-week records and official points for, never the
+ * live matchup feed: for this league's daily lineups that feed reports different team scores
+ * on every request, so live scores and projections are not shown anywhere.
+ */
+export function OfficialTable({
   week,
-  rows,
-  daysLeft,
   official,
-  asOf,
+  opp,
 }: {
   week: number;
-  rows: LiveRow[] | null;
-  daysLeft: number;
   official: Standing[];
-  asOf: string;
+  /** this week's opponent per manager (pairings only, no scores) */
+  opp: Record<string, string>;
 }) {
-  const [mode, setMode] = useState<"proj" | "now">("now");
   const games = Math.max(1, ...official.map((r) => r.w + r.l + r.t));
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <Segmented
-          id="live"
-          value={mode}
-          onChange={setMode}
-          options={
-            rows
-              ? [
-                  ["now", "Official table"],
-                  ["proj", "If the week ended today"],
-                ]
-              : [["now", "Official table"]]
-          }
-        />
-        <p className="max-w-[52ch] text-sm font-medium">
-          {mode === "now"
-            ? `Official standings through week ${week - 1}. Arrows show the move since the week before.`
-            : `Live scores from Sleeper's public data feed, updated ${fmtTime(asOf)} ET. For this league's daily lineups they can differ from the Sleeper app.`}
-        </p>
-      </div>
+      <p className="mb-6 max-w-[60ch] text-sm font-medium">
+        Official standings through week {games}, straight from Sleeper. Week {week}{" "}
+        is in progress: its scores go up here once Sleeper finalizes the week.
+      </p>
       <ol className="overflow-hidden rounded-2xl bg-[#1d140b] text-[var(--paper)] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
-        {mode === "now"
-          ? official.map((r) => (
-              <motion.li
-                layout
-                key={r.manager}
-                className="border-b border-[var(--line)] last:border-0"
-              >
-                <Link
-                  href={`/managers/${r.manager}`}
-                  className="grid grid-cols-[2rem_auto_1fr_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 md:grid-cols-[2.5rem_auto_1fr_10rem_7rem] md:gap-5 md:px-6"
-                >
-                  <span className="font-display text-2xl font-bold text-[var(--muted)] tabular-nums">
-                    {r.seed}
-                  </span>
-                  <Av id={r.manager} s={40} />
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2 truncate font-semibold">
-                      {r.manager}{" "}
-                      <Move m={r.move ?? 0} label="since last week" />
-                      {r.streak ? (
-                        <span
-                          className={`rounded-full px-1.5 text-[10px] font-bold ${r.streak.endsWith("W") ? "bg-[#7fd49a]/15 text-[#7fd49a]" : "bg-[#ff8a7a]/15 text-[#ff8a7a]"}`}
-                        >
-                          {r.streak}
-                        </span>
-                      ) : null}
+        {official.map((r) => (
+          <li
+            key={r.manager}
+            className="border-b border-[var(--line)] last:border-0"
+          >
+            <Link
+              href={`/managers/${r.manager}`}
+              className="grid grid-cols-[2rem_auto_1fr_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 md:grid-cols-[2.5rem_auto_1fr_10rem_7rem] md:gap-5 md:px-6"
+            >
+              <span className="font-display text-2xl font-bold text-[var(--muted)] tabular-nums">
+                {r.seed}
+              </span>
+              <Av id={r.manager} s={40} />
+              <span className="min-w-0">
+                <span className="flex items-center gap-2 truncate font-semibold">
+                  {r.manager}{" "}
+                  <Move m={r.move ?? 0} label="since last week" />
+                  {r.streak ? (
+                    <span
+                      className={`rounded-full px-1.5 text-[10px] font-bold ${r.streak.endsWith("W") ? "bg-[#7fd49a]/15 text-[#7fd49a]" : "bg-[#ff8a7a]/15 text-[#ff8a7a]"}`}
+                    >
+                      {r.streak}
                     </span>
-                    <span className="block truncate text-xs text-[var(--muted)]">
-                      {r.team}
-                    </span>
-                  </span>
-                  <span className="hidden md:block">
-                    <span className="block h-1.5 rounded-full bg-white/10">
-                      <span
-                        className="block h-1.5 rounded-full bg-[var(--wood)]"
-                        style={{ width: `${(((r.w + r.t / 2) / games) * 100).toFixed(2)}%` }}
-                      />
-                    </span>
-                  </span>
-                  <span className="text-right">
-                    <span className="font-display block text-2xl font-bold tabular-nums">
-                      {rec(r.w, r.l, r.t)}
-                    </span>
-                    <span className="block text-xs text-[var(--muted)] tabular-nums">
-                      {r.pf.toLocaleString()} pts
-                    </span>
-                  </span>
-                </Link>
-              </motion.li>
-            ))
-          : (rows ?? []).map((r) => (
-              <motion.li
-                layout
-                key={r.manager}
-                transition={{ type: "spring", stiffness: 300, damping: 32 }}
-                className="border-b border-[var(--line)] last:border-0"
-              >
-                <Link
-                  href={`/managers/${r.manager}`}
-                  className="grid grid-cols-[2rem_auto_1fr_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 md:grid-cols-[2.5rem_auto_1fr_15rem_7rem] md:gap-5 md:px-6"
-                >
-                  <span className="font-display text-2xl font-bold text-[var(--muted)] tabular-nums">
-                    {r.rankProj}
-                  </span>
-                  <Av id={r.manager} s={40} />
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2 truncate font-semibold">
-                      {r.manager}{" "}
-                      <Move
-                        m={r.rankNow - r.rankProj}
-                        label="from the official table"
-                      />
-                    </span>
-                    <span className="block truncate text-xs text-[var(--muted)]">
-                      <span className="text-[var(--paper)]/85">
-                        {n1(r.now)}
-                      </span>{" "}
-                      now, {n1(r.proj)} proj.
-                      <span className="mx-1.5 opacity-50">|</span>vs {r.opp}{" "}
-                      {n1(r.oppNow)}
-                    </span>
-                  </span>
-                  <span className="hidden md:block">
-                    <span className="mb-1 flex justify-between text-xs text-[var(--muted)]">
-                      <span>Win chance (estimate)</span>
-                      <span className="tabular-nums text-[var(--paper)]">
-                        {Math.round(r.winProb * 100)}%
-                      </span>
-                    </span>
-                    <span className="block h-1.5 rounded-full bg-white/10">
-                      <span
-                        className="block h-1.5 rounded-full"
-                        style={{
-                          width: `${(r.winProb * 100).toFixed(2)}%`,
-                          background:
-                            r.winProb >= 0.5 ? "var(--gold)" : "var(--ticket)",
-                        }}
-                      />
-                    </span>
-                  </span>
-                  <span className="text-right">
-                    <span className="font-display block text-2xl font-bold tabular-nums">
-                      {rec(r.pw, r.pl, r.pt)}
-                    </span>
-                    <span className="block text-xs text-[var(--muted)] md:hidden">
-                      {Math.round(r.winProb * 100)}% to win
-                    </span>
-                  </span>
-                </Link>
-              </motion.li>
-            ))}
+                  ) : null}
+                </span>
+                <span className="block truncate text-xs text-[var(--muted)]">
+                  {opp[r.manager] ? `This week: vs ${opp[r.manager]}` : r.team}
+                </span>
+              </span>
+              <span className="hidden md:block">
+                <span className="block h-1.5 rounded-full bg-white/10">
+                  <span
+                    className="block h-1.5 rounded-full bg-[var(--wood)]"
+                    style={{ width: `${(((r.w + r.t / 2) / games) * 100).toFixed(2)}%` }}
+                  />
+                </span>
+              </span>
+              <span className="text-right">
+                <span className="font-display block text-2xl font-bold tabular-nums">
+                  {rec(r.w, r.l, r.t)}
+                </span>
+                <span className="block text-xs text-[var(--muted)] tabular-nums">
+                  {r.pf.toLocaleString()} pts
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
       </ol>
       <Explain tone="court">
         <p>
-          <strong>Official table.</strong> Completed weeks only, straight from
-          Sleeper. Record first, ties broken by points for. Arrows compare with
-          the table one week earlier, rebuilt from each team&apos;s official
-          week-by-week record. The badge is the current streak.
+          Completed weeks only, straight from Sleeper: record first, ties broken
+          by official points for. Arrows compare with the table one week
+          earlier, rebuilt from each team&apos;s official records and
+          points-for snapshots. The badge is the current streak.
         </p>
         <p>
-          <strong>If the week ended today.</strong> Every matchup goes to
-          whoever has more points locked in right now, then the table re-ranks
-          with this week&apos;s points added to points for. Scores come from
-          Sleeper&apos;s public data feed, which for this league&apos;s daily
-          lineups can run differently from the live score in the Sleeper app.
-        </p>
-        <p>
-          <strong>Projected and win chance</strong> are our estimates: each
-          lineup slot ends at the better of its current score and its
-          starter&apos;s next projected game. Treat them as a guide, not gospel.{" "}
-          {daysLeft
-            ? `${daysLeft} day${daysLeft === 1 ? "" : "s"} left this week.`
-            : ""}
+          No live scores or projections. Sleeper&apos;s public matchup feed
+          returns different team scores on different requests for this
+          league&apos;s daily lineups, so it can&apos;t be trusted mid-week.
+          The exact score of every finished week shows in the weekly recap.
         </p>
       </Explain>
     </div>
@@ -288,9 +196,7 @@ type MatchTeam = {
   manager: string;
   rec: string;
   streak?: string;
-  now: number;
-  proj: number;
-  winProb: number;
+  pf: number;
   seed: number;
 };
 const MatchSide = ({ x, right }: { x: MatchTeam; right?: boolean }) => (
@@ -301,14 +207,16 @@ const MatchSide = ({ x, right }: { x: MatchTeam; right?: boolean }) => (
     <p className="font-display mt-3 text-3xl leading-none font-black md:text-4xl">
       {x.manager}
     </p>
-    <p className="mt-1 text-sm text-[var(--muted)]">
-      #{x.seed}, {x.rec}
+    <p className="font-display mt-4 text-5xl leading-none font-black tabular-nums">
+      #{x.seed}
+    </p>
+    <p className="mt-2 text-sm text-[var(--muted)]">
+      {x.rec}
       {x.streak ? `, ${x.streak} streak` : ""}
     </p>
-    <p className="font-display mt-4 text-6xl leading-none font-black tabular-nums">
-      {n1(x.now)}
+    <p className="mt-1 text-sm text-[var(--muted)] tabular-nums">
+      {x.pf.toLocaleString()} pts for
     </p>
-    <p className="mt-1 text-sm text-[var(--muted)]">{n1(x.proj)} projected</p>
   </div>
 );
 
@@ -319,31 +227,12 @@ export function MatchupOfWeek({
   b,
   h2hA,
   h2hB,
-  asOf,
 }: {
   week: number;
-  a: {
-    manager: string;
-    rec: string;
-    streak?: string;
-    now: number;
-    proj: number;
-    winProb: number;
-    seed: number;
-  };
-  b: {
-    manager: string;
-    rec: string;
-    streak?: string;
-    now: number;
-    proj: number;
-    winProb: number;
-    seed: number;
-  };
+  a: MatchTeam;
+  b: MatchTeam;
   h2hA: number;
   h2hB: number;
-  why?: string;
-  asOf: string;
 }) {
   return (
     <div className="relative overflow-hidden rounded-[28px] border border-[var(--gold)]/30 bg-[#10241b] p-6 text-[var(--paper)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] md:p-10">
@@ -362,34 +251,24 @@ export function MatchupOfWeek({
             <p className="font-display text-5xl font-black text-[var(--muted)]">
               vs
             </p>
-            <p className="mt-3 text-sm text-[var(--muted)]">All-time</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">All-time, per Sleeper</p>
             <p className="font-display text-3xl font-black tabular-nums">
               {h2hA}–{h2hB}
             </p>
           </div>
           <MatchSide x={b} right />
         </div>
-        <div className="mt-8">
-          <div className="mb-1 flex justify-between text-xs text-[var(--muted)]">
-            <span>{Math.round(a.winProb * 100)}% win chance</span>
-            <span>{Math.round(b.winProb * 100)}%</span>
-          </div>
-          <div className="flex h-2 overflow-hidden rounded-full">
-            <span
-              className="block bg-[var(--gold)]"
-              style={{ width: `${(a.winProb * 100).toFixed(2)}%` }}
-            />
-            <span className="block flex-1 bg-white/15" />
-          </div>
-        </div>
+        <p className="mt-8 text-center text-sm text-[var(--muted)]">
+          Final score posts once Sleeper finalizes week {week}.
+        </p>
         <Explain>
           <p>
             The Matchup of the Week is the game between the two highest-ranked
-            teams playing each other this week. Scores are from Sleeper&apos;s
-            public data feed (updated {fmtTime(asOf)} ET) and can differ from
-            the Sleeper app for this league&apos;s daily lineups. Projections
-            and win chance are our estimates. All-time is the regular-season
-            head to head, per Sleeper.
+            teams playing each other this week. Records, seeds and points for
+            are official. Live scores aren&apos;t shown: Sleeper&apos;s public
+            feed reports different scores for this league&apos;s daily lineups
+            on different requests, so it doesn&apos;t match the app. All-time
+            is the regular-season head to head, per Sleeper.
           </p>
         </Explain>
       </div>

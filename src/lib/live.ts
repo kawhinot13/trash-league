@@ -2,13 +2,8 @@ import { cacheLife } from "next/cache";
 import { league } from "@/lib/league";
 
 /**
- * Live intel built on Sleeper's public endpoints (matchups, per-game projections,
- * per-game stats, trending adds). Sleeper doesn't publish these combinations.
- *
- * The league uses daily lineups (game_mode 1): a game only counts on days the
- * player starts. So "points so far" always comes from Sleeper's own matchup
- * score, and the rest of the week is projected by setting each team's best
- * legal lineup for every remaining day.
+ * Live intel built on Sleeper's public endpoints (pairings, per-game projections,
+ * per-game stats, trending adds). Team scores never come from here.
  */
 const API = "https://api.sleeper.app";
 const LEAGUE = league.seasons.find((s) => s.code === "s4")!.leagueId;
@@ -35,28 +30,6 @@ const get = async <T>(path: string): Promise<T> => {
   return r.json() as Promise<T>;
 };
 
-type LiveMatchup = { roster_id: number; matchup_id: number; points: number; starters: string[]; starters_points: number[] };
-/** Sleeper returns different scores for the same week on different requests in this league:
- * read it several times and keep each team's highest reported score (closest to the official
- * season totals). */
-async function consensusMatchups(week: number, samples = 6): Promise<LiveMatchup[]> {
-  const runs = await Promise.all(
-    Array.from({ length: samples }, (_, i) =>
-      fetch(`${API}/v1/league/${LEAGUE}/matchups/${week}?sample=${i}`, { cache: "no-store" })
-        .then((r) => (r.ok ? (r.json() as Promise<LiveMatchup[]>) : []))
-        .catch(() => [] as LiveMatchup[]),
-    ),
-  );
-  const best = new Map<number, LiveMatchup>();
-  for (const rows of runs)
-    for (const m of rows) {
-      const cur = best.get(m.roster_id);
-      if (!cur || (m.points ?? 0) > (cur.points ?? 0)) best.set(m.roster_id, m);
-    }
-  if (!best.size) throw new Error("no matchups");
-  return [...best.values()];
-}
-
 /** Fantasy points under this league's scoring. Sleeper reports milestone bonuses
  * (40+ pts, 20+ reb...) as tallies, so one weighted sum works for single games and
  * season totals alike. Verified: reproduces all 149 player scores in week 4 exactly. */
@@ -72,175 +45,33 @@ const todayET = () =>
     new Date(),
   );
 
-/** Standard normal CDF (Abramowitz–Stegun). */
-const phi = (z: number) => {
-  const t = 1 / (1 + 0.2316419 * Math.abs(z));
-  const d = 0.3989423 * Math.exp((-z * z) / 2);
-  const p =
-    d *
-    t *
-    (0.3193815 +
-      t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-  return z > 0 ? 1 - p : p;
-};
-
-export type LiveRow = {
-  pending: number;
-  oppNow: number;
-  manager: string;
-  team: string;
-  w: number;
-  l: number;
-  t: number;
-  now: number;
-  proj: number;
-  opp: string;
-  oppProj: number;
-  winProb: number;
-  pw: number;
-  pl: number;
-  pt: number;
-  rankNow: number;
-  rankProj: number;
-  pf: number;
-};
-
-export async function weekIfEndedToday(): Promise<{
-  week: number;
-  rows: LiveRow[];
-  daysLeft: number;
-  asOf: string;
-} | null> {
+/**
+ * This week's pairings (who plays whom), nothing else. Sleeper's matchup feed reports
+ * different team scores on different requests for this daily-lineup league, so its points are
+ * never shown; only the matchup_id pairing is used.
+ */
+export async function weekPairings(): Promise<{ week: number; opp: Record<string, string> } | null> {
   "use cache";
   cacheLife("minutes");
   try {
-    const state = await get<{ week: number; season: string }>("/v1/state/nba");
-    const week = state.week;
-    const [lg, rosters, users, matchups, proj, stats] = await Promise.all([
-      get<{ scoring_settings: Stats }>(`/v1/league/${LEAGUE}`),
-      get<
-        {
-          roster_id: number;
-          owner_id: string;
-          players: string[] | null;
-          settings: Stats;
-        }[]
-      >(`/v1/league/${LEAGUE}/rosters`),
-      get<
-        {
-          user_id: string;
-          display_name: string;
-          metadata?: { team_name?: string };
-        }[]
-      >(`/v1/league/${LEAGUE}/users`),
-      consensusMatchups(week),
-      get<Row[]>(
-        `/projections/nba/${state.season}/${week}?season_type=regular`,
-      ),
-      get<Row[]>(`/stats/nba/${state.season}/${week}?season_type=regular`),
+    const state = await get<{ week: number }>("/v1/state/nba");
+    const [rosters, users, matchups] = await Promise.all([
+      get<{ roster_id: number; owner_id: string }[]>(`/v1/league/${LEAGUE}/rosters`),
+      get<{ user_id: string; display_name: string }[]>(`/v1/league/${LEAGUE}/users`),
+      get<{ roster_id: number; matchup_id: number | null }[]>(`/v1/league/${LEAGUE}/matchups/${state.week}`),
     ]);
-    const scoring = lg.scoring_settings;
-    const today = todayET();
-    const played = new Set(
-      stats.filter((r) => r.date).map((r) => `${r.player_id}|${r.date}`),
-    );
-    const dates = [
-      ...new Set(
-        proj.map((r) => r.date).filter((d): d is string => !!d && d >= today),
-      ),
-    ].sort();
-    // Each lineup slot shows the latest game its starter played while starting; a new game
-    // replaces the old score (verified: 79 of 108 slots = latest game, the rest = benched later).
-    const lastGame = new Map<string, { date: string; proj: number }>();
-    for (const r of proj) {
-      if (!r.date || r.date < today || played.has(`${r.player_id}|${r.date}`)) continue;
-      if (r.player?.injury_status === "Out") continue;
-      // One game per slot counts, so a manager plays the best remaining game, not the last one.
-      const cur = lastGame.get(r.player_id);
-      const pr = fp(r.stats, scoring);
-      if (!cur || pr > cur.proj) lastGame.set(r.player_id, { date: r.date, proj: pr });
-    }
-    const byUser = new Map(users.map((u) => [u.user_id, u]));
-    const team = rosters.map((r) => {
-      const mu = matchups.find((x) => x.roster_id === r.roster_id);
-      let final = 0;
-      let v = 0;
-      let pending = 0;
-      (mu?.starters ?? []).forEach((pid, i) => {
-        const now = mu?.starters_points?.[i] ?? 0;
-        const next = lastGame.get(pid);
-        // Managers protect a big score by benching, and play a starter when a better game is coming,
-        // so a slot ends the week at the better of its current score and its next projected game.
-        if (next && next.proj > now) {
-          final += next.proj;
-          v += (0.33 * next.proj) ** 2; // one game's spread is roughly a third of its projection
-          pending += 1;
-        } else final += now;
-      });
-      const rest = final - (mu?.points ?? 0);
-      const m = matchups.find((x) => x.roster_id === r.roster_id)!;
-      const u = byUser.get(r.owner_id);
-      const s = r.settings;
-      return {
-        rid: r.roster_id,
-        mid: m?.matchup_id,
-        manager: u?.display_name ?? "unknown",
-        team: u?.metadata?.team_name || u?.display_name || "",
-        w: s.wins ?? 0,
-        l: s.losses ?? 0,
-        t: s.ties ?? 0,
-        pf: (s.fpts ?? 0) + (s.fpts_decimal ?? 0) / 100,
-        now: m?.points ?? 0,
-        proj: (m?.points ?? 0) + rest,
-        sd: Math.sqrt(v),
-        pending,
-      };
-    });
-    const rows: LiveRow[] = team.map((x) => {
-      const o = team.find((y) => y.mid === x.mid && y.rid !== x.rid)!;
-      const sd = Math.sqrt(x.sd ** 2 + o.sd ** 2) || 1;
-      const winProb = phi((x.proj - o.proj) / sd);
-      // "If the week ended today" = locked-in points only: whoever leads right now wins.
-      const win = x.now > o.now;
-      const tie = x.now === o.now;
-      return {
-        manager: x.manager,
-        team: x.team,
-        w: x.w,
-        l: x.l,
-        t: x.t,
-        now: x.now,
-        proj: x.proj,
-        opp: o.manager,
-        oppProj: o.proj,
-        oppNow: o.now,
-        pending: x.pending,
-        winProb,
-        pw: x.w + (win ? 1 : 0),
-        pl: x.l + (win || tie ? 0 : 1),
-        pt: x.t + (tie ? 1 : 0),
-        rankNow: 0,
-        rankProj: 0,
-        pf: x.pf,
-      };
-    });
-    [...rows]
-      .sort((a, b) => b.w + b.t / 2 - (a.w + a.t / 2) || b.pf - a.pf)
-      .forEach((r, i) => (r.rankNow = i + 1));
-    [...rows]
-      .sort(
-        (a, b) =>
-          b.pw + b.pt / 2 - (a.pw + a.pt / 2) ||
-          b.pf + b.now - (a.pf + a.now),
-      )
-      .forEach((r, i) => (r.rankProj = i + 1));
-    rows.sort((a, b) => a.rankProj - b.rankProj);
-    return {
-      week,
-      rows,
-      daysLeft: dates.length,
-      asOf: new Date().toISOString(),
-    };
+    const name = new Map(users.map((u) => [u.user_id, u.display_name]));
+    const who = new Map(rosters.map((r) => [r.roster_id, name.get(r.owner_id) ?? "unknown"]));
+    const groups = new Map<number, string[]>();
+    for (const m of matchups)
+      if (m.matchup_id != null) (groups.get(m.matchup_id) ?? groups.set(m.matchup_id, []).get(m.matchup_id)!).push(who.get(m.roster_id)!);
+    const opp: Record<string, string> = {};
+    for (const [x, y] of groups.values())
+      if (x && y) {
+        opp[x] = y;
+        opp[y] = x;
+      }
+    return { week: state.week, opp };
   } catch {
     return null;
   }

@@ -1,61 +1,52 @@
 import { Hero } from "@/components/trash/hero";
 import { Ticker } from "@/components/trash/polish";
 import { Court, Standings } from "@/components/trash/sections";
-import { LiveWeek, MatchupOfWeek, WaiverWire } from "@/components/trash/intel";
+import { MatchupOfWeek, OfficialTable, WaiverWire } from "@/components/trash/intel";
 import { league, liveStandings } from "@/lib/league";
-import { waiverIntel, weekIfEndedToday } from "@/lib/live";
+import { waiverIntel, weekPairings } from "@/lib/live";
 
-/* Server blocks that read live Sleeper data. Wrap each in <Suspense>. */
+/* Server blocks that read live Sleeper data. Wrap each in <Suspense>.
+   Only official numbers: records, points for and this week's pairings. No live team scores. */
 export async function LiveTable() {
-  const [{ rows: official, live: ok, week }, wk] = await Promise.all([
+  const [{ rows: official, live: ok, week }, pairs] = await Promise.all([
     liveStandings(),
-    weekIfEndedToday(),
+    weekPairings(),
   ]);
   if (!ok || !week) return <Standings rows={official} live={ok} week={week} />;
+  const opp = pairs?.week === week ? pairs.opp : {};
   // Matchup of the week: the two highest-ranked teams playing each other this week.
   const seed = new Map(official.map((r) => [r.manager, r]));
-  const pairs = (wk?.rows ?? []).filter((r) => r.manager < r.opp);
-  const motw = pairs.sort(
-    (x, y) =>
-      seed.get(x.manager)!.seed +
-      seed.get(x.opp)!.seed -
-      (seed.get(y.manager)!.seed + seed.get(y.opp)!.seed),
-  )[0];
+  const motw = Object.entries(opp)
+    .filter(([x, y]) => x < y && seed.has(x) && seed.has(y))
+    .sort(
+      ([a1, b1], [a2, b2]) =>
+        seed.get(a1)!.seed + seed.get(b1)!.seed - (seed.get(a2)!.seed + seed.get(b2)!.seed),
+    )[0];
   const side = (name: string) => {
     const o = seed.get(name)!;
-    const l = wk!.rows.find((r) => r.manager === name)!;
     return {
       manager: name,
       rec: `${o.w}–${o.l}${o.t ? `–${o.t}` : ""}`,
       streak: o.streak,
-      now: l.now,
-      proj: l.proj,
-      winProb: l.winProb,
+      pf: o.pf,
       seed: o.seed,
     };
   };
+  const [a, b] = motw ? [...motw].sort((x, y) => seed.get(x)!.seed - seed.get(y)!.seed) : [];
   return (
     <Court id="standings" title="Season 4 table">
-      {motw ? (
+      {a && b ? (
         <div className="mb-10">
           <MatchupOfWeek
             week={week}
-            a={side(motw.manager)}
-            b={side(motw.opp)}
-            h2hA={league.h2h[motw.manager]?.[motw.opp] ?? 0}
-            h2hB={league.h2h[motw.opp]?.[motw.manager] ?? 0}
-            why="The two highest-ranked teams facing each other."
-            asOf={wk!.asOf}
+            a={side(a)}
+            b={side(b)}
+            h2hA={league.h2h[a]?.[b] ?? 0}
+            h2hB={league.h2h[b]?.[a] ?? 0}
           />
         </div>
       ) : null}
-      <LiveWeek
-        week={week}
-        rows={wk?.rows ?? null}
-        daysLeft={wk?.daysLeft ?? 0}
-        official={official}
-        asOf={wk?.asOf ?? new Date().toISOString()}
-      />
+      <OfficialTable week={week} official={official} opp={opp} />
     </Court>
   );
 }

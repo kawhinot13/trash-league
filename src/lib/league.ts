@@ -1,5 +1,6 @@
 import { cacheLife } from "next/cache";
 import data from "@/data/league.json";
+import official from "@/data/official.json";
 
 export type Standing = {
   manager: string;
@@ -97,7 +98,7 @@ const current = league.seasons.find((s) => s.code === "s4")!;
 
 /** Live Season 4 table straight from Sleeper, refreshed every few minutes. Falls back to the snapshot.
  * Movement vs last week comes from each roster's official week-by-week record string ("LWW"):
- * drop the latest result to get last week's record; points for drops last week's matchup score. */
+ * drop the latest result to get last week's record; last week's points for is the official snapshot. */
 export async function liveStandings(): Promise<{
   rows: Standing[];
   live: boolean;
@@ -125,12 +126,12 @@ export async function liveStandings(): Promise<{
       0,
       ...rosters.map((r: R) => (r.metadata?.record ?? "").length),
     );
-    const prevMatch: { roster_id: number; points: number }[] =
-      lastDone > 0
-        ? await fetch(
-            `${base}/league/${current.leagueId}/matchups/${lastDone}`,
-          ).then((r) => r.json())
-        : [];
+    // Last week's points for comes from the official snapshot (src/data/official.json), never the
+    // matchup feed, which reports different scores on different requests for this league.
+    const prevSnap =
+      (official as unknown as Record<string, Record<string, Record<string, number>>>).s4?.[
+        String(lastDone - 1)
+      ] ?? null;
     const byUser = new Map<
       string,
       { display_name: string; metadata?: { team_name?: string } }
@@ -142,8 +143,6 @@ export async function liveStandings(): Promise<{
       const pf =
         Math.round(((s.fpts ?? 0) + (s.fpts_decimal ?? 0) / 100) * 10) / 10;
       const prev = rec.slice(0, -1);
-      const lastPts =
-        prevMatch.find((m) => m.roster_id === r.roster_id)?.points ?? 0;
       return {
         row: {
           manager: u?.display_name ?? "unknown",
@@ -158,7 +157,7 @@ export async function liveStandings(): Promise<{
         prevW:
           [...prev].filter((c) => c === "W").length +
           [...prev].filter((c) => c === "T").length / 2,
-        prevPf: pf - lastPts,
+        prevPf: prevSnap?.[u?.display_name ?? ""] ?? 0,
       };
     });
     const rank = (key: (x: (typeof base_)[number]) => [number, number]) =>
@@ -174,7 +173,7 @@ export async function liveStandings(): Promise<{
         ...x.row,
         seed: nowRank.get(x.row.manager)!,
         move:
-          lastDone > 1
+          lastDone > 1 && prevSnap
             ? prevRank.get(x.row.manager)! - nowRank.get(x.row.manager)!
             : 0,
       }))
