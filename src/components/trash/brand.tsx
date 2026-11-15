@@ -163,16 +163,18 @@ export function PlayerBadge({
     <span
       aria-hidden
       className={`font-display ${fill ? "absolute inset-0" : "relative"} inline-flex shrink-0 flex-col items-center justify-center overflow-hidden bg-[linear-gradient(160deg,var(--bin-3),var(--bin-2))] leading-none font-black text-[var(--paper)]/90 ${className}`}
-      style={fill ? undefined : { width: s, height: s }}
+      // Filling a box: size the text from the box itself (container units), so the initials and
+      // position always fit, from the small list tiles to the big cards.
+      style={fill ? { containerType: "size" } : { width: s, height: s }}
     >
       <span className="absolute inset-x-0 top-0 h-[12%] max-h-1.5 min-h-0.5 bg-[var(--wood)]/80" />
-      <span style={{ fontSize: fill ? undefined : s * (showPos ? 0.34 : 0.4) }} className={fill ? "text-2xl" : ""}>
+      <span style={{ fontSize: fill ? (showPos ? "min(1.5rem, 34cqh, 30cqw)" : "min(1.6rem, 46cqh, 34cqw)") : s * (showPos ? 0.34 : 0.4) }}>
         {ini || "·"}
       </span>
       {showPos ? (
         <span
-          className="mt-[0.2em] font-sans font-bold tracking-[0.08em] text-[var(--wood)]"
-          style={{ fontSize: fill ? 10 : Math.max(8, s * 0.17) }}
+          className="mt-[0.15em] font-sans font-bold tracking-[0.08em] text-[var(--wood)]"
+          style={{ fontSize: fill ? "min(10px, 19cqh)" : Math.max(8, s * 0.17) }}
         >
           {where}
         </span>
@@ -184,6 +186,12 @@ export function PlayerBadge({
 /** Link to a manager's profile on whichever site this is. */
 export function MgrLink({ id, ...rest }: Omit<React.ComponentProps<typeof Link>, "href"> & { id: string }) {
   return <Link href={useBrand().manager(id)} {...rest} />;
+}
+
+/** id -> display name, for strings (labels, joined lists). Trash's ids already are handles. */
+export function useNameOf() {
+  const names = useBrand().names;
+  return (id: string) => names?.[id] ?? id;
 }
 
 /** A manager's Sleeper handle (Trash's ids already are handles). */

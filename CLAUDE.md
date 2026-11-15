@@ -50,6 +50,14 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   no email or password. Needs `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET` (32+ chars) in Vercel; without
   them sign-in is hidden. Sessions are HMAC-signed cookies with a per-account version (sign-out ends every session).
   Read only in API routes and the browser (`useMe`), never in page renders, so pages stay pre-built.
+- Daily-game standings (Rafterlore): with sign-in on, only signed-in accounts post (`/api/l/[id]/scores`). Each account
+  links once to one Sleeper user (`sleeper_links`, unique both ways) and can only post in leagues where that user is a
+  manager; others watch. Today / This week / All time (scores kept ~a year). Signed-out players see a sign-in nudge
+  before (`StandingsNudge`) and after playing. Trash keeps its honor-system board (no `viewer` in its API).
+- Recreational use: Rafterlore is a history/analytics/entertainment site with no link to betting. First import of a
+  league requires the acknowledgement (`use-ack.ts`; import API returns 428 without it); stored as version + time on
+  `families` only, and in the browser (`rl:use-ack`). Terms have "Recreational and informational use"; footer line says
+  "independent ... for recreational and informational use only". Never mention the owner's personal circumstances.
 - Admin (`/l/admin`, per request, noindex): owner dashboard of totals and league-level facts, never individual
   people. Admin = Google-verified email listed in `ADMIN_EMAILS` (Vercel env; never in the repo), checked at each
   sign-in; the email is not stored (only `accounts.is_admin`). Others get not-found.

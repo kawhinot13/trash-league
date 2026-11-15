@@ -180,7 +180,7 @@ export function RivalryMachine({
               <p className="font-display mt-3 text-3xl leading-none font-black md:text-5xl">
                 {A.nick}
               </p>
-              <p className="text-sm text-[var(--muted)]">{a}</p>
+              <p className="text-sm text-[var(--muted)]"><Handle id={a} /></p>
             </div>
             <p className="font-display text-4xl font-black text-[var(--muted)]">
               vs
@@ -197,7 +197,7 @@ export function RivalryMachine({
               <p className="font-display mt-3 text-3xl leading-none font-black md:text-5xl">
                 {B.nick}
               </p>
-              <p className="text-sm text-[var(--muted)]">{b}</p>
+              <p className="text-sm text-[var(--muted)]"><Handle id={b} /></p>
             </div>
           </div>
 
@@ -271,7 +271,7 @@ export function RivalryMachine({
                         {g.years} {round(g.round)}
                       </span>
                       <span className="font-semibold text-[var(--gold)]">
-                        {g.winner} won
+                        {g.winner ? <Handle id={g.winner} /> : null} won
                       </span>
                     </li>
                   ))}

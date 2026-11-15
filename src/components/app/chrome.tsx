@@ -87,6 +87,7 @@ export function AppFooter() {
           <p className="text-[var(--paper)]/85">
             {PRODUCT} works with Sleeper leagues. It is not affiliated with or endorsed by Sleeper.
           </p>
+          <p>An independent fantasy sports history and analytics platform. For recreational and informational use only.</p>
           <p>
             Records, champions, drafts and trades come from Sleeper&apos;s public data. Head-to-head records and weekly
             scores come from Sleeper&apos;s weekly matchups, which don&apos;t always match the official totals, so

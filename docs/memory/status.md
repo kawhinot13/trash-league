@@ -26,6 +26,9 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
   `curl -s https://api.github.com/repos/kawhinot13/trash-league/commits/<sha>/status` (public repo).
   The sandbox can't reach the production domain itself.
 
+- Daily-game standings on Rafterlore (signed-in, one Sleeper user per account, All time tab) and the
+  recreational-use terms, footer line and import acknowledgement (2026-11-15).
+
 ## Open tasks and ideas
 - Before a major public or commercial launch: written authorization from Sleeper (see decisions.md).
 - Category (non-points) leagues: detection is a heuristic; not supported yet.

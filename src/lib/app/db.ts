@@ -177,6 +177,14 @@ create table if not exists game_scores (
   primary key (family_id, game, day, manager)
 );
 
+-- Daily-game standings: the one Sleeper user each account plays as, in every league (one each way).
+-- An account can only post in leagues where that Sleeper user is a manager.
+create table if not exists sleeper_links (
+  sleeper_user text primary key,
+  account_id   text not null unique,
+  created_at   timestamptz not null default now()
+);
+
 -- Optional accounts (Sign in with Google). No email or password: Google's account id, a first
 -- name, the Sleeper username the person saves and the leagues they've opened. Deletable any time.
 create table if not exists accounts (
@@ -193,6 +201,9 @@ create table if not exists accounts (
 alter table accounts add column if not exists session_v int not null default 1;
 -- Site admin (owner), decided at each sign-in from ADMIN_EMAILS; the email itself is never stored.
 alter table accounts add column if not exists is_admin boolean not null default false;
+-- The recreational-use acknowledgement given when the league was first imported (version + time; nobody's details).
+alter table families add column if not exists use_ack text;
+alter table families add column if not exists use_ack_at timestamptz;
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

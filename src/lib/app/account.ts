@@ -149,5 +149,9 @@ export async function endSessions(s: Session) {
 
 export async function deleteAccount(s: Session) {
   const sql = await db();
-  await sql`delete from accounts where id = ${s.id} and session_v = ${s.v}`;
+  await sql.begin(async (tx) => {
+    const [row] = await tx<{ id: string }[]>`delete from accounts where id = ${s.id} and session_v = ${s.v} returning id`;
+    // Their Sleeper link goes too, so that Sleeper user can be linked again.
+    if (row) await tx`delete from sleeper_links where account_id = ${row.id}`;
+  });
 }

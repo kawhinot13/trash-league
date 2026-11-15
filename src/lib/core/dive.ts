@@ -236,7 +236,8 @@ export function dailyPrompts(pool: Prompt[], day: string) {
           return { of, key };
         })
         .sort((a, b) => a.key - b.key);
-      const { of } = ranked[0];
+      // A brand-new league can have no prompts at all yet.
+      const of = ranked[0]?.of ?? [];
       if (!of.length) break;
       const ok = of.filter(fresh);
       const q = ok.length

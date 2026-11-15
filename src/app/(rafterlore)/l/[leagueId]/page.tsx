@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { cacheLife } from "next/cache";
 import { ImportStatus } from "@/components/app/import-status";
+import { StandingsNudge } from "@/components/app/standings-nudge";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
 import { PackSection, Section } from "@/components/app/league";
 import { Hero } from "@/components/trash/hero";
@@ -144,10 +145,10 @@ function Home({ p }: { p: LeaguePage }) {
   const { view, leagueId, dataset: d } = p;
   const n = view.seasons.length;
   const people = d
-    ? d.league.seasons[d.league.seasons.length - 1].standings.map((r) => ({
-        id: r.manager,
-        nick: d.league.managers.find((m) => m.id === r.manager)?.nick ?? r.manager,
-      }))
+    ? d.league.seasons[d.league.seasons.length - 1].standings
+        // Open roster slots ("r5") have nobody to play as.
+        .filter((r) => /^\d+$/.test(r.manager))
+        .map((r) => ({ id: r.manager, nick: d.league.managers.find((m) => m.id === r.manager)?.nick ?? r.manager }))
     : [];
   const lock = d ? lockIn(d) : null;
   const court = d ? tradeCourt(d) : null;
@@ -196,6 +197,7 @@ function Home({ p }: { p: LeaguePage }) {
               Five prompts a day from the league&apos;s history. Any right answer counts, but the more niche your pick,
               the more it scores. Same prompts for everyone, so the group chat can compare.
             </SectionHead>
+            <StandingsNudge league={p.brand.name} />
             <div className="mx-auto max-w-5xl px-5 md:px-10">
               <DumpsterDive pool={divePool(d)} players={d.extras.players} people={people} />
             </div>

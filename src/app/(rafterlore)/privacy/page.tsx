@@ -24,6 +24,11 @@ export default function Privacy() {
           </li>
           <li>Each league&apos;s official points-for totals, saved once a night during the season.</li>
           <li>Results we calculate from that data, like trade grades and lineup efficiency.</li>
+          <li>
+            That the recreational-use confirmation was given when a league was first opened: the date and the wording&apos;s
+            version, with no details about who gave it.
+          </li>
+          <li>Daily-game results posted to a league&apos;s standings (manager, day and score), kept for about a year.</li>
         </ul>
         <p>
           We don&apos;t store anything Sleeper doesn&apos;t show publicly. No emails, phone numbers, passwords, chats or
@@ -39,6 +44,11 @@ export default function Privacy() {
           you&apos;re the site&apos;s administrator, and we never store it. We never see your Google password. A sign-in cookie keeps you signed
           in for up to six months. You can sign out, or delete the account and everything it remembered, any time from
           the account menu.
+        </p>
+        <p>
+          Signing in also puts your daily-game scores on your leagues&apos; standings. You pick which Sleeper manager you are
+          once; your account plays as that manager in every league they&apos;re in, and no other account can. Deleting the
+          account removes that link.
         </p>
       </section>
       <section>

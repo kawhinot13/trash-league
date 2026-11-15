@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import type { Pickup } from "@/lib/live";
 import type { Manager, Season, Standing } from "@/lib/league";
 import { Handle, MgrLink, MgrPhoto } from "@/components/trash/brand";
-import { LivePlayerPhoto, useBrand } from "@/components/trash/brand";
+import { LivePlayerPhoto, useBrand, useNameOf } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
 const n1 = (x: number) =>
@@ -839,7 +839,7 @@ export function Almanac({
                   <Av id={p.b} s={36} />
                   <span className="min-w-0 text-sm">
                     <span className="block break-words font-semibold">
-                      {p.a} + {p.b}
+                      <Handle id={p.a} /> + <Handle id={p.b} />
                     </span>
                   </span>
                   <span className="font-display ml-auto text-2xl font-black tabular-nums">
@@ -1000,6 +1000,7 @@ const OddCard = ({
 function Oddities({ seasons }: { seasons: Season[] }) {
   const brand = useBrand();
   const done = seasons.filter((s) => s.status === "complete");
+  const nameOf = useNameOf();
   // Players who changed hands the most
   const moved = new Map<
     string,
@@ -1086,7 +1087,7 @@ function Oddities({ seasons }: { seasons: Season[] }) {
                   {name}
                 </span>
                 <span className="block break-words text-xs text-[var(--muted)]">
-                  to {[...new Set(x.owners)].join(", ")}
+                  to {[...new Set(x.owners)].map(nameOf).join(", ")}
                 </span>
               </span>
               <span className="font-display text-2xl font-black tabular-nums">

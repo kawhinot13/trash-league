@@ -10,7 +10,7 @@ import {
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { Manager } from "@/lib/league";
-import { Handle, MgrPhoto, MgrLink } from "@/components/trash/brand";
+import { Handle, MgrPhoto, MgrLink, useNameOf } from "@/components/trash/brand";
 
 /** Reduced-motion preference, read after hydration so server and client HTML always match. */
 function useCalm() {
@@ -76,6 +76,7 @@ export function OwnsGrid({
   colors: Record<string, string>;
 }) {
   const [hover, setHover] = useState<{ a: string; b: string } | null>(null);
+  const nameOf = useNameOf();
   const rec = (a: string, b: string) =>
     [h2h[a]?.[b] ?? 0, h2h[b]?.[a] ?? 0] as const;
   const sel = hover ?? (names.includes("jgood432") && names.includes("Edizzle6") ? { a: "jgood432", b: "Edizzle6" } : { a: names[0], b: names[1] ?? names[0] });
@@ -103,7 +104,7 @@ export function OwnsGrid({
               {names.map((n) => (
                 <th key={n} scope="col" className="relative h-28 w-8 min-w-8">
                   <span className="absolute bottom-1 left-1/2 origin-bottom-left -rotate-[60deg] font-medium whitespace-nowrap text-[var(--muted)]">
-                    {n}
+                    <Handle id={n} />
                   </span>
                 </th>
               ))}
@@ -116,7 +117,7 @@ export function OwnsGrid({
                   scope="row"
                   className="pr-2 text-right font-medium whitespace-nowrap text-[var(--muted)]"
                 >
-                  {a}
+                  <Handle id={a} />
                 </th>
                 {names.map((b) => {
                   if (a === b)
@@ -132,7 +133,7 @@ export function OwnsGrid({
                         type="button"
                         onMouseEnter={() => setHover({ a, b })}
                         onFocus={() => setHover({ a, b })}
-                        aria-label={`${a} is ${x} and ${y} against ${b}`}
+                        aria-label={`${nameOf(a)} is ${x} and ${y} against ${nameOf(b)}`}
                         className="font-display flex size-8 items-center justify-center rounded-md text-sm font-bold tabular-nums transition-transform"
                         style={{
                           background:
@@ -178,7 +179,14 @@ export function OwnsGrid({
           />
         </div>
         <p className="mt-5 text-lg leading-snug">
-          <strong>{sel.a}</strong> {verdict} <strong>{sel.b}</strong>.
+          <strong>
+            <Handle id={sel.a} />
+          </strong>{" "}
+          {verdict}{" "}
+          <strong>
+            <Handle id={sel.b} />
+          </strong>
+          .
         </p>
         <p className="font-display mt-3 text-7xl font-black tabular-nums">
           {w}–{l}

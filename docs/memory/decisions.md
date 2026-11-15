@@ -4,6 +4,20 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Daily-game standings tied to accounts; recreational-use terms
+- Standings: each account links once to ONE Sleeper user for every league (`sleeper_links`, unique both
+  ways), and can only post where that user is a manager. Owner asked that a signed-in user can't play in
+  other people's leagues. Rejected: a claim per league (anyone could pick any manager anywhere); proving
+  identity with a team-name code like removal (too much friction for a game; can add later if abused).
+  Signed-out players can still play; the board nudges them to sign in. Trash keeps its honor system.
+- Recreational use: terms section + footer line + an acknowledgement before a league's first import.
+  Stored as wording version + time on `families` (no person data) and in the browser so returning
+  visitors aren't asked again. No "projections" or "roster recommendations" claims: Rafterlore has none.
+  No About page exists; the /l home serves that role and was left as is.
+- Raw Sleeper ids leaked into shared components (OwnsGrid, rivalry header/winner, duos, most-moved);
+  all now go through `Handle`/`useNameOf` (Trash ids are its handles, so Trash HTML is unchanged).
+  An empty dive pool (brand-new league) crashed the page; now it just shows no prompts.
+
 ## 2026-11-15: Admin page + Vercel Web Analytics
 - Owner wanted site data. Traffic (visits, pages, referrers, devices) comes from Vercel Web Analytics:
   cookieless, nothing to maintain. Rafterlore's own numbers (leagues, accounts, plays, Sleeper calls, jobs,
