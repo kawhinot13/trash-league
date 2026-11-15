@@ -1,13 +1,5 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { Archivo, Big_Shoulders } from "next/font/google";
-import { SmoothScroll } from "@/components/smooth-scroll";
-import { GlassNav } from "@/components/trash/polish";
-import { RicoPeek } from "@/components/trash/rico-peek";
-import { Footer } from "@/components/trash/sections";
-import { league } from "@/lib/league";
-import { HOLIDAY } from "@/lib/holiday";
-import { Snowfall } from "@/components/holiday/snowfall";
-import { PigRide } from "@/components/pig/pig-ride";
 import "./globals.css";
 
 const display = Big_Shoulders({
@@ -24,30 +16,16 @@ const body = Archivo({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Trash — a fantasy basketball league",
-  description:
-    "Four seasons, three champions, ninety-three trades. The official home of the Trash fantasy basketball league.",
-};
-
 export const viewport: Viewport = {
   themeColor: "#0b2419",
 };
 
+/** Shared shell only: fonts and global CSS. The Trash site's chrome lives in (trash)/layout.tsx,
+ * the multi-league app's in l/layout.tsx, so neither leaks into the other. */
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  const rico = league.managers.find((m) => m.id === "RI3O");
   return (
     <html lang="en" className={`${display.variable} ${body.variable} antialiased`}>
-      <body className="min-h-full bg-transparent text-[var(--paper)]">
-        <SmoothScroll>
-          {HOLIDAY ? <Snowfall /> : null}
-          <GlassNav />
-          {children}
-          <Footer />
-          <PigRide />
-          <RicoPeek trades={rico?.trades ?? 0} record={rico ? `${rico.w}–${rico.l}` : ""} />
-        </SmoothScroll>
-      </body>
+      <body className="min-h-full bg-transparent text-[var(--paper)]">{children}</body>
     </html>
   );
 }
