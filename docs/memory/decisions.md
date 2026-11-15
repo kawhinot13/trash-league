@@ -9,7 +9,9 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   side by side; roster cards are two across; power-ranking cards are tighter; waiver intel shows 10 rows and
   the trade court 4 trades on phones with "show more" (`usePhone()` in components/trash/use-phone.ts; server
   render = desktop counts, trimmed after hydration). Live ~25% shorter, Managers ~35%, Stats ~20%.
-- Not changed yet: History's trade crimes, time machine and ring inquiry are still long on phones.
+- Trade crimes (both sites) fold their player panels behind "See the evidence" on phones (`Evidence` in
+  components/trash/evidence.tsx: CSS-only checkbox, no layout shift; always open from `sm` up). Time machine and
+  ring inquiry still long on phones.
 
 ## 2026-11-15: Trapezoid of Excellence (owner's spec)
 - Kept the open-ended trapezoid (floor + sloped left edge, open top/right) over curved shapes: each edge is a

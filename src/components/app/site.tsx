@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Evidence } from "@/components/trash/evidence";
 import { HOLIDAY } from "@/lib/holiday";
 import { ImportStatus } from "@/components/app/import-status";
 import { Handle, MgrPhoto, PlayerPhoto } from "@/components/trash/brand";
@@ -173,13 +174,13 @@ export function TradeCrimes({ d }: { d: Dataset }) {
         const loser = t.sides.find((s) => s.who !== t.winner);
         return (
           <Spotlight key={t.id} className="rounded-3xl">
-            <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-10">
+            <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:p-6 md:p-10">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-sm text-[var(--muted)]">
                     Exhibit {String.fromCharCode(65 + i)}, {t.years} week {t.week}
                   </p>
-                  <h3 className="font-display mt-1 text-4xl leading-none font-black md:text-6xl">
+                  <h3 className="font-display mt-1 text-3xl leading-none font-black break-words sm:text-4xl md:text-6xl">
                     <Handle id={t.winner!} /> won by {Math.round(t.margin).toLocaleString()}
                   </h3>
                 </div>
@@ -191,10 +192,10 @@ export function TradeCrimes({ d }: { d: Dataset }) {
                 </span>
               </div>
               <p className="mt-4 max-w-[62ch] leading-relaxed text-[var(--muted)]">
-                What each side&apos;s new players scored in their new team&apos;s starting lineup for the rest of that
-                season{loser ? <>, and <Handle id={loser.who} /> has been living with it since</> : null}.
+                Judged by what each side&apos;s new players were worth to them for the rest of that season
+                {loser ? <>, and <Handle id={loser.who} /> has been living with it since</> : null}.
               </p>
-              <div className="mt-8 grid gap-6 md:grid-cols-2">
+              <Evidence id={`r-${t.id}`} count={t.sides.reduce((a, s) => a + s.got.length, 0)} className="mt-6 gap-4 sm:mt-8 sm:gap-6 md:grid-cols-2">
                 {t.sides.map((s) => (
                   <div key={s.who} className="rounded-2xl border border-[var(--line)] p-4">
                     <p className="flex items-center gap-3 text-sm">
@@ -203,7 +204,7 @@ export function TradeCrimes({ d }: { d: Dataset }) {
                         <strong className="font-semibold">
                           <Handle id={s.who} />
                         </strong>{" "}
-                        received, then scored {Math.round(s.pts).toLocaleString()}
+                        received, worth {Math.round(s.pts).toLocaleString()} to them
                       </span>
                     </p>
                     <ul className="mt-4 flex flex-wrap gap-3">
@@ -220,7 +221,7 @@ export function TradeCrimes({ d }: { d: Dataset }) {
                     </ul>
                   </div>
                 ))}
-              </div>
+              </Evidence>
             </article>
           </Spotlight>
         );

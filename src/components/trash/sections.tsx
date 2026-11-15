@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Evidence } from "./evidence";
 import { RevealTitle, Spotlight } from "./polish";
 import {
   headshot,
@@ -314,13 +315,13 @@ export function Crimes() {
       <div className="mx-auto grid max-w-6xl gap-6 px-5 md:px-10">
         {EXHIBITS.map((x) => (
           <Spotlight key={x.letter} className="rounded-3xl">
-            <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-10">
+            <article className="relative overflow-hidden rounded-3xl border border-white/10 bg-[rgba(22,58,44,0.55)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:p-6 md:p-10">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-sm text-[var(--muted)]">
                     Exhibit {x.letter}, {x.when}
                   </p>
-                  <h3 className="font-display mt-1 text-5xl leading-none font-black md:text-6xl">
+                  <h3 className="font-display mt-1 text-4xl leading-none font-black sm:text-5xl md:text-6xl">
                     {x.title}
                   </h3>
                 </div>
@@ -334,7 +335,7 @@ export function Crimes() {
               <p className="mt-4 max-w-[62ch] leading-relaxed text-[var(--muted)]">
                 {x.story}
               </p>
-              <div className="mt-8 grid gap-6 md:grid-cols-2">
+              <Evidence id={`t-${x.letter}`} count={Object.values(x.trade.sides).flat().length} className="mt-6 gap-4 sm:mt-8 sm:gap-6 md:grid-cols-2">
                 {Object.entries(x.trade.sides).map(([who, got]) => (
                   <div
                     key={who}
@@ -369,7 +370,7 @@ export function Crimes() {
                     </ul>
                   </div>
                 ))}
-              </div>
+              </Evidence>
             </article>
           </Spotlight>
         ))}
