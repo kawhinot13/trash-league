@@ -3,6 +3,7 @@ import {
   OAUTH_COOKIE,
   SESSION_COOKIE,
   authConfigured,
+  isAdminEmail,
   cookieFlags,
   sessionMaxAge,
   sessionToken,
@@ -50,10 +51,13 @@ export async function GET(req: Request) {
       sub?: string;
       given_name?: string;
       name?: string;
+      email?: string;
+      email_verified?: boolean | string;
     };
     if (!["https://accounts.google.com", "accounts.google.com"].includes(claims.iss ?? "") || claims.aud !== process.env.AUTH_GOOGLE_ID || !claims.sub)
       throw new Error("unexpected id token");
-    const session = await upsertGoogleAccount(claims.sub, claims.given_name || claims.name || "");
+    // The email is only compared with ADMIN_EMAILS here, then dropped.
+    const session = await upsertGoogleAccount(claims.sub, claims.given_name || claims.name || "", isAdminEmail(claims.email, claims.email_verified));
     return back(url.origin, flow.next, [`${SESSION_COOKIE}=${sessionToken(session.id, session.v)}; ${cookieFlags(sessionMaxAge)}`]);
   } catch (e) {
     logError("google sign-in", e);

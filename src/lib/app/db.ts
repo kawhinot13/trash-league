@@ -191,6 +191,8 @@ create table if not exists accounts (
 );
 -- Sign-out ends every session (older tables get the column too).
 alter table accounts add column if not exists session_v int not null default 1;
+-- Site admin (owner), decided at each sign-in from ADMIN_EMAILS; the email itself is never stored.
+alter table accounts add column if not exists is_admin boolean not null default false;
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

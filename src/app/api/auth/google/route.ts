@@ -15,7 +15,8 @@ export async function GET(req: Request) {
     client_id: process.env.AUTH_GOOGLE_ID!,
     redirect_uri: new URL("/api/auth/google/callback", url.origin).toString(),
     response_type: "code",
-    scope: "openid profile",
+    // email: only to recognize the site admin at sign-in (never stored).
+    scope: "openid profile email",
     state,
     code_challenge: challenge,
     code_challenge_method: "S256",

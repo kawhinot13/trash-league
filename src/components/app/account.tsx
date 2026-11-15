@@ -7,7 +7,10 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
  * Optional sign-in (Google). Read in the browser from /api/me, so league pages stay pre-built.
  * When sign-in isn't set up on the server, nothing renders.
  */
-export type Me = { configured: boolean; account: { name: string; sleeper: string | null; leagues: { id: string; name: string }[] } | null };
+export type Me = {
+  configured: boolean;
+  account: { name: string; sleeper: string | null; leagues: { id: string; name: string }[]; admin?: boolean } | null;
+};
 
 let state: Me | null = null;
 let loading: Promise<void> | null = null;
@@ -122,6 +125,11 @@ export function AccountButton() {
           <Link href="/l" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2.5 font-semibold hover:bg-white/8">
             Your leagues
           </Link>
+          {a.admin ? (
+            <Link href="/l/admin" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2.5 font-semibold text-[var(--wood)] hover:bg-white/8">
+              Admin
+            </Link>
+          ) : null}
           <button type="button" disabled={busy} onClick={signOut} className="block w-full rounded-xl px-3 py-2.5 text-left font-semibold hover:bg-white/8">
             Sign out
           </button>

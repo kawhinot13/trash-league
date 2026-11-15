@@ -35,7 +35,8 @@ export default function Privacy() {
         <p>
           You can sign in with Google so Rafterlore remembers you on any device. We keep only Google&apos;s id number for
           your account, your first name, the Sleeper username you look up while signed in and the leagues you opened
-          (until you remove them). We don&apos;t get or keep your email address or your Google password. A sign-in cookie keeps you signed
+          (until you remove them). Google tells us your email address when you sign in; we use it only to check whether
+          you&apos;re the site&apos;s administrator, and we never store it. We never see your Google password. A sign-in cookie keeps you signed
           in for up to six months. You can sign out, or delete the account and everything it remembered, any time from
           the account menu.
         </p>
@@ -51,8 +52,9 @@ export default function Privacy() {
       <section>
         <h2>Cookies and tracking</h2>
         <p>
-          Rafterlore doesn&apos;t use tracking cookies or third-party analytics. The only cookies are the ones that keep you
-          signed in, if you sign in. Our host may keep standard server logs
+          Rafterlore doesn&apos;t use tracking cookies or advertising trackers. The only cookies are the ones that keep you
+          signed in, if you sign in. Our host&apos;s privacy-friendly analytics (Vercel Web Analytics) counts page views,
+          referrers, countries and device types without cookies and without identifying you. Our host may keep standard server logs
           (like any website) to keep the service running.
         </p>
       </section>

@@ -46,6 +46,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   no email or password. Needs `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET` (32+ chars) in Vercel; without
   them sign-in is hidden. Sessions are HMAC-signed cookies with a per-account version (sign-out ends every session).
   Read only in API routes and the browser (`useMe`), never in page renders, so pages stay pre-built.
+- Admin (`/l/admin`, per request, noindex): owner dashboard of totals and league-level facts, never individual
+  people. Admin = Google-verified email listed in `ADMIN_EMAILS` (Vercel env; never in the repo), checked at each
+  sign-in; the email is not stored (only `accounts.is_admin`). Others get not-found.
+- Traffic: Vercel Web Analytics (`<Analytics />` in the root layout; cookieless; enable in the Vercel dashboard).
 - Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
   instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are

@@ -49,6 +49,11 @@ export const sessionToken = (accountId: string, v: number) => sign("s", { a: acc
 export const sessionMaxAge = SESSION_DAYS * 86_400;
 
 export type Session = { id: string; v: number };
+/** A session from the cookie's raw value (pages that read cookies() themselves). */
+export function sessionFromValue(value: string | undefined | null): Session | null {
+  const s = unsign<{ a: string; v: number }>("s", value ? decodeURIComponent(value) : null);
+  return s && typeof s.a === "string" && typeof s.v === "number" ? { id: s.a, v: s.v } : null;
+}
 /** The session from a request's cookies (signature and expiry checked; version checked by the queries). */
 export function sessionFrom(req: Request): Session | null {
   const raw = req.headers.get("cookie") ?? "";
@@ -70,21 +75,31 @@ export function sameOrigin(req: Request) {
 export const safeNext = (s: string | null | undefined) => (s && /^\/(?!\/)[\w\-./?=&%#]*$/.test(s) ? s : "/l");
 
 export type SavedLeague = { id: string; name: string };
-export type Account = { id: string; name: string; sleeper: string | null; leagues: SavedLeague[] };
+export type Account = { id: string; name: string; sleeper: string | null; leagues: SavedLeague[]; admin: boolean };
 
-export async function upsertGoogleAccount(sub: string, name: string): Promise<Session> {
+/**
+ * Whether a Google-verified email is one of the site admins (ADMIN_EMAILS in Vercel, comma
+ * separated). Checked at sign-in only; the email is never stored.
+ */
+export function isAdminEmail(email: unknown, verified: unknown) {
+  if (typeof email !== "string" || (verified !== true && verified !== "true")) return false;
+  const list = (process.env.ADMIN_EMAILS ?? "").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+  return list.includes(email.trim().toLowerCase());
+}
+
+export async function upsertGoogleAccount(sub: string, name: string, admin = false): Promise<Session> {
   const sql = await db();
   const first = name.trim().split(/\s+/)[0]?.slice(0, 40) ?? "";
   const [row] = await sql<{ id: string; session_v: number }[]>`
-    insert into accounts (id, google_sub, name) values (${randomUUID()}, ${sub}, ${first})
-    on conflict (google_sub) do update set seen_at = now()
+    insert into accounts (id, google_sub, name, is_admin) values (${randomUUID()}, ${sub}, ${first}, ${admin})
+    on conflict (google_sub) do update set seen_at = now(), is_admin = excluded.is_admin
     returning id, session_v`;
   return { id: row.id, v: row.session_v };
 }
 
 export async function getAccount(s: Session): Promise<Account | null> {
   const sql = await db();
-  const [row] = await sql<Account[]>`select id, name, sleeper, leagues from accounts where id = ${s.id} and session_v = ${s.v}`;
+  const [row] = await sql<Account[]>`select id, name, sleeper, leagues, is_admin as admin from accounts where id = ${s.id} and session_v = ${s.v}`;
   return row ?? null;
 }
 

@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Admin page + Vercel Web Analytics
+- Owner wanted site data. Traffic (visits, pages, referrers, devices) comes from Vercel Web Analytics:
+  cookieless, nothing to maintain. Rafterlore's own numbers (leagues, accounts, plays, Sleeper calls, jobs,
+  nightly runs) are on `/l/admin`, owner only. Rejected: listing individual visitors or accounts.
+- Admin identity: the owner asked for access by email. The email lives only in Vercel's `ADMIN_EMAILS` (the
+  repo is public) and is compared at sign-in (scope now includes `email`, verified only), then dropped;
+  `accounts.is_admin` keeps the yes/no. Privacy page updated accordingly.
+
 ## 2026-11-15: Optional Google sign-in
 - Owner asked for a login that remembers you. Built Google sign-in only: email/password needs a mail service
   for resets (a paid/external service) and password storage. Stores the minimum: Google sub, first name,

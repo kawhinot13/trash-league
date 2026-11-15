@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const id = sessionFrom(req);
   try {
     const account = id ? await getAccount(id) : null;
-    return json({ configured: true, account: account && { name: account.name, sleeper: account.sleeper, leagues: account.leagues } });
+    return json({ configured: true, account: account && { name: account.name, sleeper: account.sleeper, leagues: account.leagues, admin: account.admin } });
   } catch (e) {
     logError("me", e);
     return json({ configured: true, account: null });
@@ -37,7 +37,7 @@ export async function PATCH(req: Request) {
           .slice(0, MAX_LEAGUES),
       );
     const a = await getAccount(id);
-    return json({ account: a && { name: a.name, sleeper: a.sleeper, leagues: a.leagues } });
+    return json({ account: a && { name: a.name, sleeper: a.sleeper, leagues: a.leagues, admin: a.admin } });
   } catch (e) {
     logError("me update", e);
     return json({ error: "Couldn't save that. Try again." }, { status: 500 });

@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Viewport } from "next";
 import { Archivo, Big_Shoulders } from "next/font/google";
 import "./globals.css";
@@ -25,7 +26,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} antialiased`}>
-      <body className="min-h-full bg-transparent text-[var(--paper)]">{children}</body>
+      <body className="min-h-full bg-transparent text-[var(--paper)]">
+        {children}
+        {/* Vercel Web Analytics: page views without cookies; inert until enabled in the Vercel dashboard. */}
+        <Analytics />
+      </body>
     </html>
   );
 }
