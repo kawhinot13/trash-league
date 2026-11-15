@@ -1,4 +1,4 @@
-import type { FOPlayer, FOTeam } from "@/lib/front-office";
+import type { FOPlayer, FOTeam } from "@/lib/core/front-office";
 
 /** Which player positions can fill each lineup slot. */
 const SLOT_OK: Record<string, string[]> = {
