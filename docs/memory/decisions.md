@@ -4,6 +4,15 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Trade court values = average lock-in x lock-ins after the trade
+- Owner's call. Each incoming player earns his season-average start (points per week in ANY team's
+  starting lineup that season) for every week he's in the receiving manager's starting lineup after the
+  trade (playoffs included). Bench weeks earn nothing. Replaces "actual points scored as a starter", which
+  let one huge or empty game swing a trade. gain = [value, weeks held, lock-ins] in both pipelines
+  (`scripts/build-extras.py`, `analysis.ts`, ANALYSIS_VERSION 6). Even threshold stays 60.
+- Rejected for now: crediting weeks a player "would have" started (avg beats the weakest starter);
+  needs per-week game/injury data to avoid crediting injured weeks.
+
 ## 2026-11-15: Daily-game standings tied to accounts; recreational-use terms
 - Standings: each account links once to ONE Sleeper user for every league (`sleeper_links`, unique both
   ways), and can only post where that user is a manager. Owner asked that a signed-in user can't play in

@@ -6,13 +6,15 @@ import type { GradedTrade, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Face, pname } from "./player";
-import { MgrPhoto } from "@/components/trash/brand";
+import { MgrPhoto, useBrand } from "@/components/trash/brand";
+import { lineupTerms } from "@/lib/core/lineup-terms";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
 const WIN = "#7fd49a";
 
 function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; nick: (id: string) => string; i: number }) {
   const reduce = useReducedMotion();
+  const terms = lineupTerms(useBrand().lineup);
   const max = Math.max(1, ...t.sides.map((s) => s.pts));
   return (
     <motion.li
@@ -57,7 +59,7 @@ function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; 
                 ))}
               </ul>
               <div className="mt-3 flex items-baseline justify-between text-xs">
-                <span className="text-[var(--muted)]">Points for {nick(s.who)} after</span>
+                <span className="text-[var(--muted)]">Value for {nick(s.who)} after</span>
                 <span className="font-display text-xl font-black tabular-nums" style={{ color: won ? WIN : undefined }}>
                   {n0(s.pts)}
                 </span>
@@ -72,7 +74,11 @@ function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; 
                   transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
                 />
               </div>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">{s.held} player-weeks on the roster afterwards</p>
+              <p className="mt-1 text-[11px] text-[var(--muted)]">
+                {s.starts === null
+                  ? `${s.held} player-weeks on the roster afterwards`
+                  : `${terms.starts(s.starts)} after the trade, ${s.held} player-weeks on the roster`}
+              </p>
             </div>
           );
         })}
@@ -108,7 +114,7 @@ export function TradeCourt({
     <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       {/* records */}
       <h3 className="font-display text-3xl font-black">Trade records</h3>
-      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and net points gained across all of them.</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and the net value gained across all of them (per Sleeper).</p>
       <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {records.map((r, i) => (
           <li key={r.id}>
@@ -178,9 +184,11 @@ export function TradeCourt({
 
       <Explain>
         <p>
-          Each side of a trade is judged by what it actually got: the points the incoming players scored in that
-          manager&apos;s starting lineup for the rest of that season, playoffs included. Players who sat on the bench
-          or got flipped right away earn little, and value from a flip shows up in the next trade instead.
+          Each side of a trade is judged by what it actually got. For the rest of that season (playoffs included),
+          every week an incoming player is in that manager&apos;s starting lineup, he earns his average score as a
+          starter that season. Weeks on the bench earn nothing, and one huge or empty game doesn&apos;t swing a trade.
+          Players who got flipped right away earn little, and value from a flip shows up in the next trade instead.
+          Built from Sleeper&apos;s weekly lineups (per Sleeper).
         </p>
         <p>Draft picks are listed but not scored. A trade within {60} points either way is called even.</p>
       </Explain>

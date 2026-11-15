@@ -81,7 +81,7 @@ export type RawSeason = {
     gp: number;
   }[];
   rosters: Record<string, Record<string, string[]>>;
-  trades: { week: number; sides: Record<string, string[]>; gain?: Record<string, [number, number]> }[];
+  trades: { week: number; sides: Record<string, string[]>; gain?: Record<string, [number, number] | [number, number, number]> }[];
   adds: Record<string, number>;
   /** [week, actual, optimal] */
   lineups: Record<string, [number, number, number][]>;

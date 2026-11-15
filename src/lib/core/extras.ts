@@ -294,7 +294,9 @@ export function myGuys(d: Dataset): GuysRow[] {
 }
 
 /* ── Trade court ───────────────────────────────────────────── */
-export type GradedSide = { who: string; got: string[]; pts: number; held: number };
+/** pts: each incoming player's season-average start, once for every week he started for this manager
+ * after the trade. starts: those weeks (null in data graded before 2026-11-15). held: weeks rostered. */
+export type GradedSide = { who: string; got: string[]; pts: number; held: number; starts: number | null };
 export type GradedTrade = {
   id: string;
   code: string;
@@ -313,7 +315,7 @@ export function tradeCourt(d: Dataset, even = EVEN): { trades: GradedTrade[]; re
   const trades: GradedTrade[] = [];
   for (const s of d.extras.seasons) {
     s.trades.forEach((t, i) => {
-      const sides = Object.entries(t.sides).map(([who, got]) => ({ who, got, pts: t.gain?.[who]?.[0] ?? 0, held: t.gain?.[who]?.[1] ?? 0 }));
+      const sides = Object.entries(t.sides).map(([who, got]) => ({ who, got, pts: t.gain?.[who]?.[0] ?? 0, held: t.gain?.[who]?.[1] ?? 0, starts: t.gain?.[who]?.[2] ?? null }));
       const ranked = [...sides].sort((a, b) => b.pts - a.pts);
       const margin = ranked.length > 1 ? ranked[0].pts - ranked[1].pts : 0;
       trades.push({ id: `${s.code}-${i}`, code: s.code, years: yearsOf(d)[s.code], week: t.week, sides, winner: margin >= even ? ranked[0].who : null, margin });

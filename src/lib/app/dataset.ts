@@ -141,14 +141,14 @@ export function buildDataset(
       }
     }
 
-    // Trades, with each side's graded gain [points as a starter afterwards, weeks held].
+    // Trades, with each side's graded gain [average lock-in x lock-ins afterwards, weeks held, lock-ins].
     const exTrades: RawSeason["trades"] = [];
     const lgTrades: Season["trades"] = [];
     for (const w of current ? [...all, current] : all)
       for (const t of w.trades) {
         const sides = Object.fromEntries(Object.entries(t.sides).map(([rid, got]) => [W(rid), got]));
         const g = gradeOf.get(`${lg.season}|${w.week}|${t.ts}`);
-        const gain = g ? Object.fromEntries(g.sides.map((s) => [s.who, [s.pts, s.held] as [number, number]])) : undefined;
+        const gain = g ? Object.fromEntries(g.sides.map((s) => [s.who, [s.pts, s.held, s.starts ?? 0] as [number, number, number]])) : undefined;
         exTrades.push({ week: w.week, sides, ...(gain ? { gain } : {}) });
         lgTrades.push({
           season: code,

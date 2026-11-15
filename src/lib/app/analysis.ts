@@ -39,7 +39,7 @@ export type GradedTrade = {
   years: string;
   week: number;
   ts: number;
-  sides: { who: Who; got: string[]; pts: number; held: number }[];
+  sides: { who: Who; got: string[]; pts: number; held: number; starts: number }[];
   winner: Who | null;
   margin: number;
   /** Replayed weeks after the trade (0: too soon to judge). */
@@ -49,7 +49,7 @@ export type Pickup = { who: Who; pid: string; season: string; years: string; wee
 /** One head-to-head game, per Sleeper's weekly matchup scores. */
 export type Game = { season: string; years: string; week: number; a: Who; b: Who; pa: number; pb: number; playoff: boolean };
 
-export const ANALYSIS_VERSION = 5;
+export const ANALYSIS_VERSION = 6;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */
@@ -159,20 +159,39 @@ export function analyse(
       }
     const weekNos = weeks.map((w) => w.week);
 
-    // Trade grades: what each side's incoming players scored in that manager's starting lineup
-    // for the rest of the season (playoffs included), and how many weeks they stayed.
+    // Each player's average lock-in this season: points per week in any team's starting lineup.
+    const lockAvg = new Map<string, number>();
+    {
+      const tot = new Map<string, [number, number]>();
+      for (const m of starts.values())
+        for (const [p, v] of m) {
+          const t = tot.get(p) ?? [0, 0];
+          t[0] += v;
+          t[1] += 1;
+          tot.set(p, t);
+        }
+      for (const [p, [sum, n]] of tot) lockAvg.set(p, sum / n);
+    }
+
+    // Trade grades: for the rest of the season (playoffs included), each incoming player earns his
+    // average lock-in for every week he's in that manager's starting lineup (bench weeks earn
+    // nothing), so one lucky or unlucky game doesn't decide a trade. Also how many weeks they stayed.
     for (const w of current ? [...weeks, current] : weeks)
       for (const t of w.trades) {
         const later = weekNos.filter((x) => x > w.week);
         const sides = Object.entries(t.sides).map(([rid, got]) => {
           let pts = 0;
           let held = 0;
+          let n = 0;
           for (const x of later)
             for (const p of got) {
-              pts += starts.get(`${rid}|${x}`)?.get(p) ?? 0;
+              if (starts.get(`${rid}|${x}`)?.has(p)) {
+                pts += lockAvg.get(p) ?? 0;
+                n += 1;
+              }
               if (rostered.get(`${rid}|${x}`)?.has(p)) held += 1;
             }
-          return { who: W(rid), got, pts: Math.round(pts * 10) / 10, held };
+          return { who: W(rid), got, pts: Math.round(pts * 10) / 10, held, starts: n };
         });
         trades.push({ season: lg.season, years, week: w.week, ts: t.ts, sides, winner: null, margin: 0, weeksAfter: later.length });
       }
