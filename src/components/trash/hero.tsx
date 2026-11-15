@@ -3,7 +3,7 @@
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { SparklesText } from "@/components/ui/sparkles-text";
-import { TrophyHat } from "@/components/holiday/trophy-hat";
+import { SantaHat } from "@/components/holiday/santa-hat";
 import { XmasCountdown } from "@/components/holiday/countdown";
 import { HOLIDAY } from "@/lib/holiday";
 
@@ -17,22 +17,19 @@ import { onReady } from "./polish";
  * site (seconds of main-thread work on phones), and a gentle CSS float looks the same. */
 function Trophy() {
   return (
-    <div className="trophy-float flex h-full w-full items-center justify-center">
-      {/* image and hat share one box, so the hat stays on the rim at every size */}
-      <div className="relative h-[86%]" style={{ aspectRatio: "839 / 1068" }}>
-        <Image
-          src="/trophy.webp"
-          alt=""
-          width={839}
-          height={1068}
-          priority
-          sizes="(min-width: 768px) 480px, 240px"
-          className="h-full w-full drop-shadow-[0_30px_60px_rgba(0,0,0,0.45)]"
-        />
-        {HOLIDAY ? (
-          <TrophyHat className="absolute w-[58%] -rotate-[12deg]" style={{ left: "-2%", top: "-15%" }} />
-        ) : null}
-      </div>
+    <div className="trophy-float relative flex h-full w-full items-center justify-center">
+      {HOLIDAY ? (
+        <SantaHat className="absolute top-[3%] left-1/2 z-10 w-[34%] -translate-x-[28%] -rotate-[14deg] drop-shadow-[0_8px_16px_rgba(0,0,0,0.4)]" />
+      ) : null}
+      <Image
+        src="/trophy.webp"
+        alt=""
+        width={839}
+        height={1068}
+        priority
+        sizes="(min-width: 768px) 480px, 240px"
+        className="h-[86%] w-auto drop-shadow-[0_30px_60px_rgba(0,0,0,0.45)]"
+      />
     </div>
   );
 }
