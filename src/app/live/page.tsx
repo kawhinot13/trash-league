@@ -4,7 +4,7 @@ import { LiveTable, Waivers } from "@/components/trash/live-blocks";
 import { PageIntro } from "@/components/trash/page-intro";
 import { SectionHead, Standings } from "@/components/trash/sections";
 import { league } from "@/lib/league";
-import { players, weeklyRecap } from "@/lib/extras";
+import { players } from "@/lib/extras";
 import { liveRecap } from "@/lib/recap-live";
 import { powerRankings } from "@/lib/power";
 import { PowerRankings } from "@/components/trash/power";
@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Live — Trash" };
 async function Power() {
   const p = await powerRankings();
   if (!p) return <p className="text-[var(--muted)]">Power rankings load once Sleeper answers. Refresh in a minute.</p>;
-  return <PowerRankings rows={p.rows} week={p.week} />;
+  return <PowerRankings rows={p.rows} week={p.week} weights={p.weights} />;
 }
 
 async function LiveRecap() {
@@ -50,7 +50,7 @@ export default function LivePage() {
           Every finished week of the season in one place: blowouts, nail-biters, bench crimes and who carried who.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <Suspense fallback={<WeeklyRecap {...weeklyRecap("s4")} players={players} managers={league.managers} />}>
+          <Suspense fallback={<p className="text-[var(--muted)]">Loading the recap…</p>}>
             <LiveRecap />
           </Suspense>
         </div>

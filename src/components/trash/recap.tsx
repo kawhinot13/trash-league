@@ -71,6 +71,28 @@ export function WeeklyRecap({
       </div>
       <AnimatePresence mode="wait">
         <motion.ul key={wk} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {r.results?.length ? (
+            <li className="rounded-2xl border border-white/10 bg-black/25 p-4 sm:col-span-2 lg:col-span-4">
+              <p className="text-xs font-bold text-[var(--paper)]">Results</p>
+              <ul className="mt-2 grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                {r.results.map((g) => (
+                  <li key={g.w + g.l} className="flex items-center gap-2">
+                    <Av id={g.w} />
+                    <span>
+                      <span className="font-semibold">{nick(g.w)}</span> <span className="text-[var(--muted)]">beat</span> {nick(g.l)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {!r.exact ? (
+                <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
+                  Team scores aren&apos;t shown for this week. Sleeper&apos;s data feed reports them inconsistently for
+                  daily-lineup leagues, so the only exact source is the official season points total, which the site
+                  started saving after week 3. Every week from 4 on gets exact scores.
+                </p>
+              ) : null}
+            </li>
+          ) : null}
           {r.blowout ? (
             <Card label="Blowout of the week" tone="var(--ticket)" i={i++}>
               <div className="flex items-center gap-2">
@@ -168,7 +190,7 @@ export function WeeklyRecap({
         </motion.ul>
       </AnimatePresence>
       <p className="mt-4 text-xs text-[var(--muted)]">
-        Scores read live from Sleeper, refreshed every few minutes. Sleeper reports slightly different scores for the same week from one request to the next, so each team&apos;s highest reported score is used. Best-possible lineups come from the nightly box-score replay.
+        Results and team scores come from Sleeper&apos;s official records and season points totals. Player performances come from NBA box scores.
       </p>
     </div>
   );

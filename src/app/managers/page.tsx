@@ -39,7 +39,8 @@ export default function ManagersPage() {
       <section aria-labelledby="lockin" className="py-24 md:py-32">
         <SectionHead id="lockin" title="The Lock-In Index">
           Who sets a lineup like a front office and who leaves 70-point nights on the bench. Every
-          manager&apos;s real score against the best lineup they could have played.
+          manager&apos;s real score against the best lineup they could have played. Estimates: built from
+          Sleeper&apos;s weekly lineup data, which doesn&apos;t always match the scores in the app.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <LockInIndex {...lock} managers={league.managers} />

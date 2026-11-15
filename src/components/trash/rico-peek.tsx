@@ -3,6 +3,8 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { RICO_BASE } from "./rico-art";
+import { SantaHat } from "@/components/holiday/santa-hat";
+import { HOLIDAY } from "@/lib/holiday";
 
 /**
  * Kilroy was here, Trash edition: a cartoon RI3O peeks over a scorer's-table
@@ -311,6 +313,9 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
             style={{ transformOrigin: "50% 100%" }}
           >
             <RicoFace look={look} blink={blink} brow={brow} />
+            {HOLIDAY ? (
+              <SantaHat className="pointer-events-none absolute left-[16%] w-[72%] -rotate-[10deg]" style={{ top: "-16%" }} />
+            ) : null}
           </motion.div>
         </div>
         {/* the wall: a scorer's-table plank with the classic scrawl */}

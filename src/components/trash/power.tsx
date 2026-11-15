@@ -25,14 +25,15 @@ function Move({ m }: { m: number }) {
   );
 }
 
-export function PowerRankings({ rows, week }: { rows: PowerRow[]; week: number | null }) {
+export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week: number | null; weights: Record<keyof PowerRow["parts"], number> }) {
+  const parts = PARTS.filter((p) => weights[p.key] > 0).map((p) => ({ ...p, w: Math.round(weights[p.key] * 100) }));
   const reduce = useReducedMotion();
   return (
     <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-8">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="font-display text-4xl font-black">{week ? `Week ${week}` : "This week"}</p>
         <div className="flex flex-wrap gap-3 text-xs text-[var(--muted)]">
-          {PARTS.map((p) => (
+          {parts.map((p) => (
             <span key={p.key} className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-sm" style={{ background: p.color }} />
               {p.label} {p.w}%
@@ -84,7 +85,7 @@ export function PowerRankings({ rows, week }: { rows: PowerRow[]; week: number |
                 <span className="font-display text-2xl font-black text-[var(--paper)] tabular-nums">{r.score}</span>
               </div>
               <div className="mt-1.5 flex h-2.5 overflow-hidden rounded-full bg-white/8" aria-label={`Power score ${r.score} of 100`}>
-                {PARTS.map((p, k) => (
+                {parts.map((p, k) => (
                   <motion.span
                     key={p.key}
                     className="h-full"
@@ -103,13 +104,14 @@ export function PowerRankings({ rows, week }: { rows: PowerRow[]; week: number |
       </ol>
       <Explain>
         <p>
-          Each team gets a power score out of 100: record (30%), points scored per week (25%), roster strength (30%,
-          the best possible starting nine from the Front Office player values) and form (15%, last finished week vs
-          the league average). Each piece is scaled from the league&apos;s worst to best.
+          Each team gets a power score out of 100 from record, official points scored per week and roster strength
+          (the best possible starting nine from the Front Office player values), plus form (last week&apos;s exact
+          score vs the league average) once exact weekly scores are available. Each piece is scaled from the
+          league&apos;s worst to best.
         </p>
         <p>
           Movement compares with the same formula one week earlier. Records and points are Sleeper&apos;s official
-          numbers; last week&apos;s score uses the highest of Sleeper&apos;s reported scores for that week.
+          numbers only.
         </p>
       </Explain>
     </div>

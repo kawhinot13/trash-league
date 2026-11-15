@@ -326,3 +326,76 @@ body::after {
 @keyframes lu-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes lu-down { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
 @media (prefers-reduced-motion: reduce) { .lu-up, .lu-down { animation: none; } }
+
+/* ── Christmas theme ─────────────────────────────────────── */
+:root {
+  --holly: #c8102e;
+  --pine: #0b2419;
+  --snow: #f6f3ea;
+}
+body {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(200, 16, 46, 0.12), transparent 60%),
+    radial-gradient(90% 50% at 100% 100%, rgba(233, 196, 106, 0.06), transparent 60%),
+    var(--bin);
+}
+.xmas-flake {
+  position: absolute;
+  top: -12px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff 40%, rgba(255, 255, 255, 0.4) 70%, transparent);
+  animation: xmas-fall linear infinite;
+  will-change: transform;
+}
+@keyframes xmas-fall {
+  from { transform: translate3d(0, -5vh, 0); }
+  to { transform: translate3d(var(--drift), 105vh, 0); }
+}
+.xmas-bulb {
+  width: 7px;
+  height: 11px;
+  margin-left: -3.5px;
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: 0 0 8px 2px var(--glow);
+  animation: xmas-twinkle 2.4s ease-in-out infinite;
+}
+.xmas-bulb::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 1.5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: #1f3a2e;
+}
+@keyframes xmas-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; box-shadow: 0 0 2px 0 var(--glow); }
+}
+.xmas-drift {
+  position: relative;
+}
+.xmas-drift::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: -9px;
+  height: 14px;
+  background:
+    radial-gradient(14px 9px at 8% 100%, var(--snow) 98%, transparent) ,
+    radial-gradient(22px 11px at 22% 100%, var(--snow) 98%, transparent),
+    radial-gradient(18px 10px at 41% 100%, var(--snow) 98%, transparent),
+    radial-gradient(26px 12px at 63% 100%, var(--snow) 98%, transparent),
+    radial-gradient(16px 9px at 84% 100%, var(--snow) 98%, transparent),
+    linear-gradient(var(--snow), var(--snow)) bottom / 100% 5px no-repeat;
+  border-radius: 6px 6px 0 0;
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .xmas-snow { display: none; }
+  .xmas-bulb { animation: none; }
+}

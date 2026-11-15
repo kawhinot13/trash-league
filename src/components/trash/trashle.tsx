@@ -153,7 +153,7 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
             particleCount: 110,
             spread: 80,
             origin: { y: 0.4 },
-            colors: ["#7fd49a", "#c98a4b", "#f6f3ea", "#1f4a39"],
+            colors: ["#d93a3a", "#3fae5a", "#e9c46a", "#f6f3ea", "#c8102e"],
           });
       } else if (next.length >= TRIES) sfx.slam();
       if (day && (cur === target.word || next.length >= TRIES)) {
@@ -207,7 +207,7 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
   };
 
   return (
-    <div data-no-rico className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_30%_0%,rgba(127,212,154,0.12),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+    <div data-no-rico className="xmas-drift relative rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_30%_0%,rgba(127,212,154,0.12),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
       <canvas ref={fx} className="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">

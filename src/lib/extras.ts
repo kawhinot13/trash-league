@@ -375,6 +375,10 @@ export function draftEye(id: string) {
 /* ── Weekly recap ──────────────────────────────────────────── */
 export type RecapWeek = {
   week: number;
+  /** Official results for every game (from Sleeper's record strings). */
+  results?: { w: string; l: string }[];
+  /** True when team scores are exact (from official points-for snapshots). */
+  exact?: boolean;
   blowout: { w: string; l: string; ws: number; ls: number } | null;
   close: { w: string; l: string; ws: number; ls: number } | null;
   high: { id: string; pts: number } | null;

@@ -433,7 +433,7 @@ export function Lineup({
             particleCount: 100,
             spread: 70,
             origin: { x: 0.25, y: 0.4 },
-            colors: ["#7fd49a", "#c98a4b", "#f6f3ea"],
+            colors: ["#d93a3a", "#3fae5a", "#e9c46a", "#f6f3ea", "#c8102e"],
           });
       }, reveal);
     else if (next.length >= TRIES)
@@ -455,7 +455,7 @@ export function Lineup({
   };
 
   return (
-    <div data-no-rico ref={rootRef} className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_20%_0%,rgba(246,243,234,0.07),rgba(12,32,24,0.94)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+    <div data-no-rico ref={rootRef} className="xmas-drift relative rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_20%_0%,rgba(246,243,234,0.07),rgba(12,32,24,0.94)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
       <canvas ref={fx} className="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">

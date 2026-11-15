@@ -5,6 +5,8 @@ import { GlassNav } from "@/components/trash/polish";
 import { RicoPeek } from "@/components/trash/rico-peek";
 import { Footer } from "@/components/trash/sections";
 import { league } from "@/lib/league";
+import { HOLIDAY } from "@/lib/holiday";
+import { Snowfall } from "@/components/holiday/snowfall";
 import "./globals.css";
 
 const display = Big_Shoulders({
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f2a20",
+  themeColor: "#0b2419",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -37,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${display.variable} ${body.variable} antialiased`}>
       <body className="min-h-full bg-transparent text-[var(--paper)]">
         <SmoothScroll>
+          {HOLIDAY ? <Snowfall /> : null}
           <GlassNav />
           {children}
           <Footer />

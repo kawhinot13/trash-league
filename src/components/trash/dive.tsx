@@ -247,7 +247,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
   };
 
   return (
-    <div data-no-rico className="relative overflow-visible rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_70%_0%,rgba(201,138,75,0.16),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+    <div data-no-rico className="xmas-drift relative overflow-visible rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_70%_0%,rgba(201,138,75,0.16),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
       {/* HUD */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">

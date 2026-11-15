@@ -190,7 +190,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
 
   return (
     <LocalPhotos.Provider value={localSet}>
-    <div data-no-rico className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
+    <div data-no-rico className="xmas-drift rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"]]} />
         <p className="text-xs text-[var(--muted)]">Live Season 4 rosters, week {data.week}</p>

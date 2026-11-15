@@ -343,4 +343,23 @@ for m in LG["managers"]:
     m["pct"] = round((m["w"] + m["t"] / 2) / gp, 3) if gp else 0
 LG["managers"].sort(key=lambda m: -m["pct"])
 json.dump(LG, open(LPATH, "w"), ensure_ascii=False)
+
+# Official points-for snapshots, keyed by completed weeks (from the record string). The
+# difference between two snapshots is a team's exact weekly score; Sleeper's weekly matchup
+# endpoint is not reliable for this league, so the site never takes team scores from it.
+OPATH = os.path.join(ROOT, "src/data/official.json")
+OFF = json.load(open(OPATH)) if os.path.exists(OPATH) else {}
+for sn in LG["seasons"]:
+    if sn["status"] == "complete":
+        continue
+    lid = sn["leagueId"]
+    users = {u["user_id"]: u["display_name"] for u in get(f"/v1/league/{lid}/users", fresh=True)}
+    ros = get(f"/v1/league/{lid}/rosters", fresh=True)
+    weeks_done = {len((r.get("metadata") or {}).get("record", "")) for r in ros}
+    if len(weeks_done) == 1:  # every team has the same number of finished games: totals are final
+        wk = str(weeks_done.pop())
+        OFF.setdefault(sn["code"], {}).setdefault(wk, {
+            users[r["owner_id"]]: round(r["settings"].get("fpts", 0) + r["settings"].get("fpts_decimal", 0) / 100, 1) for r in ros})
+json.dump(OFF, open(OPATH, "w"), indent=1)
+print("official snapshots:", {k: sorted(v) for k, v in OFF.items()})
 print("league.json in-progress season refreshed")

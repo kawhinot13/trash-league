@@ -7,6 +7,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { NumberTicker } from "@/components/ui/number-ticker";
+import { StringLights } from "@/components/holiday/lights";
+import { HOLIDAY } from "@/lib/holiday";
 
 /** Run `fn` once the page has painted. (There used to be a preloader to wait for; it was
  * removed because it also popped up when navigating to Home from another page.) */
@@ -41,12 +43,13 @@ export function GlassNav() {
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-3 md:pt-4">
         <nav
           aria-label="Sections"
-          className={`pointer-events-auto flex w-full max-w-5xl items-center justify-between gap-2 rounded-full border px-2 py-2 pl-5 transition-[background-color,border-color,box-shadow] duration-500 ${
+          className={`pointer-events-auto relative flex w-full max-w-5xl items-center justify-between gap-2 rounded-full border px-2 py-2 pl-5 transition-[background-color,border-color,box-shadow] duration-500 ${
             scrolled
               ? "border-white/12 bg-[rgba(10,30,22,0.86)] shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
               : "border-transparent bg-transparent"
           }`}
         >
+          {HOLIDAY && scrolled ? <StringLights /> : null}
           <Link href="/" className="font-display text-2xl font-black tracking-tight">
             Trash
           </Link>

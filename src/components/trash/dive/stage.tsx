@@ -6,6 +6,7 @@ import { gsap, useGSAP } from "@/lib/gsap";
 import type { Players } from "@/lib/extras";
 import { Face, pname } from "../player";
 import { sfx } from "./sfx";
+import { HOLIDAY } from "@/lib/holiday";
 
 /** Stage geometry, in SVG units (viewBox 0 0 400 440). */
 const W = 400;
@@ -107,7 +108,7 @@ export function Stage({
   const burst = (score: number) => {
     const host = bits.current;
     if (!host || reduce.current) return;
-    const colors = ["#e9e3d2", "#c98a4b", "#7fd49a", "#d6342c", "#f2cf4a"];
+    const colors = ["#d93a3a", "#3fae5a", "#e9c46a", "#f6f3ea", "#c8102e"];
     const n = 10 + Math.round(score / 8);
     for (let i = 0; i < n; i++) {
       const d = document.createElement("span");
@@ -178,7 +179,7 @@ export function Stage({
   const celebrate = () => {
     if (reduce.current || !fx.current) return;
     const shoot = confetti.create(fx.current, { resize: true, useWorker: true });
-    const colors = ["#c98a4b", "#f6f3ea", "#7fd49a", "#1f4a39", "#f2cf4a"];
+    const colors = ["#d93a3a", "#3fae5a", "#e9c46a", "#f6f3ea", "#c8102e"];
     void shoot({ particleCount: 90, spread: 75, startVelocity: 38, origin: { x: 0.5, y: RIM / H }, angle: 90, colors, scalar: 0.9, ticks: 160 });
     setTimeout(() => void shoot({ particleCount: 50, spread: 120, startVelocity: 28, origin: { x: 0.5, y: RIM / H }, colors, scalar: 0.7 }), 180);
   };
@@ -334,6 +335,15 @@ export function Stage({
         <g ref={lid}>
           <path d={`M56 ${RIM - 26} H340 L338 ${RIM - 8} H58 Z`} fill="#2a5a45" stroke={INK} strokeWidth="5" strokeLinejoin="round" />
           <rect x="180" y={RIM - 33} width="40" height="8" rx="3" fill={INK} />
+          {HOLIDAY ? (
+            <path
+              d={`M58 ${RIM - 26} Q 70 ${RIM - 40} 90 ${RIM - 30} Q 110 ${RIM - 44} 140 ${RIM - 31} Q 170 ${RIM - 42} 176 ${RIM - 30} L 226 ${RIM - 30} Q 250 ${RIM - 44} 280 ${RIM - 31} Q 310 ${RIM - 42} 338 ${RIM - 26} Z`}
+              fill="#f6f3ea"
+              stroke={INK}
+              strokeWidth="3"
+              strokeLinejoin="round"
+            />
+          ) : null}
         </g>
       </svg>
 

@@ -1,6 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
+import { SparklesText } from "@/components/ui/sparkles-text";
+import { SantaHat } from "@/components/holiday/santa-hat";
+import { XmasCountdown } from "@/components/holiday/countdown";
+import { HOLIDAY } from "@/lib/holiday";
+
+// WebGL snow, hero only: loaded after hydration, pauses off-screen, off for reduced motion.
+const PixelSnow = dynamic(() => import("@/components/PixelSnow"), { ssr: false, loading: () => null });
 import { useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { onReady } from "./polish";
@@ -9,7 +17,10 @@ import { onReady } from "./polish";
  * site (seconds of main-thread work on phones), and a gentle CSS float looks the same. */
 function Trophy() {
   return (
-    <div className="trophy-float flex h-full w-full items-center justify-center">
+    <div className="trophy-float relative flex h-full w-full items-center justify-center">
+      {HOLIDAY ? (
+        <SantaHat className="absolute top-[3%] left-1/2 z-10 w-[34%] -translate-x-[28%] -rotate-[14deg] drop-shadow-[0_8px_16px_rgba(0,0,0,0.4)]" />
+      ) : null}
       <Image
         src="/trophy.webp"
         alt=""
@@ -154,6 +165,11 @@ export function Hero({
         }}
       />
 
+      {HOLIDAY ? (
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[1] opacity-90">
+          <PixelSnow color="#f6f3ea" density={0.55} speed={0.6} dpr={1.5} />
+        </div>
+      ) : null}
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pt-20">
         <h1 className="font-display flex select-none leading-[0.78] font-black tracking-[-0.03em] text-[clamp(7rem,31vw,30rem)] [text-shadow:0_20px_60px_rgba(0,0,0,0.35)]">
           {"TRASH".split("").map((c, i) => (
@@ -167,10 +183,20 @@ export function Hero({
         </div>
       </div>
       <div className="hero-copy relative z-10 grid gap-6 px-5 pb-24 md:grid-cols-[1fr_auto] md:items-end md:px-10 md:pb-28">
+        <div className="flex flex-col gap-3">
+        {HOLIDAY ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <SparklesText className="font-display text-4xl font-black md:text-5xl" colors={{ first: "#e9c46a", second: "#d93a3a" }} sparklesCount={8}>
+              Merry Trashmas
+            </SparklesText>
+            <XmasCountdown />
+          </div>
+        ) : null}
         <p className="max-w-[46ch] text-lg leading-snug text-[var(--muted)] md:text-xl">
           A fantasy basketball league since 2023. Four seasons, three champions,
           ninety-three trades, and nobody has won it twice.
         </p>
+        </div>
         <a
           href="/live"
           className="group inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-[rgba(16,40,30,0.55)] px-5 py-3 text-sm transition-colors duration-200 hover:border-white/25 md:self-end"

@@ -2,6 +2,7 @@ import data from "@/data/extras.json";
 import { profile } from "@/lib/fo-analysis";
 import { frontOffice } from "@/lib/front-office";
 import { league, liveStandings } from "@/lib/league";
+import { officialWeek } from "@/lib/recap-live";
 
 /**
  * Season 4 power rankings. One score per team, 0–100:
@@ -40,10 +41,16 @@ const scale = (xs: number[]) => {
   return (x: number) => (hi > lo ? (x - lo) / (hi - lo) : 0.5);
 };
 
-export async function powerRankings(): Promise<{ week: number | null; rows: PowerRow[] } | null> {
+export async function powerRankings(): Promise<{ week: number | null; rows: PowerRow[]; weights: Record<keyof PowerRow["parts"], number> } | null> {
   const [{ rows: table, week }, fo] = await Promise.all([liveStandings(), frontOffice()]);
   if (!table.length) return null;
   const lines = s4lines();
+  // Exact last-week scores only (official points-for snapshots); Sleeper's weekly matchup
+  // scores are unreliable for this league, so without snapshots "form" sits out.
+  const done = Math.max(0, ...table.map((r) => r.w + r.l + r.t));
+  const lastExact = officialWeek(done);
+  const prevExact = officialWeek(done - 1);
+  const W = lastExact ? { record: 0.3, scoring: 0.25, roster: 0.3, form: 0.15 } : { record: 0.35, scoring: 0.3, roster: 0.35, form: 0 };
   const nick = (id: string) => league.managers.find((m) => m.id === id)?.nick ?? id;
 
   const base = table.map((r) => {
@@ -64,12 +71,12 @@ export async function powerRankings(): Promise<{ week: number | null; rows: Powe
       winPct: gp ? (r.w + r.t / 2) / gp : 0,
       ppw: gp ? r.pf / gp : 0,
       roster: prof?.lineup.total ?? 0,
-      last: lastRow ? lastRow[1] : null,
+      last: lastExact?.get(r.manager) ?? null,
       eff,
       mvp,
       prevWinPct: prevGp ? (prevW + r.t / 2) / prevGp : 0,
-      prevPpw: prevGp ? (r.pf - lastPts) / prevGp : 0,
-      prevLast: hist.length > 1 ? hist[hist.length - 2][1] : null,
+      prevPpw: prevGp ? (r.pf - (lastExact?.get(r.manager) ?? lastPts)) / prevGp : 0,
+      prevLast: prevExact?.get(r.manager) ?? null,
     };
   });
 
@@ -81,7 +88,7 @@ export async function powerRankings(): Promise<{ week: number | null; rows: Powe
     const sf = scale(vals.map((v) => (v[3] ?? avgLast) - avgLast));
     return vals.map((v) => {
       const parts = { record: sw(v[0]), scoring: sp(v[1]), roster: sr(v[2]), form: sf((v[3] ?? avgLast) - avgLast) };
-      return { parts, score: 100 * (0.3 * parts.record + 0.25 * parts.scoring + 0.3 * parts.roster + 0.15 * parts.form) };
+      return { parts, score: 100 * (W.record * parts.record + W.scoring * parts.scoring + W.roster * parts.roster + W.form * parts.form) };
     });
   };
   const now = scoreAll((b) => [b.winPct, b.ppw, b.roster, b.last]);
@@ -103,8 +110,6 @@ export async function powerRankings(): Promise<{ week: number | null; rows: Powe
   const recR = rankBy((b) => b.winPct);
   const rosR = rankBy((b) => b.roster);
   const ppwR = rankBy((b) => b.ppw);
-  const effs = base.map((b) => b.eff).filter((x): x is number => x !== null);
-  const avgEff = effs.length ? effs.reduce((a, x) => a + x, 0) / effs.length : 0;
   const n = base.length;
 
   const rows: PowerRow[] = base.map((b, i) => {
@@ -117,8 +122,6 @@ export async function powerRankings(): Promise<{ week: number | null; rows: Powe
     if (ppwR.get(i) === 1) notes.push("The highest-scoring team in the league.");
     if (sN >= 3 && streak.endsWith("W")) notes.push(`Won ${sN} straight.`);
     if (sN >= 3 && streak.endsWith("L")) notes.push(`Lost ${sN} straight. Someone check on them.`);
-    if (b.eff !== null && b.eff >= avgEff + 0.04) notes.push(`Locks in like a pro: ${(b.eff * 100).toFixed(0)}% lineup efficiency.`);
-    if (b.eff !== null && b.eff <= avgEff - 0.04) notes.push(`Leaving points on the bench: ${(b.eff * 100).toFixed(0)}% lineup efficiency.`);
     if (b.mvp && notes.length < 2) notes.push(`${b.mvp.name} is carrying this team at ${Math.round(b.mvp.value)} a week.`);
     if (!notes.length) notes.push("Nothing loud yet. Middle of the pack, waiting for a move.");
     const score = Math.round(now[i].score);
@@ -140,5 +143,5 @@ export async function powerRankings(): Promise<{ week: number | null; rows: Powe
     };
   });
   rows.sort((a, b) => a.rank - b.rank);
-  return { week, rows };
+  return { week, rows, weights: W };
 }

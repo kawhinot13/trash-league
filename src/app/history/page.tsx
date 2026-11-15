@@ -38,7 +38,8 @@ export default function HistoryPage() {
       <section aria-labelledby="court" className="py-24 md:py-32">
         <SectionHead id="court" title="Trade court">
           Every trade in league history, judged by what each side actually got out of it. Who won, who got fleeced,
-          and who&apos;s the best dealer in Trash.
+          and who&apos;s the best dealer in Trash. Estimates: built from Sleeper&apos;s weekly lineup data, which
+          doesn&apos;t always match the scores in the app.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <TradeCourt {...tradeCourt()} players={players} managers={league.managers} />
