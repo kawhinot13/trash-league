@@ -28,7 +28,7 @@ export default function ManagerPage({ params }: PageProps<"/l/[leagueId]/manager
             {(p) => {
               if (!p.view.careers.some((c) => c.ownerId === userId)) notFound();
               if (p.dataset?.league.managers.some((m) => m.id === userId))
-                return <ManagerProfileView d={p.dataset} id={userId} label={yearsOf(p.dataset)} base={`/l/${leagueId}`} />;
+                return <ManagerProfileView d={p.dataset} id={userId} label={yearsOf(p.dataset)} base={`/l/${leagueId}`} lineup={p.brand.lineup} even={p.analysis?.even ?? 60} />;
               return <ManagerProfile p={p} ownerId={userId} />;
             }}
           </LeagueGate>

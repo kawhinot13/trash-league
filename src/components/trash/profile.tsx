@@ -5,13 +5,33 @@ import { Face, pname } from "@/components/trash/player";
 import { draftEye, lockIn, myGuys, tradeCourt, yearsOf } from "@/lib/core/extras";
 import { h2h as coreH2h, record } from "@/lib/core/league";
 import type { Dataset } from "@/lib/core/types";
+import { lineupTerms } from "@/lib/core/lineup-terms";
+import { tradeRule } from "@/lib/core/stat-notes";
+import { Explain } from "@/components/trash/intel";
 
 /**
  * A manager's profile: record, scouting report (lineups, their guys, draft eye, trade record),
  * season by season, who they own and every trade. Shared by Trash and Rafterlore; links, photos
  * and handles come from the brand.
  */
-export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id: string; label: Record<string, string>; base?: string }) {
+export function ManagerProfileView({
+  d,
+  id,
+  label,
+  base = "",
+  lineup,
+  even = 60,
+}: {
+  d: Dataset;
+  id: string;
+  label: Record<string, string>;
+  base?: string;
+  /** The league's lineup type, for wording (Trash: lock-in). */
+  lineup?: "lock-in" | "daily" | "weekly" | null;
+  /** Margin under which a trade is called even (Rafterlore scales it to the league). */
+  even?: number;
+}) {
+  const terms = lineupTerms(lineup);
   const { league } = d;
   const players = d.extras.players;
   const seasonYears = yearsOf(d);
@@ -35,7 +55,7 @@ export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id
   const lockRank = lock.rows.findIndex((r) => r.id === m.id) + 1;
   const guys = myGuys(d).find((g) => g.id === m.id);
   const eye = draftEye(d, m.id);
-  const court = tradeCourt(d);
+  const court = tradeCourt(d, even);
   const rec = court.records.find((r) => r.id === m.id);
   const myTrades = court.trades.filter((t) => t.sides.some((x) => x.who === m.id));
   const net = (t: (typeof myTrades)[number]) => {
@@ -89,7 +109,7 @@ export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id
               <>
                 <p className="font-display mt-3 text-6xl leading-none font-black tabular-nums">{(lr.eff * 100).toFixed(1)}%</p>
                 <p className="mt-2 text-[var(--muted)]">
-                  Lineup efficiency, #{lockRank} of {lock.rows.length} on the Lock-In Index. Leaves {n0(lr.left)} points on
+                  Lineup efficiency, #{lockRank} of {lock.rows.length} on the {terms.index}. Leaves {n0(lr.left)} points on
                   the bench a week. Worst week: {n0(lr.worst.opt - lr.worst.act)} left sitting in {seasonYears[lr.worst.code]} week{" "}
                   {lr.worst.week}.
                 </p>
@@ -153,7 +173,7 @@ export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id
                 </p>
                 <p className={`mt-2 font-semibold ${rec.net >= 0 ? "text-[#7fd49a]" : "text-[#ff8a7a]"}`}>
                   {rec.net >= 0 ? "+" : ""}
-                  {n0(rec.net)} net points across all trades
+                  {n0(rec.net)} net value across all trades
                 </p>
                 {bestTrade ? (
                   <p className="mt-3 text-sm text-[var(--muted)]">
@@ -171,6 +191,26 @@ export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id
             )}
           </section>
         </div>
+
+        <Explain title="How these numbers work">
+          <ul className="list-disc space-y-1 pl-5">
+            <li>
+              <strong>Lineups:</strong> the points this manager&apos;s starters scored, divided by the most the roster could have
+              scored with the best lineup each week. 100% means a perfect lineup every week (per Sleeper).
+            </li>
+            <li>
+              <strong>Their guys:</strong> the players who scored the most for this manager while in the starting lineup.
+            </li>
+            <li>
+              <strong>Draft eye:</strong> &ldquo;re-drafted&rdquo; is where the player would go if that draft were redone by
+              the fantasy points everyone actually scored that season. A pick much earlier than that is a bust; much later is a
+              steal.
+            </li>
+            <li>
+              <strong>Trade record:</strong> {tradeRule(terms.avg, even, false)} Net is the value received minus the value given away.
+            </li>
+          </ul>
+        </Explain>
 
         <h2 className="font-display mt-16 text-5xl font-black">Season by season</h2>
         <div className="mt-6 overflow-x-auto rounded-2xl bg-[var(--bin-2)]">

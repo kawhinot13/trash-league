@@ -8,6 +8,7 @@ import { Explain, Segmented } from "./intel";
 import { Face, pname } from "./player";
 import { MgrPhoto, useBrand } from "@/components/trash/brand";
 import { lineupTerms } from "@/lib/core/lineup-terms";
+import { tradeRule } from "@/lib/core/stat-notes";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
 const WIN = "#7fd49a";
@@ -91,11 +92,14 @@ export function TradeCourt({
   records,
   players,
   managers,
+  even = 60,
 }: {
   trades: GradedTrade[];
   records: { id: string; w: number; l: number; e: number; net: number }[];
   players: Players;
   managers: Manager[];
+  /** Margin under which a trade is called even (Rafterlore scales it to the league). */
+  even?: number;
 }) {
   const terms = lineupTerms(useBrand().lineup);
   const [season, setSeason] = useState("all");
@@ -114,7 +118,7 @@ export function TradeCourt({
     <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       {/* records */}
       <h3 className="font-display text-3xl font-black">Trade records</h3>
-      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and the net value gained across all of them (per Sleeper).</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and the net value gained across all of them (per Sleeper). {tradeRule(terms.avg, even)}</p>
       <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {records.map((r, i) => (
           <li key={r.id}>
@@ -182,15 +186,27 @@ export function TradeCourt({
         </button>
       ) : null}
 
-      <Explain>
+      <Explain title="How trades are scored">
+        <p>In one line: a trade is worth what the players you got were worth to you, week by week.</p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            Each player has an average {terms.avg} for the season: his points per week in a starting lineup, on any team.
+          </li>
+          <li>
+            Every week after the trade that he&apos;s on your roster and plays at least one game, you get that average once.
+            Started or benched counts the same, so forgetting to start him doesn&apos;t change the trade.
+          </li>
+          <li>Weeks he&apos;s hurt, has no games, or is already gone count zero.</li>
+          <li>Add up every player you got: that&apos;s your side&apos;s value. More value wins; within {even} points it&apos;s even.</li>
+        </ul>
         <p>
-          Each side of a trade is judged by what it got. For the rest of that season (playoffs included), every week
-          an incoming player is on that manager&apos;s roster and plays at least one game, he earns his average {terms.avg}{" "}
-          that season, whether or not he was started. Benching him is the manager&apos;s call, not the trade&apos;s;
-          weeks he&apos;s hurt or gone earn nothing, and one huge or empty game doesn&apos;t swing a trade. Value from
-          a flip shows up in the next trade instead. Averages come from Sleeper&apos;s weekly lineups (per Sleeper).
+          Example: he averages 47. He&apos;s on your roster for 4 more weeks and plays in 3 of them. Your side gets 3 × 47 = 141,
+          whatever he actually scored, started or not.
         </p>
-        <p>Draft picks are listed but not scored. A trade within {60} points either way is called even.</p>
+        <p>
+          If he&apos;s traded again, his value counts toward the next trade instead. Draft picks are listed but not scored.
+          Averages come from Sleeper&apos;s weekly lineups (per Sleeper).
+        </p>
       </Explain>
     </div>
   );

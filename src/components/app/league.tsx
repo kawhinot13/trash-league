@@ -1,4 +1,5 @@
 import { lineupTerms } from "@/lib/core/lineup-terms";
+import { tradeRule } from "@/lib/core/stat-notes";
 import Link from "next/link";
 import { Avatar } from "@/components/app/avatar";
 import type { LeaguePage } from "@/lib/app/league-page";
@@ -346,7 +347,7 @@ export function TradeCourt({ p, only }: { p: LeaguePage; only?: string }) {
             </li>
           ))}
         </ol>
-        <p className="mt-3 text-xs text-[var(--muted)]">Won, lost, even. Net points gained across every trade.</p>
+        <p className="mt-3 text-xs text-[var(--muted)]">Won, lost, even. Net value gained across every trade.</p>
       </div>
       <div>
         <ol className="divide-y divide-[var(--line)] border-y border-[var(--line)]">{a.trades.slice(0, 6).map(card)}</ol>
@@ -359,6 +360,7 @@ export function TradeCourt({ p, only }: { p: LeaguePage; only?: string }) {
             <ol className="divide-y divide-[var(--line)] border-b border-[var(--line)]">{a.trades.slice(6).map((t, i) => card(t, i + 6))}</ol>
           </details>
         ) : null}
+        <p className="mt-4 text-sm text-[var(--muted)]">{tradeRule(lineupTerms(p.brand.lineup).avg, a.even ?? 60)}</p>
       </div>
     </div>
   );

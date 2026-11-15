@@ -60,7 +60,7 @@ function History({ p }: { p: LeaguePage }) {
           lineups, per Sleeper.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <TradeCourt {...tradeCourt(d, p.analysis?.even ?? 60)} players={d.extras.players} managers={d.league.managers} />
+          <TradeCourt {...tradeCourt(d, p.analysis?.even ?? 60)} even={p.analysis?.even ?? 60} players={d.extras.players} managers={d.league.managers} />
         </div>
       </section>
 
