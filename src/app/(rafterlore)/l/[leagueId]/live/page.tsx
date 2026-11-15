@@ -99,11 +99,12 @@ function Live({ p }: { p: LeaguePage }) {
       {inSeason ? (
         <section aria-labelledby="week" className="py-16 md:py-24">
           <SectionHead id="week" title="This week">
-            Live matchup scores, per Sleeper. They move all week and don&apos;t always match the official totals, which
-            are saved every night.
+            {p.view.sport === "nfl"
+              ? "Live matchup scores, per Sleeper, refreshed every few minutes."
+              : "Who plays who this week and their starters. Sleeper's live basketball scores aren't reliable, so scores show up in the table once the week is final."}
           </SectionHead>
           <div className="mx-auto max-w-6xl px-5 md:px-10">
-            <Suspense fallback={<p className="text-[var(--muted)]">Getting this week&apos;s scores…</p>}>
+            <Suspense fallback={<p className="text-[var(--muted)]">Getting this week&apos;s matchups…</p>}>
               <LiveGames p={p} />
             </Suspense>
           </div>

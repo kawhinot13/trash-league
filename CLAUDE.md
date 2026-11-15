@@ -56,6 +56,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   official points for into `pf_snapshots`, queue the incremental import. Each run is logged in `cron_runs`;
   `/l/status` shows whether last night ran and failures.
 - Numbers: season efficiency uses official totals; anything from weekly matchups (H2H, live, single weeks) says "per Sleeper".
+  No live in-week scores for basketball (Sleeper's are wrong; owner's rule: only show scoring that's verified).
+  Football live scores are shown: weekly matchup scores sum to the official totals (checked).
 - Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.
   Never put league-specific features in the generic components.
 - Local testing: Postgres binaries in `/usr/lib/postgresql/16/bin`; run `DATABASE_URL=... NODE_USE_ENV_PROXY=1 next dev`.
