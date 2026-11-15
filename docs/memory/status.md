@@ -32,6 +32,9 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 - Trapezoid of Excellence (all-time, current, each past season; backtest) and a separate Playoff report on both
   History pages (2026-11-15).
 
+- History split in two (2026-11-15): History keeps the story (banners, seasons, crimes, almanac, time machine,
+  movie, ring inquiry); the new Stats tab has the Trapezoid, playoff report, trade court and re-draft.
+
 ## Open tasks and ideas
 - Trapezoid: category leagues would need a separate category-dominance model (not built; points leagues only).
 - Before a major public or commercial launch: written authorization from Sleeper (see decisions.md).

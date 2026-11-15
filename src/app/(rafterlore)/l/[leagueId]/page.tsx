@@ -236,7 +236,8 @@ function Home({ p }: { p: LeaguePage }) {
                   tone: "#7fd49a",
                 },
                 { href: "/rivals", title: "Rivals", line: "Who owns who, and the rivalry machine for any two managers.", stat: `${court?.trades.length ?? 0} trades and counting`, tone: "var(--paper)" },
-                { href: "/history", title: "History", line: "Every champion, the trade court, the re-draft, the time machine and the almanac.", stat: `${n} season${n === 1 ? "" : "s"} on record`, tone: "var(--gold)" },
+                { href: "/history", title: "History", line: "Every champion, season by season, trade crimes, the time machine and the almanac.", stat: `${n} season${n === 1 ? "" : "s"} on record`, tone: "var(--gold)" },
+                { href: "/stats", title: "Stats", line: "The Trapezoid of Excellence, the playoff report, the trade court and the re-draft.", stat: `${court?.trades.length ?? 0} trades judged`, tone: "#c9b6ff" },
                 { href: "/front-office", title: "Front office", line: "Your roster's strengths, trade ideas and a trade evaluator, from live rosters.", stat: "Live from Sleeper", tone: "#9fc3ff" },
               ]}
             />

@@ -27,6 +27,7 @@ const LINKS = [
   ["/managers", "Managers"],
   ["/rivals", "Rivals"],
   ["/history", "History"],
+  ["/stats", "Stats"],
 ] as const;
 export function GlassNav({
   logo = "Trash",

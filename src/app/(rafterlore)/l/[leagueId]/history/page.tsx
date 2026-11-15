@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
-import { Archive, Pickups } from "@/components/app/league";
+import { Archive } from "@/components/app/league";
 import { ChampionBanners, Intro, Pending, TradeCrimes } from "@/components/app/site";
 import { Almanac } from "@/components/trash/intel";
-import { RedraftBoard } from "@/components/trash/redraft";
 import { SectionHead } from "@/components/trash/section-head";
 import { TimeMachine } from "@/components/trash/time-machine";
-import { TradeCourt } from "@/components/trash/trade-court";
-import { PlayoffReport } from "@/components/trash/playoff-report";
-import { Trapezoid } from "@/components/trash/trapezoid";
-import { backtest, playoffReport, trapezoidViews } from "@/lib/core/trapezoid";
 import type { LeaguePage } from "@/lib/app/league-page";
-import { machine, redrafts, tradeCourt } from "@/lib/core/extras";
+import { machine, tradeCourt } from "@/lib/core/extras";
 
 export const metadata: Metadata = { title: "History" };
 
@@ -38,14 +33,14 @@ function History({ p }: { p: LeaguePage }) {
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Archive p={p} />
         </div>
-        <Pending p={p} what="The trade court, re-draft, time machine and almanac" />
+        <Pending p={p} what="The time machine and almanac" />
       </main>
     );
   return (
     <main className="overflow-x-clip">
       <Intro title="History">
-        {n} season{n === 1 ? "" : "s"} of rings, heists, re-drafts and arguments. Everything here is pulled from the
-        Sleeper record.
+        {n} season{n === 1 ? "" : "s"} of rings, heists and arguments. Everything here is pulled from the Sleeper record.
+        The numbers (trade court, re-draft, the Trapezoid of Excellence) live on the Stats page.
       </Intro>
 
       <ChampionBanners d={d} />
@@ -57,16 +52,6 @@ function History({ p }: { p: LeaguePage }) {
         </div>
       </section>
 
-      <section aria-labelledby="court" className="py-24 md:py-32">
-        <SectionHead id="court" title="Trade court">
-          Every trade in league history, judged by what each side actually got out of it. Built from Sleeper&apos;s weekly
-          lineups, per Sleeper.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <TradeCourt {...tradeCourt(d, p.analysis?.even ?? 60)} even={p.analysis?.even ?? 60} players={d.extras.players} managers={d.league.managers} />
-        </div>
-      </section>
-
       {tradeCourt(d).trades.some((t) => t.winner) ? (
         <section aria-labelledby="crimes" className="py-24 md:py-32">
           <SectionHead id="crimes" title="Trade crimes">The most lopsided deals in league history, with the evidence.</SectionHead>
@@ -74,36 +59,10 @@ function History({ p }: { p: LeaguePage }) {
         </section>
       ) : null}
 
-      <section aria-labelledby="trapezoid" className="py-24 md:py-32">
-        <SectionHead id="trapezoid" title="Trapezoid of Excellence">
-          Who scores and wins like a champion? Every manager plotted by regular-season win rate and scoring, against the window
-          this league&apos;s own champions set.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <Trapezoid views={trapezoidViews(d)} bt={backtest(d)} people={d.league.managers} />
-        </div>
-      </section>
-
-      <section aria-labelledby="playoff-report" className="py-24 md:py-32">
-        <SectionHead id="playoff-report" title="Playoff report">
-          The postseason, kept separate: who gets in, who wins when it counts and who scores up or down in the playoffs.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <PlayoffReport rows={playoffReport(d)} people={d.league.managers} years={Object.fromEntries(d.league.seasons.map((s) => [s.code, s.years]))} />
-        </div>
-      </section>
-
       <section aria-labelledby="almanac" className="py-24 md:py-32">
         <SectionHead id="almanac" title="The almanac">Every season, sorted by the questions the league actually argues about.</SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Almanac managers={d.league.managers} seasons={d.league.seasons} partners={d.league.partners ?? []} />
-        </div>
-      </section>
-
-      <section aria-labelledby="redraft" className="py-24 md:py-32">
-        <SectionHead id="redraft" title="The re-draft">Every first-round pick, done again knowing how the season actually went.</SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <RedraftBoard drafts={redrafts(d)} players={d.extras.players} managers={d.league.managers} />
         </div>
       </section>
 
@@ -116,14 +75,6 @@ function History({ p }: { p: LeaguePage }) {
         </div>
       </section>
 
-      {p.analysis?.pickups.length ? (
-        <section aria-labelledby="pickups" className="py-24 md:py-32">
-          <SectionHead id="pickups" title="Best pickups">Waiver and free-agent adds, by what they scored as starters for the manager who found them.</SectionHead>
-          <div className="mx-auto max-w-6xl px-5 md:px-10">
-            <Pickups p={p} />
-          </div>
-        </section>
-      ) : null}
     </main>
   );
 }

@@ -41,9 +41,16 @@ function Doors() {
     {
       href: "/history",
       title: "History",
-      line: "The Mickey Mouse ring inquiry, the re-draft, the time machine and the story so far.",
+      line: "The Mickey Mouse ring inquiry, the time machine, trade crimes and the story so far.",
       stat: "Three seasons, three champions",
       tone: "var(--gold)",
+    },
+    {
+      href: "/stats",
+      title: "Stats",
+      line: "The Trapezoid of Excellence, the playoff report, the trade court and the re-draft.",
+      stat: `${league.totals.trades} trades judged`,
+      tone: "#9fc3ff",
     },
   ];
   return (

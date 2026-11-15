@@ -3,14 +3,9 @@ import { Almanac } from "@/components/trash/intel";
 import { Ballot, Rain, Story } from "@/components/trash/interactive";
 import { MickeyRing } from "@/components/trash/mickey";
 import { PageIntro } from "@/components/trash/page-intro";
-import { RedraftBoard } from "@/components/trash/redraft";
 import { Banners, Crimes, SectionHead } from "@/components/trash/sections";
 import { TimeMachine } from "@/components/trash/time-machine";
-import { TradeCourt } from "@/components/trash/trade-court";
-import { PlayoffReport } from "@/components/trash/playoff-report";
-import { Trapezoid } from "@/components/trash/trapezoid";
-import { backtest, playoffReport, trapezoidViews } from "@/lib/core/trapezoid";
-import { TRASH, machine, players, redrafts, tradeCourt } from "@/lib/extras";
+import { machine, players } from "@/lib/extras";
 import { league } from "@/lib/league";
 import { mickeyCase, ringRun } from "@/lib/rings";
 import { STORY } from "@/lib/story";
@@ -23,40 +18,11 @@ export default function HistoryPage() {
   return (
     <main className="overflow-x-clip">
       <PageIntro title="History">
-        Four seasons of rings, heists, re-drafts and arguments. Everything here is pulled from the Sleeper record.
+        Four seasons of rings, heists and arguments. Everything here is pulled from the Sleeper record. The numbers
+        (trade court, re-draft, the Trapezoid of Excellence) live on the Stats page.
       </PageIntro>
 
       <Banners />
-
-      <section aria-labelledby="court" className="py-24 md:py-32">
-        <SectionHead id="court" title="Trade court">
-          Every trade in league history, judged by what each side actually got out of it. Who won, who got fleeced,
-          and who&apos;s the best dealer in Trash. Estimates: built from Sleeper&apos;s weekly lineup data, which
-          doesn&apos;t always match the scores in the app.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <TradeCourt {...tradeCourt()} players={players} managers={league.managers} />
-        </div>
-      </section>
-
-      <section aria-labelledby="trapezoid" className="py-24 md:py-32">
-        <SectionHead id="trapezoid" title="Trapezoid of Excellence">
-          Who scores and wins like a champion? Every manager plotted by regular-season win rate and scoring, against the window
-          this league&apos;s own champions set.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <Trapezoid views={trapezoidViews(TRASH)} bt={backtest(TRASH)} people={league.managers} />
-        </div>
-      </section>
-
-      <section aria-labelledby="playoff-report" className="py-24 md:py-32">
-        <SectionHead id="playoff-report" title="Playoff report">
-          The postseason, kept separate: who gets in, who wins when it counts and who scores up or down in the playoffs.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <PlayoffReport rows={playoffReport(TRASH)} people={league.managers} years={Object.fromEntries(TRASH.league.seasons.map((s) => [s.code, s.years]))} />
-        </div>
-      </section>
 
       <section aria-labelledby="almanac" className="py-24 md:py-32">
         <SectionHead id="almanac" title="The almanac">
@@ -68,15 +34,6 @@ export default function HistoryPage() {
             seasons={league.seasons}
             partners={(league as unknown as { partners: { a: string; b: string; n: number }[] }).partners}
           />
-        </div>
-      </section>
-
-      <section aria-labelledby="redraft" className="py-24 md:py-32">
-        <SectionHead id="redraft" title="The re-draft">
-          Every first-round pick, done again knowing how the season actually went.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <RedraftBoard drafts={redrafts()} players={players} managers={league.managers} />
         </div>
       </section>
 

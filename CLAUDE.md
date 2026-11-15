@@ -29,7 +29,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   the same (verify by diffing prerendered pages before/after).
 - Rafterlore code: `src/lib/app/` (Sleeper client + throttle, caches, discovery, replay, grading, store, jobs, live
   features, rate limits, validation, redaction). League pages under `src/app/(rafterlore)/l/[leagueId]/`: home
-  (games), live, managers (+ profiles), rivals, history, front-office, remove. `gate.tsx` loads a league, handles not
+  (games), live, managers (+ profiles), rivals, history, stats, front-office, remove. `gate.tsx` loads a league, handles not
   found / limited / removed / error and wraps pages in the league's brand.
 - Logo: the ribbon R (owner's design), one traced path in `components/app/mark-path.ts` (`RMark`, `RLoader` in
   `mark.tsx`; green #013825). Assets in `public/brand/` (adaptive tab SVG, PNG tiles, .ico, webmanifest);
@@ -87,7 +87,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   football "starts" (both "Lineup Index"). Never hard-code Trash's years or lineup size in shared copy.
   No live in-week scores for basketball (Sleeper's are wrong; owner's rule: only show scoring that's verified).
   Football live scores are shown: weekly matchup scores sum to the official totals (checked).
-- Trapezoid of Excellence + Playoff report (History page, both sites): pure math in `core/trapezoid.ts`, UI in
+- Stats page (`/stats`, `/l/[id]/stats`; split from History, which keeps the story): Trapezoid of Excellence,
+  Playoff report, trade court, re-draft (+ best pickups on Rafterlore).
+- Trapezoid of Excellence + Playoff report (Stats page, both sites): pure math in `core/trapezoid.ts`, UI in
   `components/trash/trapezoid.tsx` / `playoff-report.tsx`. Win % = W/(W+L+T); PF = official regular-season PF /
   weeks (median leagues: games/2); Scoring Index = avg / league avg x 100 (all-time weighted by weeks). Window from the
   league's own champions, only seasons BEFORE the one charted (no leakage); config in `TRAP_CONFIG`. Playoff scores are

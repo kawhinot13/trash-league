@@ -47,6 +47,7 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
         [`${home}/managers`, "Managers"],
         [`${home}/rivals`, "Rivals"],
         [`${home}/history`, "History"],
+        [`${home}/stats`, "Stats"],
       ]}
       cta={{ href: `${home}#dive`, label: "Daily games" }}
       holiday={HOLIDAY}
