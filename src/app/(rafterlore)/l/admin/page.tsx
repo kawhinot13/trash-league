@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AppNav } from "@/components/app/chrome";
 import { SESSION_COOKIE, authConfigured, getAccount, sessionFromValue } from "@/lib/app/account";
@@ -14,6 +13,24 @@ const when = (d: Date | null) =>
   d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) : "–";
 
 /** The owner's dashboard. Anyone who isn't a signed-in admin gets a plain "not found". */
+/** What anyone who isn't an admin sees: a short note, never data. */
+function Gate({ title, children, signIn }: { title: string; children: React.ReactNode; signIn?: boolean }) {
+  return (
+    <>
+      <AppNav />
+      <main className="mx-auto min-h-[60dvh] max-w-3xl px-5 pt-36 pb-24 md:px-10 md:pt-44">
+        <h1 className="font-display text-6xl leading-[0.9] font-black md:text-7xl">{title}</h1>
+        <p className="mt-5 text-lg text-[var(--muted)]">{children}</p>
+        {signIn ? (
+          <a href="/api/auth/google?next=/l/admin" className="mt-8 inline-block rounded-full bg-[var(--paper)] px-6 py-3 font-semibold text-[var(--bin)]">
+            Sign in with Google
+          </a>
+        ) : null}
+      </main>
+    </>
+  );
+}
+
 export default function AdminPage() {
   return (
     <Suspense fallback={<main className="min-h-screen" />}>
@@ -25,10 +42,23 @@ export default function AdminPage() {
 async function Admin() {
   // Read the visitor's cookie first: this page is per request, never prerendered.
   const raw = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!authConfigured()) notFound();
+  if (!authConfigured()) return <Gate title="Sign-in isn't set up">Admin needs Google sign-in to be switched on in Vercel first.</Gate>;
   const session = sessionFromValue(raw);
   const me = session ? await getAccount(session).catch(() => null) : null;
-  if (!me?.admin) notFound();
+  if (!me)
+    return (
+      <Gate title="Admin" signIn>
+        Sign in with the site admin&apos;s Google account to see this page.
+      </Gate>
+    );
+  if (!me.admin)
+    return (
+      <Gate title="Not an admin (yet)">
+        This account doesn&apos;t have admin access. If it should: add its email to <strong>ADMIN_EMAILS</strong> in Vercel
+        (Settings, Environment Variables), redeploy, then sign out here and sign back in. Admin access is checked when you
+        sign in.
+      </Gate>
+    );
   const { totals: t, leagues, plays, failures, crons } = await adminStats();
   const cards: [string, string, string?][] = [
     ["Leagues", n0(t.leagues), `${n0(t.seasons)} seasons stored`],

@@ -1,10 +1,38 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AppFooter } from "@/components/app/chrome";
+import { RafterloreNotFound } from "@/components/app/not-found";
 import { GlassNav } from "@/components/trash/polish";
 import { Footer } from "@/components/trash/sections";
 
-/** The site-wide 404: the Trash site's nav and footer around a short note. */
+/**
+ * The site-wide 404. On rafterlore.com it's Rafterlore's (no Trash lights, music or footer);
+ * everywhere else, the Trash site's nav and footer around a short note.
+ */
 export default function NotFound() {
+  return (
+    <Suspense fallback={<main className="min-h-screen" />}>
+      <ByHost />
+    </Suspense>
+  );
+}
+
+async function ByHost() {
+  const host = (await headers()).get("host") ?? "";
+  if (/(^|\.)rafterlore\.com(:\d+)?$/i.test(host))
+    return (
+      <div className="rafterlore flex min-h-screen flex-col">
+        <div className="flex-1">
+          <RafterloreNotFound />
+        </div>
+        <AppFooter />
+      </div>
+    );
+  return <TrashNotFound />;
+}
+
+function TrashNotFound() {
   return (
     <>
       <Suspense fallback={null}>
