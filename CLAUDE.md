@@ -39,6 +39,11 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   import API; the client pings `/api/l/[id]/refresh` for in-season Sleeper refreshes and regrades. Call
   `invalidateFamily()` whenever stored data changes (`saveFamily` also drops `league:<id>`). Routine updates use
   "soon" (stale-while-revalidate, nobody waits); "now" only for first import/grade, removal and restore. Live features use the remote cache too.
+- Accounts (optional, Sign in with Google; `src/lib/app/account.ts`, `/api/auth/*`, `/api/me`): remember a Sleeper
+  username and recently opened leagues. Stores Google's account id, first name, that username and up to 12 leagues;
+  no email or password. Needs `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET` (32+ chars) in Vercel; without
+  them sign-in is hidden. Sessions are HMAC-signed cookies with a per-account version (sign-out ends every session).
+  Read only in API routes and the browser (`useMe`), never in page renders, so pages stay pre-built.
 - Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
   instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are

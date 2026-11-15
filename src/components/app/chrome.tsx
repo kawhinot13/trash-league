@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { AccountButton } from "@/components/app/account";
 import { GlassNav } from "@/components/trash/polish";
 import { PRODUCT } from "@/lib/app/brand";
 
@@ -17,7 +18,8 @@ export function AppNav(props: { league?: { name: string; id: string; live: boole
 }
 
 function Nav({ league }: { league?: { name: string; id: string; live: boolean } }) {
-  if (!league) return <GlassNav logo={PRODUCT} home="/l" links={[]} cta={{ href: "/l", label: "Find a league" }} holiday={false} />;
+  if (!league)
+    return <GlassNav logo={PRODUCT} home="/l" links={[]} cta={{ href: "/l", label: "Find a league" }} holiday={false} extra={<AccountButton />} />;
   const home = `/l/${league.id}`;
   return (
     <GlassNav
@@ -34,6 +36,7 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
       ]}
       cta={{ href: `${home}#dive`, label: "Daily games" }}
       holiday={false}
+      extra={<AccountButton />}
     />
   );
 }

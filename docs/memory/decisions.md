@@ -4,6 +4,16 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Optional Google sign-in
+- Owner asked for a login that remembers you. Built Google sign-in only: email/password needs a mail service
+  for resets (a paid/external service) and password storage. Stores the minimum: Google sub, first name,
+  saved Sleeper username, last 12 leagues opened; no email (scope `openid profile`). Hand-written OAuth code
+  flow with PKCE + state (no auth library: fewer moving parts on Next 16). id_token read without signature
+  check because it comes straight from Google's token endpoint over TLS (OIDC Core 3.1.3.7); iss/aud checked.
+- Auth routes call `connection()`: a build prerendered the start route once, which would have reused one
+  state for everyone. Sessions carry a version so sign-out ends all sessions. Privacy page updated (it said
+  "no accounts"). The finder's "see an example league" link was removed at the owner's request.
+
 ## 2026-11-15: Background cache refresh (slow page-to-page clicks)
 - Every invalidation used `{ expire: 0 }`, so after each in-season refresh (every ~10 min), catch-up (30 min)
   or regrade, the next click on each league page waited for a full rebuild (cold function + Neon + render).
@@ -112,7 +122,7 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   per-route limits: imports, the nightly job and page views all draw from it.
 - Rate limits are per network, stored only as salted hashes for two days.
 - League removal is self-serve for any member (proved by Sleeper username), with a 7-day restore
-  window, because there are no accounts. Ids are kept so a removed league isn't re-imported.
+  window, because there were no accounts (optional Google sign-in added 2026-11-15). Ids are kept so a removed league isn't re-imported.
 - Stored Sleeper payloads are whitelisted (`sanitizeBundle`): the league object carries the last
   chat message, which must never be stored.
 

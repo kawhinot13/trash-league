@@ -35,9 +35,12 @@ export function GlassNav({
   cta = { href: "/#dive", label: "Daily games" },
   holiday = HOLIDAY,
   product,
+  extra,
 }: {
   /** Wordmark at the left (the league's name). */
   logo?: string;
+  /** Extra controls before the bright button (Rafterlore's account menu; Trash has none). */
+  extra?: React.ReactNode;
   /** A small product mark above the wordmark, linking to `product.href` (Rafterlore; Trash has none). */
   product?: { name: string; href: string };
   /** Where the wordmark and the "Home" section point. */
@@ -118,6 +121,7 @@ export function GlassNav({
           </ul>
           <div className="flex items-center gap-2">
             {holiday ? <MusicToggle /> : null}
+            {extra}
             {cta ? (
               <Link
                 href={cta.href}

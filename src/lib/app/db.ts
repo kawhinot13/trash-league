@@ -176,6 +176,21 @@ create table if not exists game_scores (
   created_at  timestamptz not null default now(),
   primary key (family_id, game, day, manager)
 );
+
+-- Optional accounts (Sign in with Google). No email or password: Google's account id, a first
+-- name, the Sleeper username the person saves and the leagues they've opened. Deletable any time.
+create table if not exists accounts (
+  id          text primary key,
+  google_sub  text not null unique,
+  name        text not null default '',
+  sleeper     text,
+  leagues     jsonb not null default '[]'::jsonb,
+  session_v   int not null default 1,
+  created_at  timestamptz not null default now(),
+  seen_at     timestamptz not null default now()
+);
+-- Sign-out ends every session (older tables get the column too).
+alter table accounts add column if not exists session_v int not null default 1;
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

@@ -4,6 +4,7 @@ import { hasDb } from "@/lib/app/db";
 import { enqueueImport, kick, runJobs } from "@/lib/app/jobs";
 import { logError } from "@/lib/app/safe";
 import { refreshStale, storedLeague } from "@/lib/app/store";
+import { rememberLeague, sessionFrom } from "@/lib/app/account";
 import { isSleeperId } from "@/lib/app/validate";
 
 export const maxDuration = 60;
@@ -22,6 +23,12 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/l/[leagueId]/r
     const s = await storedLeague(leagueId);
     if (s && !s.removed) {
       const fam = s.family;
+      // Signed in: remember this league on the account (most recent first).
+      const who = sessionFrom(_req);
+      if (who) {
+        const newest = fam.seasons[fam.seasons.length - 1].league;
+        after(() => rememberLeague(who, { id: newest.league_id, name: newest.name }).catch((e) => logError("remember league", e)));
+      }
       after(() => refreshStale(fam).catch((e) => logError(`refresh ${fam.id}`, e)));
       const open = !!s.job && (s.job.status === "queued" || s.job.status === "running");
       const old = !!s.analysis && (s.analysis.version ?? 1) < ANALYSIS_VERSION;

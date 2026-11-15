@@ -11,6 +11,8 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
   Lock-In, quiz, profiles), rivals (machine, who owns who), history (seasons, trade court, generated
   trade crimes, almanac, re-draft, time machine, pickups), front office; verified removal; /privacy, /terms;
   share cards (league, manager, rivals); "see an example league" link; /l/status (nightly runs, queue, budget).
+- Optional Google sign-in (remembers Sleeper username + recent leagues). Hidden until AUTH_GOOGLE_ID,
+  AUTH_GOOGLE_SECRET and AUTH_SECRET are set in Vercel and both domains' callback URLs are registered with Google.
 - Sports: Sleeper basketball and football (2026-11-15). Basketball leagues are labeled lock-in or daily
   lineups (detected from games). Player photos replaced by badges on Rafterlore.
 - Infrastructure: Neon Postgres in production, nightly cron (10:17 UTC), job queue, shared Sleeper

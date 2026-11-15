@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FoundLeague } from "@/lib/app/find";
 import { Avatar } from "@/components/app/avatar";
+import { updateMe, useMe } from "@/components/app/account";
 
 type Result = { user: { name: string; avatar: string | null }; leagues: FoundLeague[] };
 
@@ -15,6 +16,44 @@ export function Finder() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [res, setRes] = useState<Result | null>(null);
+  const me = useMe();
+  const account = me?.account ?? null;
+
+  const lookup = useCallback(
+    async (v: string, remember: boolean) => {
+      setBusy(true);
+      setErr(null);
+      try {
+        const r = await fetch(`/api/l/find?u=${encodeURIComponent(v)}`);
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error ?? "Something went wrong.");
+        setRes(j);
+        // Signed in: remember the username that found leagues, so they show up next time.
+        if (remember && j.user && account && account.sleeper?.toLowerCase() !== v.toLowerCase()) void updateMe({ sleeper: v });
+      } catch (x) {
+        setRes(null);
+        setErr(x instanceof Error ? x.message : "Something went wrong.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [account],
+  );
+
+  // Back from a sign-in that didn't go through.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (new URLSearchParams(window.location.search).get("signin") === "failed") setErr("Sign-in didn't go through. Try again.");
+  }, []);
+
+  // Signed in with a saved username: show that person's leagues straight away.
+  const auto = useRef(false);
+  useEffect(() => {
+    if (auto.current || !account?.sleeper) return;
+    auto.current = true;
+    setQ(account.sleeper);
+    void lookup(account.sleeper, false);
+  }, [account, lookup]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,19 +63,7 @@ export function Finder() {
       router.push(`/l/${id}`);
       return;
     }
-    setBusy(true);
-    setErr(null);
-    try {
-      const r = await fetch(`/api/l/find?u=${encodeURIComponent(v)}`);
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Something went wrong.");
-      setRes(j);
-    } catch (x) {
-      setRes(null);
-      setErr(x instanceof Error ? x.message : "Something went wrong.");
-    } finally {
-      setBusy(false);
-    }
+    await lookup(v, true);
   };
 
   return (
@@ -54,7 +81,7 @@ export function Finder() {
           autoCapitalize="none"
           spellCheck={false}
           required
-          className="h-[52px] min-w-0 flex-1 rounded-full border border-[var(--line)] bg-[var(--bin-2)] px-5 text-base placeholder:text-[var(--muted)] focus:border-[var(--wood)] focus:outline-none"
+          className="h-[52px] min-w-0 shrink-0 rounded-full sm:flex-1 border border-[var(--line)] bg-[var(--bin-2)] px-5 text-base placeholder:text-[var(--muted)] focus:border-[var(--wood)] focus:outline-none"
         />
         <button
           type="submit"
@@ -65,12 +92,26 @@ export function Finder() {
         </button>
       </form>
       <p className="mt-3 text-sm text-[var(--muted)]">
-        A league id or Sleeper league link works too. Or{" "}
-        <Link href="/l/1400952185902120960" className="font-semibold text-[var(--paper)] underline underline-offset-4">
-          see an example league
-        </Link>
-        .
+        A league id or Sleeper league link works too.
+        {me?.configured && !account ? " Sign in to have Rafterlore remember your leagues." : ""}
       </p>
+      {account?.leagues.length ? (
+        <div className="mt-10">
+          <p className="font-semibold">Recently opened</p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {account.leagues.map((l) => (
+              <li key={l.id}>
+                <Link
+                  href={`/l/${l.id}`}
+                  className="inline-block rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--wood)]"
+                >
+                  {l.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {err ? (
         <p role="alert" className="mt-6 text-[var(--paper)]">
           {err}
