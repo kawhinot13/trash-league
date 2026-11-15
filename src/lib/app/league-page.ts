@@ -80,10 +80,17 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
       db: hasDb(),
       pack,
       nameOf,
-      dataset: dataset ? withNicknames(dataset, pack?.nicknames) : null,
+      dataset: dataset ? withTeams(withNicknames(dataset, pack?.nicknames), view) : null,
       brand: brandFor(leagueId, view, dataset),
     },
   };
+}
+
+/** Each manager's newest team name (datasets graded before it was stored carry the handle there). */
+function withTeams(d: Dataset, view: ReturnType<typeof familyView>): Dataset {
+  const team = new Map<string, string>();
+  for (const s of view.seasons) for (const t of s.teams) if (t.ownerId) team.set(t.ownerId, t.team);
+  return { ...d, league: { ...d.league, managers: d.league.managers.map((m) => ({ ...m, team: team.get(m.id) ?? m.team })) } };
 }
 
 /** A custom pack's nicknames replace display names in the league's dataset. */

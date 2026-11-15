@@ -255,7 +255,7 @@ export function buildDataset(
       id,
       nick: latest.get(id)?.nick ?? id,
       color: "",
-      team: latest.get(id)?.nick ?? id,
+      team: latest.get(id)?.team ?? id,
       w,
       l,
       t,

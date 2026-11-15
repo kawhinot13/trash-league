@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: One manager profile for both sites
+- Trash's profile page moved into `components/trash/profile.tsx` (`ManagerProfileView` over a Dataset); Trash and
+  Rafterlore both render it (Rafterlore falls back to its own profile until a league's import finishes).
+- Rico's pop-up overlay (Trash pack) is off on Rafterlore for now; the home ticker adds Trash's live lines
+  (climber, faller, streak, top pickup) for in-season leagues.
+
 ## 2026-11-15: Telling Rafterlore from Trash
 - Same look by request, so the difference is a small "RAFTERLORE" mark above the league name in the nav
   (links to /l), plus the footer wordmark and "· Rafterlore" tab titles. Trash's nav has no mark.

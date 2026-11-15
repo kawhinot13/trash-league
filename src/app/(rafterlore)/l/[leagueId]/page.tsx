@@ -13,6 +13,7 @@ import { StatStrip, Ticker } from "@/components/trash/polish";
 import { SectionHead } from "@/components/trash/section-head";
 import { Trashle } from "@/components/trash/trashle";
 import type { LeaguePage } from "@/lib/app/league-page";
+import { liveTable, waivers } from "@/lib/app/live-features";
 import { sleeper, type SLeague } from "@/lib/app/sleeper";
 import { isSleeperId } from "@/lib/app/validate";
 import { divePool } from "@/lib/core/dive";
@@ -67,6 +68,29 @@ function tickerItems(d: Dataset): { tag: string; text: string }[] {
   const lock = lockIn(d).rows[0];
   if (lock) items.push({ tag: "Lineups", text: `${m.find((x) => x.id === lock.id)?.nick ?? "Someone"} sets the best lineups in the league: ${(lock.eff * 100).toFixed(1)}%` });
   return items;
+}
+
+/** In-season ticker: this week's climber, faller, hottest streak and top pickup, then the history lines. */
+async function LiveTicker({ p, d }: { p: LeaguePage; d: Dataset }) {
+  const lid = p.view.current.leagueId;
+  const cur = d.league.seasons[d.league.seasons.length - 1];
+  const [table, wire] = await Promise.all([
+    liveTable(lid, cur.standings).catch(() => null),
+    waivers(lid).catch(() => null),
+  ]);
+  const items: { tag: string; text: string }[] = [];
+  const rows = table?.live ? table.rows : [];
+  const week = table?.week ?? null;
+  const up = [...rows].sort((a, b) => (b.move ?? 0) - (a.move ?? 0))[0];
+  const down = [...rows].sort((a, b) => (a.move ?? 0) - (b.move ?? 0))[0];
+  const hot = [...rows].filter((r) => r.streak?.endsWith("W")).sort((a, b) => parseInt(b.streak!) - parseInt(a.streak!))[0];
+  if (up?.move && up.move > 0)
+    items.push({ tag: "Climber", text: `${p.nameOf(up.manager)} rose ${up.move} spot${up.move > 1 ? "s" : ""} to #${up.seed} after week ${(week ?? 1) - 1}` });
+  if (down?.move && down.move < 0) items.push({ tag: "Faller", text: `${p.nameOf(down.manager)} slid ${-down.move} spot${down.move < -1 ? "s" : ""} to #${down.seed}` });
+  if (hot && parseInt(hot.streak!) > 1) items.push({ tag: "Streak", text: `${p.nameOf(hot.manager)} has won ${parseInt(hot.streak!)} straight` });
+  if (wire?.players[0])
+    items.push({ tag: "Waivers", text: `Top pickup: ${wire.players[0].name}, ${wire.players[0].recentAvg.toFixed(1)} fantasy points a game lately` });
+  return <Ticker items={[...items, ...tickerItems(d)]} />;
 }
 
 /** The line under the giant name: the league's story in one sentence. */
@@ -152,7 +176,13 @@ function Home({ p }: { p: LeaguePage }) {
             ]}
           />
           <div className="mt-14 md:mt-20">
-            <Ticker items={tickerItems(d)} />
+            {view.current.status === "in_season" ? (
+              <Suspense fallback={<Ticker items={tickerItems(d)} />}>
+                <LiveTicker p={p} d={d} />
+              </Suspense>
+            ) : (
+              <Ticker items={tickerItems(d)} />
+            )}
           </div>
 
           <section id="dive" aria-labelledby="dive-title" className="scroll-mt-24 py-24 md:py-32">

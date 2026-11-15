@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
 import { ManagerProfile } from "@/components/app/manager";
+import { ManagerProfileView } from "@/components/trash/profile";
+import { yearsOf } from "@/lib/core/extras";
 import { familyView } from "@/lib/app/model";
 import { storedLeague } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
@@ -22,9 +24,11 @@ export default function ManagerPage({ params }: PageProps<"/l/[leagueId]/manager
       {params.then(({ leagueId, userId }) => {
         if (!isSleeperId(userId)) notFound();
         return (
-          <LeagueGate leagueId={leagueId}>
+          <LeagueGate leagueId={leagueId} dataset>
             {(p) => {
               if (!p.view.careers.some((c) => c.ownerId === userId)) notFound();
+              if (p.dataset?.league.managers.some((m) => m.id === userId))
+                return <ManagerProfileView d={p.dataset} id={userId} label={yearsOf(p.dataset)} base={`/l/${leagueId}`} />;
               return <ManagerProfile p={p} ownerId={userId} />;
             }}
           </LeagueGate>

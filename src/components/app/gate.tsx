@@ -6,7 +6,6 @@ import { Freshen } from "@/components/app/freshen";
 import { Importer } from "@/components/app/importer";
 import { loadLeague, type LeaguePage } from "@/lib/app/league-page";
 import { isSleeperId } from "@/lib/app/validate";
-import { PackOverlay } from "@/packs/overlay";
 import { BrandProvider } from "@/components/trash/brand";
 
 /** One load per request, shared by the page and its metadata. */
@@ -72,7 +71,6 @@ export async function LeagueGate({
       <AppNav league={{ name: p.view.name, id: leagueId, live: p.view.current.status === "in_season" }} />
       <BrandProvider config={p.brand}>{children(p)}</BrandProvider>
       {p.db ? <Freshen leagueId={leagueId} /> : null}
-      {p.pack ? <PackOverlay id={p.pack.id} props={p.pack.overlay} /> : null}
     </>
   );
 }
