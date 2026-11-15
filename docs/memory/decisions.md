@@ -4,6 +4,16 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Rafterlore = the Trash site for any league
+- Reuse, don't rewrite: Trash's features moved into `src/lib/core` as pure functions over a dataset;
+  Rafterlore produces the same dataset shape per league (checked against Trash: identical champions,
+  trades, draft values and lineup optimals). Shared components take a brand with Trash defaults.
+- Excluded from the generic site (Trash pack or Trash-only): Rico, the pig, the song, holiday decor,
+  story, movie, storm, Mickey Mouse inquiry, nicknames, hand-written trade crimes (Rafterlore
+  generates its own from the most lopsided trades).
+- Game names on Rafterlore: Deep Cut (dive), Rosterdle (wordle), The Lineup. The dive keeps its
+  dumpster art for now. Leaderboards are per league in Postgres (`game_scores`).
+
 ## 2026-11-15: Verified league removal
 - A Sleeper username is public, so it can't authorize removal. Removal and restore now need a
   one-time code (`RFL-XXXXXX`, 30 min, 8 checks) placed in the requester's own team name in the

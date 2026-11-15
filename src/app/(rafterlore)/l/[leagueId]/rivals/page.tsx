@@ -49,7 +49,11 @@ function Rivals({ p }: { p: LeaguePage }) {
           Every meeting, every trade between them and a verdict on who really has the upper hand.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <RivalryMachine managers={d.league.managers} seasons={d.league.seasons} h2h={d.league.h2h} initial={initial} />
+          {cur.length >= 2 ? (
+            <RivalryMachine managers={d.league.managers} seasons={d.league.seasons} h2h={d.league.h2h} initial={initial} />
+          ) : (
+            <p className="text-[var(--muted)]">Rivalries start once the season has at least two teams.</p>
+          )}
         </div>
       </section>
 

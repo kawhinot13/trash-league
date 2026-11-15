@@ -7,6 +7,7 @@ import type { Players } from "@/lib/extras";
 import { Face, pname } from "../player";
 import { sfx } from "./sfx";
 import { HOLIDAY } from "@/lib/holiday";
+import { useBrand } from "@/components/trash/brand";
 
 /** Stage geometry, in SVG units (viewBox 0 0 400 440). */
 const W = 400;
@@ -81,6 +82,8 @@ export function Stage({
   /** When set, the lid opens for a fresh round every time this changes. */
   round?: number;
 }) {
+  const brandHoliday = useBrand().holiday;
+  const holiday = HOLIDAY && brandHoliday;
   const root = useRef<HTMLDivElement>(null);
   const lid = useRef<SVGGElement>(null);
   const card = useRef<HTMLDivElement>(null);
@@ -335,7 +338,7 @@ export function Stage({
         <g ref={lid}>
           <path d={`M56 ${RIM - 26} H340 L338 ${RIM - 8} H58 Z`} fill="#2a5a45" stroke={INK} strokeWidth="5" strokeLinejoin="round" />
           <rect x="180" y={RIM - 33} width="40" height="8" rx="3" fill={INK} />
-          {HOLIDAY ? (
+          {holiday ? (
             <path
               d={`M58 ${RIM - 26} Q 70 ${RIM - 40} 90 ${RIM - 30} Q 110 ${RIM - 44} 140 ${RIM - 31} Q 170 ${RIM - 42} 176 ${RIM - 30} L 226 ${RIM - 30} Q 250 ${RIM - 44} 280 ${RIM - 31} Q 310 ${RIM - 42} 338 ${RIM - 26} Z`}
               fill="#f6f3ea"

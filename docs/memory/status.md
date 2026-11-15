@@ -5,9 +5,11 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 
 ## Shipped
 - Trash site (`src/app/(trash)`): unchanged by the Rafterlore work.
-- Rafterlore (`/l`): username finder; league overview (banners, standings, all-time, seasons,
-  trade court, lineups, pickups, custom pack); manager profiles; rivals (head-to-head per Sleeper);
-  this week (live, per Sleeper); verified removal and restore (team-name code); /privacy and /terms.
+- Rafterlore (`/l`): username finder; every generic Trash feature for any league: home (banners,
+  stats, ticker, Deep Cut / Rosterdle / The Lineup with per-league leaderboards), live (table, matchup
+  of the week, this week, power rankings, recap, waiver wire), managers (cards, all-time, my guys,
+  Lock-In, quiz, profiles), rivals (machine, who owns who), history (seasons, trade court, generated
+  trade crimes, almanac, re-draft, time machine, pickups), front office; verified removal; /privacy, /terms.
 - Infrastructure: Neon Postgres in production, nightly cron (10:17 UTC), job queue, shared Sleeper
   throttle, caches, rate limits, redacted logging.
 - Claude Code setup: secret guard and TypeScript stop hooks, mobile-qa (Haiku) and rules-reviewer

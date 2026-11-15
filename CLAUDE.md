@@ -16,9 +16,16 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Product name: Rafterlore (`src/lib/app/brand.ts`). Any Sleeper NBA head-to-head points league. Pages live in
   `src/app/(rafterlore)/` with their own shell; the Trash site lives in `src/app/(trash)/`. Rafterlore never imports Trash
   data or chrome. League pages: overview, this week (live, per Sleeper), rivals, managers + profiles, remove.
-- Code: `src/lib/app/` (Sleeper client + shared throttle, caches, season discovery, model, replay, grading, Postgres
-  store, jobs, rate limits, validation, redaction). UI in `src/components/app/`; `gate.tsx` loads a league and
-  handles not found / rate limited / removed / error for every league page.
+- Shared features: `src/lib/core/` holds every league feature as pure functions over a `Dataset` (Trash's
+  league.json + extras.json shape) or a `LiveSource`. Trash's `src/lib/*.ts` are thin wrappers passing Trash's data;
+  Rafterlore builds each league's dataset in the grade step (`src/lib/app/dataset.ts`, stored in `analyses`).
+  Shared UI in `src/components/trash/` takes a brand (`brand.tsx`: photos, links, names, storage keys, leaderboard,
+  holiday) whose defaults are Trash's, so Trash renders identically. Change shared code only if Trash's HTML stays
+  the same (verify by diffing prerendered pages before/after).
+- Rafterlore code: `src/lib/app/` (Sleeper client + throttle, caches, discovery, replay, grading, store, jobs, live
+  features, rate limits, validation, redaction). League pages under `src/app/(rafterlore)/l/[leagueId]/`: home
+  (games), live, managers (+ profiles), rivals, history, front-office, remove. `gate.tsx` loads a league, handles not
+  found / limited / removed / error and wraps pages in the league's brand.
 - Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
   instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are

@@ -12,6 +12,8 @@ import { createContext, useContext, useMemo } from "react";
 export type BrandConfig = {
   /** How copy names the league ("Trash"). */
   name: string;
+  /** Seasonal decorations (the Trash site's holiday theme). Off unless set. */
+  holiday?: boolean;
   /** Short name for tight labels ("Trash"; Rafterlore uses "League"). Defaults to `name`. */
   tag?: string;
   /** Path prefix for the league's pages ("" for Trash, "/l/<id>" on Rafterlore). */
@@ -40,6 +42,7 @@ export const TRASH_BRAND: BrandConfig = {
   avatars: "local",
   headshots: "local",
   games: { dive: "Dumpster Dive", wordle: "Trashle", lineup: "The Lineup" },
+  holiday: true,
 };
 
 export type Brand = BrandConfig & {
