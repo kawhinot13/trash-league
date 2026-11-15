@@ -7,11 +7,12 @@ import { refreshStale, storedLeague } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
 
 export const maxDuration = 60;
+const CATCH_UP_MS = 30 * 60_000;
 
 /**
  * League pages are served pre-built, so they can't refresh themselves. A visit pings this after
- * the page loads: in-progress seasons older than ten minutes are re-read from Sleeper, and results
- * from an older grading are regraded. Both run after the response; the page cache is dropped when
+ * the page loads: in-progress seasons older than ten minutes are re-read from Sleeper; in season the
+ * league's trades, lineups and records are caught up every half hour; older gradings are regraded. Both run after the response; the page cache is dropped when
  * new data lands. Cheap when nothing is stale (one cached read).
  */
 export async function POST(_req: Request, ctx: RouteContext<"/api/l/[leagueId]/refresh">) {
@@ -23,7 +24,11 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/l/[leagueId]/r
       const fam = s.family;
       after(() => refreshStale(fam).catch((e) => logError(`refresh ${fam.id}`, e)));
       const open = !!s.job && (s.job.status === "queued" || s.job.status === "running");
-      if (s.analysis && (s.analysis.version ?? 1) < ANALYSIS_VERSION && !open)
+      const old = !!s.analysis && (s.analysis.version ?? 1) < ANALYSIS_VERSION;
+      // In season, catch up trades, lineups and records every half hour (only unfinished weeks are re-read).
+      const inSeason = fam.seasons.some((b) => b.league.status === "in_season");
+      const behind = inSeason && !!s.analysis && Date.now() - Date.parse(s.analysis.computedAt) > CATCH_UP_MS;
+      if ((old || behind) && !open)
         after(async () => {
           await enqueueImport(fam.id);
           const r = await runJobs(50_000);

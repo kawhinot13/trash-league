@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Current-week trades and in-season catch-up
+- Rafterlore showed 91 trades vs Trash's 93: grading replays only finished weeks (lineups aren't final), so
+  trades made this week were missing. Grading now also reads the current week's transactions, for trades only
+  (`SeasonInput.current`). ANALYSIS_VERSION 4 regrades every league once.
+- The dataset was also only rebuilt nightly. `/api/l/[id]/refresh` now queues a catch-up (unfinished weeks only)
+  when an in-season league's grading is over 30 minutes old. Verified on Trash: totals, every manager's record,
+  points, trades, playoffs, titles, champions and every season's standings match league.json.
+
 ## 2026-11-15: One manager profile for both sites
 - Trash's profile page moved into `components/trash/profile.tsx` (`ManagerProfileView` over a Dataset); Trash and
   Rafterlore both render it (Rafterlore falls back to its own profile until a league's import finishes).

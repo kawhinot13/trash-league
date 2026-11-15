@@ -48,7 +48,7 @@ export type Pickup = { who: Who; pid: string; season: string; years: string; wee
 /** One head-to-head game, per Sleeper's weekly matchup scores. */
 export type Game = { season: string; years: string; week: number; a: Who; b: Who; pa: number; pb: number; playoff: boolean };
 
-export const ANALYSIS_VERSION = 3;
+export const ANALYSIS_VERSION = 4;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */
@@ -71,8 +71,12 @@ export type Analysis = {
 /**
  * `exact`: "league|roster|week" -> that week's official score, from consecutive nightly snapshots.
  */
+/** One season's replayed weeks. `current` holds the week in progress: only its trades are used
+ * (lineups and scores aren't final until the week ends, but a trade is final when it's made). */
+export type SeasonInput = { bundle: SeasonBundle; weeks: WeekData[]; regEnd: number; current?: WeekData };
+
 export function analyse(
-  seasons: { bundle: SeasonBundle; weeks: WeekData[]; regEnd: number }[],
+  seasons: SeasonInput[],
   exact: Map<string, number> = new Map(),
 ): Analysis {
   const lineups = new Map<Who, LineupRow>();
@@ -88,7 +92,7 @@ export function analyse(
   let misfits = 0;
   let replayed = 0;
 
-  for (const { bundle, weeks, regEnd } of seasons) {
+  for (const { bundle, weeks, regEnd, current } of seasons) {
     const lg = bundle.league;
     const years = seasonYears(lg.season);
     const who = new Map<number, Who>(bundle.rosters.map((r) => [r.roster_id, r.owner_id ?? `r${r.roster_id}`]));
@@ -156,7 +160,7 @@ export function analyse(
 
     // Trade grades: what each side's incoming players scored in that manager's starting lineup
     // for the rest of the season (playoffs included), and how many weeks they stayed.
-    for (const w of weeks)
+    for (const w of current ? [...weeks, current] : weeks)
       for (const t of w.trades) {
         const later = weekNos.filter((x) => x > w.week);
         const sides = Object.entries(t.sides).map(([rid, got]) => {

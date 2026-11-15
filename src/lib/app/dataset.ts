@@ -1,7 +1,5 @@
 import type { Analysis } from "@/lib/app/analysis";
-import type { SeasonBundle } from "@/lib/app/family";
 import { seasonView, type Finish } from "@/lib/app/model";
-import type { WeekData } from "@/lib/app/replay";
 import { seasonYears } from "@/lib/app/sleeper";
 import type { PlayerDir } from "@/lib/app/sleeper-cache";
 import type { Dataset, ExtrasData, LeagueData, Manager, RawSeason, Season } from "@/lib/core/types";
@@ -11,7 +9,8 @@ import type { Dataset, ExtrasData, LeagueData, Manager, RawSeason, Season } from
  * built from (league.json + extras.json shapes), so every shared feature works for any league.
  * Manager ids are Sleeper user ids (open teams: "r<roster id>"); season codes run s1, s2, ...
  */
-export type SeasonInput = { bundle: SeasonBundle; weeks: WeekData[]; regEnd: number };
+export type { SeasonInput } from "@/lib/app/analysis";
+import type { SeasonInput } from "@/lib/app/analysis";
 
 // Distinct, readable team colors on the dark arena palette, assigned in all-time order.
 const COLORS = [
@@ -46,7 +45,7 @@ export function buildDataset(
   let tradeTotal = 0;
   const gradeOf = new Map(analysis.trades.map((t) => [`${t.season}|${t.week}|${t.ts}`, t]));
 
-  inputs.forEach(({ bundle, weeks, regEnd }, si) => {
+  inputs.forEach(({ bundle, weeks, regEnd, current }, si) => {
     const code = `s${si + 1}`;
     const lg = bundle.league;
     const v = seasonView(bundle);
@@ -144,7 +143,7 @@ export function buildDataset(
     // Trades, with each side's graded gain [points as a starter afterwards, weeks held].
     const exTrades: RawSeason["trades"] = [];
     const lgTrades: Season["trades"] = [];
-    for (const w of all)
+    for (const w of current ? [...all, current] : all)
       for (const t of w.trades) {
         const sides = Object.fromEntries(Object.entries(t.sides).map(([rid, got]) => [W(rid), got]));
         const g = gradeOf.get(`${lg.season}|${w.week}|${t.ts}`);

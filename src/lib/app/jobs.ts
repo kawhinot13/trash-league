@@ -159,11 +159,23 @@ async function grade(familyId: string) {
   const rows = await sql<{ league_id: string; data: WeekData }[]>`
     select w.league_id, w.data from league_weeks w join leagues l using (league_id)
     where l.family_id = ${familyId} order by w.week`;
-  const inputs = bs.map((b) => ({
-    bundle: b,
-    weeks: rows.filter((r) => r.league_id === b.league.league_id).map((r) => r.data),
-    regEnd: seasonWeeks(b.league, state.league_season || state.season, state.week).regEnd,
-  }));
+  const cur = state.league_season || state.season;
+  const inputs = await Promise.all(
+    bs.map(async (b) => {
+      const sw = seasonWeeks(b.league, cur, state.week);
+      // The week in progress: only its trades count (a trade is final when made; lineups aren't).
+      const live = b.league.status === "in_season" && b.league.season === cur && state.week > (sw.weeks.at(-1) ?? 0);
+      const txs = live
+        ? await sleeper<STransaction[] | null>(`/v1/league/${b.league.league_id}/transactions/${state.week}`).then((x) => x ?? []).catch(() => [])
+        : [];
+      return {
+        bundle: b,
+        weeks: rows.filter((r) => r.league_id === b.league.league_id).map((r) => r.data),
+        regEnd: sw.regEnd,
+        current: txs.length ? replayWeek(b.league, state.week, [], txs, []) : undefined,
+      };
+    }),
+  );
   const exact = await exactWeeks(bs);
   const a = analyse(inputs, exact);
   const dir = await playerDirectory().catch(() => ({}) as PlayerDir);
