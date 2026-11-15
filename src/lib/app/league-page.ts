@@ -76,6 +76,7 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
       leagueId,
       view,
       format: formatOf(family.seasons[family.seasons.length - 1].league),
+      scoring: scoringOf(family.seasons.map((b) => b.league), analysis?.model),
       analysis: analysis && (analysis.version ?? 1) >= 1 ? { ...analysis, games: analysis.games ?? [] } : null,
       weekly: exactWeekly(snaps),
       nights: new Set(snaps.map((s) => s.day)).size,
@@ -128,6 +129,9 @@ export type LeaguePage = {
   leagueId: string;
   view: ReturnType<typeof familyView>;
   format: ReturnType<typeof formatOf>;
+  /** Sleeper basketball scoring, detected from the league's games: one locked-in game per lineup
+   * spot a week ("lock-in"), or every game a starter plays ("daily"). Null before any games. */
+  scoring: "lock-in" | "daily" | null;
   analysis: (NonNullable<Awaited<ReturnType<typeof analysisOf>>> & { games: NonNullable<Awaited<ReturnType<typeof analysisOf>>>["games"] }) | null;
   weekly: Map<number, Map<number, number>>;
   nights: number;
@@ -140,6 +144,13 @@ export type LeaguePage = {
   dataset: Dataset | null;
   brand: BrandConfig;
 };
+
+/** The newest season with games decides; pre-draft seasons have nothing to measure. */
+function scoringOf(leagues: { league_id: string; status: string }[], model?: Record<string, "one" | "all">): LeaguePage["scoring"] {
+  const played = [...leagues].reverse().find((l) => l.status !== "pre_draft" && l.status !== "drafting" && model?.[l.league_id]);
+  if (!played) return null;
+  return model![played.league_id] === "one" ? "lock-in" : "daily";
+}
 
 /** The import progress bar's starting state, from the latest job. */
 function progressOf(j: StoredLeague["job"]): Progress | null {

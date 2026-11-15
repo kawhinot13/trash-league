@@ -102,7 +102,9 @@ function blurb(p: LeaguePage) {
   const trades = p.dataset?.league.totals.trades;
   return `A fantasy basketball league since ${view.seasons[0].years.slice(0, 4)}. ${n} season${n === 1 ? "" : "s"}${
     champs.length ? `, ${distinct} champion${distinct === 1 ? "" : "s"}` : ""
-  }${trades ? `, ${trades} trades` : ""}${champs.length && distinct === champs.length && champs.length > 1 ? ", and nobody has won it twice" : ""}.`;
+  }${trades ? `, ${trades} trades` : ""}${champs.length && distinct === champs.length && champs.length > 1 ? ", and nobody has won it twice" : ""}.${
+    p.scoring === "lock-in" ? " Lock-in scoring: one game counts per lineup spot each week." : p.scoring === "daily" ? " Daily lineups: every game a starter plays counts." : ""
+  }`;
 }
 
 /** The pill under the hero: the season in progress and who leads, or last season's champion. */
