@@ -14,7 +14,7 @@ const TRIES = 8;
 const LAUNCH = Date.UTC(2026, 10, 14);
 type Mark = "hit" | "close" | "miss";
 const BG: Record<Mark, string> = { hit: "#7fd49a", close: "#c98a4b", miss: "#1d3329" };
-const YR = ["", "’23", "’24", "’25", "’26"];
+const TRASH_YR = ["", "’23", "’24", "’25", "’26"];
 
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, "");
@@ -38,7 +38,7 @@ const store = {
 type Clue = { label: string; value: string; mark: Mark; arrow?: "up" | "down" };
 
 /** Compare a guess to the suspect. Arrows point toward the answer. */
-function clues(g: Suspect, t: Suspect, nick: (id: string) => string, league = "Trash"): Clue[] {
+function clues(g: Suspect, t: Suspect, nick: (id: string) => string, league = "Trash", short?: Record<string, string>): Clue[] {
   const num = (a: number, b: number, near: number) =>
     ({ mark: a === b ? "hit" : Math.abs(a - b) <= near ? "close" : "miss", arrow: a === b ? undefined : b > a ? "up" : "down" }) as const;
   const posHit = g.pos.length === t.pos.length && g.pos.every((p) => t.pos.includes(p));
@@ -51,7 +51,7 @@ function clues(g: Suspect, t: Suspect, nick: (id: string) => string, league = "T
     { label: `${league} weeks`, value: String(g.weeks), ...num(g.weeks, t.weeks, 15) },
     { label: `${league} teams`, value: String(g.owners.length), ...num(g.owners.length, t.owners.length, 1) },
     { label: "Top owner", value: nick(g.owner), mark: g.owner === t.owner ? "hit" : t.owners.includes(g.owner) ? "close" : "miss" },
-    { label: "First season", value: YR[g.first], ...num(g.first, t.first, 1) },
+    { label: "First season", value: short?.[`s${g.first}`] ?? TRASH_YR[g.first], ...num(g.first, t.first, 1) },
   ];
 }
 
@@ -123,7 +123,7 @@ function Key() {
         suspect is taller, older, has more weeks, and so on.
       </p>
       <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-        {colsFor(brand.name).map((c) => (
+        {colsFor(brand.tag ?? brand.name).map((c) => (
           <div key={c.label}>
             <dt className="font-semibold">{c.label}</dt>
             <dd className="text-[var(--muted)]">{c.info}</dd>
@@ -449,7 +449,7 @@ export function Lineup({
   const share = async () => {
     if (!target) return;
     const sq = { hit: "🟩", close: "🟫", miss: "⬛" };
-    const rows = guesses.map((g) => clues(byId.get(g)!, target, nick, brand.name).map((c) => sq[c.mark]).join("")).join("\n");
+    const rows = guesses.map((g) => clues(byId.get(g)!, target, nick, brand.tag ?? brand.name, brand.short).map((c) => sq[c.mark]).join("")).join("\n");
     try {
       await navigator.clipboard.writeText(`${brand.games.lineup} #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${rows}\n${location.origin}${brand.base || "/"}#lineup`);
       setCopied(true);
@@ -605,7 +605,7 @@ export function Lineup({
           {/* statements */}
           <div className="mt-5">
             <div className={`hidden gap-1.5 px-1.5 pb-2 text-[11px] font-semibold text-[var(--muted)] md:grid ${GRID}`}>
-              {colsFor(brand.name).map((c) => (
+              {colsFor(brand.tag ?? brand.name).map((c) => (
                 <ColHead key={c.label} {...c} />
               ))}
             </div>
@@ -613,7 +613,7 @@ export function Lineup({
               {[...guesses].reverse().map((pid) => {
                 const g = byId.get(pid);
                 if (!g || !target) return null;
-                const cs = clues(g, target, nick, brand.name);
+                const cs = clues(g, target, nick, brand.tag ?? brand.name, brand.short);
                 const isNew = pid === fresh;
                 return (
                   <motion.li

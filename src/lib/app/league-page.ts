@@ -7,7 +7,9 @@ import { familyView } from "@/lib/app/model";
 import { formatOf } from "@/lib/app/family";
 import { clientIp } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
-import { analysisOf, getFamily, snapshots, type Snapshot } from "@/lib/app/store";
+import { analysisOf, datasetOf, getFamily, snapshots, type Snapshot } from "@/lib/app/store";
+import type { BrandConfig } from "@/components/trash/brand";
+import type { Dataset } from "@/lib/core/types";
 import { packIdFor } from "@/packs/ids";
 import { loadPack } from "@/packs";
 
@@ -19,7 +21,7 @@ export type LoadResult =
   | { status: "error" };
 
 /** Everything a league's pages show, in one load. */
-export async function loadLeague(leagueId: string, opts: { snapshots?: boolean } = {}): Promise<LoadResult> {
+export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; dataset?: boolean } = {}): Promise<LoadResult> {
   let got;
   try {
     got = await getFamily(leagueId, await clientIp());
@@ -32,11 +34,12 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean }
   if (got.status === "removed") return { status: "removed", purgeAfter: got.purgeAfter?.toISOString() ?? null };
   const view = familyView(got.family);
   const ids = got.family.seasons.map((s) => s.league.league_id);
-  const [analysis, snaps, job, pack] = await Promise.all([
+  const [analysis, snaps, job, pack, dataset] = await Promise.all([
     analysisOf(view.id).catch(() => null),
     opts.snapshots ? snapshots(view.current.leagueId).catch(() => [] as Snapshot[]) : Promise.resolve([] as Snapshot[]),
     latestJob(view.id).catch(() => null),
     loadPack(packIdFor(ids)),
+    opts.dataset ? datasetOf(view.id).catch(() => null) : Promise.resolve(null),
   ]);
   // Results from an older version of the grading: regrade in the background (no new weeks to fetch).
   const open = job && (job.status === "queued" || job.status === "running");
@@ -65,7 +68,33 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean }
       db: hasDb(),
       pack,
       nameOf,
+      dataset: dataset ? withNicknames(dataset, pack?.nicknames) : null,
+      brand: brandFor(leagueId, view, dataset),
     },
+  };
+}
+
+/** A custom pack's nicknames replace display names in the league's dataset. */
+function withNicknames(d: Dataset, nicks?: Record<string, string>): Dataset {
+  if (!nicks) return d;
+  return { ...d, league: { ...d.league, managers: d.league.managers.map((m) => ({ ...m, nick: nicks[m.nick] ?? m.nick })) } };
+}
+
+/** How the shared league components render for this league. */
+function brandFor(leagueId: string, view: ReturnType<typeof familyView>, d: Dataset | null): BrandConfig {
+  return {
+    name: view.name,
+    tag: "League",
+    base: `/l/${leagueId}`,
+    storage: `rl:${view.id}:`,
+    scores: `/api/l/${leagueId}/scores`,
+    avatars: Object.fromEntries(view.careers.map((c) => [c.ownerId, c.avatar])),
+    headshots: "sleeper",
+    games: { dive: "Deep Cut", wordle: "Rosterdle", lineup: "The Lineup" },
+    names: Object.fromEntries(view.careers.map((c) => [c.ownerId, c.name])),
+    short: Object.fromEntries(
+      (d?.league.seasons ?? []).map((s) => [s.code, `’${s.years.slice(2, 4)}`]),
+    ),
   };
 }
 export type LeaguePage = {
@@ -80,6 +109,9 @@ export type LeaguePage = {
   db: boolean;
   pack: Awaited<ReturnType<typeof loadPack>>;
   nameOf: (who: string | null | undefined) => string;
+  /** Trash-shaped dataset for the shared features (null until the first import finishes). */
+  dataset: Dataset | null;
+  brand: BrandConfig;
 };
 
 /** roster id -> week number (1-based count of finished weeks) -> exact official score. */

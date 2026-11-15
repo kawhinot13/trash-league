@@ -8,10 +8,12 @@ export function LeagueTabs({ id, live }: { id: string; live: boolean }) {
   const path = usePathname();
   const base = `/l/${id}`;
   const tabs = [
-    { href: base, label: "Overview", on: path === base },
-    ...(live ? [{ href: `${base}/live`, label: "This week", on: path === `${base}/live` }] : []),
-    { href: `${base}/rivals`, label: "Rivals", on: path === `${base}/rivals` },
+    { href: base, label: "Home", on: path === base },
+    ...(live ? [{ href: `${base}/live`, label: "Live", on: path === `${base}/live` }] : [{ href: `${base}/live`, label: "Table", on: path === `${base}/live` }]),
     { href: `${base}/managers`, label: "Managers", on: path.startsWith(`${base}/managers`) },
+    { href: `${base}/rivals`, label: "Rivals", on: path === `${base}/rivals` },
+    { href: `${base}/history`, label: "History", on: path === `${base}/history` },
+    { href: `${base}/front-office`, label: "Front office", on: path === `${base}/front-office` },
   ];
   return (
     <div className="mx-auto max-w-6xl overflow-x-auto px-4 [scrollbar-width:none] md:px-10">

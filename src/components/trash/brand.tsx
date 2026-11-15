@@ -12,6 +12,8 @@ import { createContext, useContext, useMemo } from "react";
 export type BrandConfig = {
   /** How copy names the league ("Trash"). */
   name: string;
+  /** Short name for tight labels ("Trash"; Rafterlore uses "League"). Defaults to `name`. */
+  tag?: string;
   /** Path prefix for the league's pages ("" for Trash, "/l/<id>" on Rafterlore). */
   base: string;
   /** Prefix for browser-storage keys, so leagues on one site never share game progress. */
@@ -24,8 +26,10 @@ export type BrandConfig = {
   headshots: "local" | "sleeper";
   /** Names of the three daily games. */
   games: { dive: string; wordle: string; lineup: string };
-  /** Manager id -> display name, for monograms when there's no photo. */
+  /** Manager id -> Sleeper display name (handles, monograms). Trash's ids are its handles. */
   names?: Record<string, string>;
+  /** Season code -> short year label ("’25"), for compact season lists. */
+  short?: Record<string, string>;
 };
 
 export const TRASH_BRAND: BrandConfig = {
@@ -86,6 +90,11 @@ export function PlayerPhoto({ pid, alt = "", ...rest }: Omit<ImageProps, "src" |
 /** Link to a manager's profile on whichever site this is. */
 export function MgrLink({ id, ...rest }: Omit<React.ComponentProps<typeof Link>, "href"> & { id: string }) {
   return <Link href={useBrand().manager(id)} {...rest} />;
+}
+
+/** A manager's Sleeper handle (Trash's ids already are handles). */
+export function Handle({ id }: { id: string }) {
+  return <>{useBrand().names?.[id] ?? id}</>;
 }
 
 /** The league's name, for server components that render shared copy. */

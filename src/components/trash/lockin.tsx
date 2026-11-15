@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { BenchCrime, LockRow } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
-import { MgrPhoto } from "@/components/trash/brand";
+import { Handle, MgrPhoto } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
@@ -141,7 +141,7 @@ export function LockInIndex({
                             <p className="truncate font-semibold">
                               {nick(r.id)}{" "}
                               <span className="font-normal text-[var(--muted)]">
-                                {r.id}
+                                <Handle id={r.id} />
                               </span>
                             </p>
                             <span

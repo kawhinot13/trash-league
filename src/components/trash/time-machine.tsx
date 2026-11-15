@@ -46,7 +46,10 @@ export function TimeMachine({
     return best;
   }, [stops, seasons]);
   const [i, setI] = useState(start);
-  const [who, setWho] = useState("RI3O");
+  // Trash opens on its busiest trader; other leagues on whoever made the most trades.
+  const [who, setWho] = useState(() =>
+    managers.some((m) => m.id === "RI3O") ? "RI3O" : ([...managers].sort((a, b) => b.trades - a.trades)[0]?.id ?? ""),
+  );
   const [playing, setPlaying] = useState(false);
   const reduce = useReducedMotion();
   const nick = (id: string) => managers.find((m) => m.id === id)?.nick ?? id;

@@ -7,7 +7,7 @@ import type { FrontOffice } from "@/lib/front-office";
 import { METRICS, diagnose, evaluateTrade, market, profile, type Metric, type Mover } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
-import { MgrPhoto } from "@/components/trash/brand";
+import { Handle, MgrPhoto } from "@/components/trash/brand";
 import { useBrand } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
@@ -459,7 +459,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                       { who: nick(partner), d: trade.themDelta },
                     ].map((x) => (
                       <div key={x.who} className="rounded-2xl bg-black/25 p-4">
-                        <p className="text-sm text-[var(--muted)]">{x.who}&apos;s starting nine</p>
+                        <p className="text-sm text-[var(--muted)]"><Handle id={x.who} />&apos;s starting nine</p>
                         <p className="font-display text-4xl font-black tabular-nums" style={{ color: x.d >= 0 ? GOOD : BAD }}>
                           {x.d >= 0 ? "+" : ""}
                           {n0(x.d)}

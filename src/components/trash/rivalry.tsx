@@ -4,14 +4,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Manager, Season } from "@/lib/league";
 import { Explain } from "./intel";
-import { MgrPhoto } from "@/components/trash/brand";
+import { Handle, MgrPhoto } from "@/components/trash/brand";
 
-const yrs: Record<string, string> = {
-  s1: "2023–24",
-  s2: "2024–25",
-  s3: "2025–26",
-  s4: "2026–27",
-};
 const round = (r: number) =>
   ({ 1: "Quarterfinal", 2: "Semifinal", 3: "Final" })[r] ?? `Round ${r}`;
 
@@ -98,13 +92,16 @@ export function RivalryMachine({
   managers,
   seasons,
   h2h,
+  initial = ["KawhiNot13", "GreenBean69420"],
 }: {
   managers: Manager[];
   seasons: Season[];
   h2h: Record<string, Record<string, number>>;
+  /** The two managers it opens on. */
+  initial?: [string, string];
 }) {
-  const [a, setA] = useState("KawhiNot13");
-  const [b, setB] = useState("GreenBean69420");
+  const [a, setA] = useState(initial[0]);
+  const [b, setB] = useState(initial[1]);
   const A = managers.find((m) => m.id === a)!;
   const B = managers.find((m) => m.id === b)!;
   const data = useMemo(() => {
@@ -113,12 +110,12 @@ export function RivalryMachine({
     const trades = seasons.flatMap((s) =>
       s.trades
         .filter((t) => t.sides[a] && t.sides[b])
-        .map((t) => ({ ...t, years: yrs[s.code] })),
+        .map((t) => ({ ...t, years: s.years })),
     );
     const playoffs = seasons.flatMap((s) =>
       s.bracket
         .filter((g) => (g.a === a && g.b === b) || (g.a === b && g.b === a))
-        .map((g) => ({ ...g, years: yrs[s.code] })),
+        .map((g) => ({ ...g, years: s.years })),
     );
     const both = seasons
       .map((s) => ({
@@ -242,7 +239,7 @@ export function RivalryMachine({
                       </p>
                       {[a, b].map((who) => (
                         <p key={who} className="mt-1">
-                          <span className="font-semibold">{who}</span> got{" "}
+                          <span className="font-semibold"><Handle id={who} /></span> got{" "}
                           <span className="text-[var(--paper)]/85">
                             {(t.sides[who] ?? [])
                               .map((p) => p.name)
@@ -293,7 +290,7 @@ export function RivalryMachine({
                     key={s.code}
                     className="grid grid-cols-[6rem_1fr_1fr] gap-2 text-sm"
                   >
-                    <span className="text-[var(--muted)]">{yrs[s.code]}</span>
+                    <span className="text-[var(--muted)]">{s.years}</span>
                     <span
                       className={
                         ra!.seed < rb!.seed

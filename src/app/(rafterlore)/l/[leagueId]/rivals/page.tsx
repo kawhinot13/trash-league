@@ -1,83 +1,77 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
-import { Section } from "@/components/app/league";
-import { Rivals } from "@/components/app/rivals";
-import type { Game } from "@/lib/app/analysis";
+import { Intro, Pending } from "@/components/app/site";
+import { Explain } from "@/components/trash/intel";
+import { OwnsGrid } from "@/components/trash/interactive";
+import { RivalryMachine } from "@/components/trash/rivalry";
+import { SectionHead } from "@/components/trash/section-head";
 import type { LeaguePage } from "@/lib/app/league-page";
 
 export const metadata: Metadata = { title: "Rivals" };
 
-export default function RivalsPage({ params, searchParams }: PageProps<"/l/[leagueId]/rivals">) {
+export default function RivalsPage({ params }: PageProps<"/l/[leagueId]/rivals">) {
   return (
     <Suspense fallback={<LeagueLoading />}>
-      {Promise.all([params, searchParams]).then(([{ leagueId }, sp]) => (
-        <LeagueGate leagueId={leagueId}>{(p) => <RivalsView p={p} a={String(sp.a ?? "")} b={String(sp.b ?? "")} />}</LeagueGate>
+      {params.then(({ leagueId }) => (
+        <LeagueGate leagueId={leagueId} dataset>
+          {(p) => <Rivals p={p} />}
+        </LeagueGate>
       ))}
     </Suspense>
   );
 }
 
-function pairs(games: Game[]) {
-  const by = new Map<string, { a: string; b: string; aw: number; bw: number; n: number }>();
-  for (const g of games) {
-    const [a, b] = [g.a, g.b].sort();
-    const k = `${a}|${b}`;
-    const r = by.get(k) ?? { a, b, aw: 0, bw: 0, n: 0 };
-    r.n += 1;
-    const aPts = g.a === a ? g.pa : g.pb;
-    const bPts = g.a === a ? g.pb : g.pa;
-    if (aPts > bPts) r.aw += 1;
-    else if (bPts > aPts) r.bw += 1;
-    by.set(k, r);
-  }
-  return [...by.values()].map((r) => (r.bw > r.aw ? { a: r.b, b: r.a, aw: r.bw, bw: r.aw, n: r.n } : r));
-}
-
-function RivalsView({ p, a, b }: { p: LeaguePage; a: string; b: string }) {
-  const managers = p.view.careers.map((c) => ({ id: c.ownerId, name: p.nameOf(c.ownerId), avatar: c.avatar }));
-  const ids = new Set(managers.map((m) => m.id));
-  const games = p.analysis?.games ?? [];
-  const all = pairs(games.filter((g) => ids.has(g.a) && ids.has(g.b)));
-  // Default: the most-played rivalry.
-  const top = [...all].sort((x, y) => y.n - x.n)[0];
-  const a0 = ids.has(a) ? a : (top?.a ?? managers[0]?.id ?? "");
-  const b0 = ids.has(b) && b !== a0 ? b : (top && top.a === a0 ? top.b : managers.find((m) => m.id !== a0)?.id ?? "");
-  const owned = [...all].filter((r) => r.n >= 4).sort((x, y) => y.aw - y.bw - (x.aw - x.bw) || y.n - x.n).slice(0, 8);
-  const href = (r: { a: string; b: string }) => `/l/${p.leagueId}/rivals?a=${r.a}&b=${r.b}`;
+function Rivals({ p }: { p: LeaguePage }) {
+  const d = p.dataset;
+  if (!d)
+    return (
+      <main className="overflow-x-clip">
+        <Intro title="Rivals" />
+        <Pending p={p} what="Rivalries" />
+      </main>
+    );
+  const current = new Set(d.league.seasons[d.league.seasons.length - 1].standings.map((r) => r.manager));
+  // Everyone still in the league, plus anyone who played at least two seasons.
+  const names = d.league.managers.filter((m) => current.has(m.id) || m.seasons.length >= 2).map((m) => m.id);
+  const colors = Object.fromEntries(d.league.managers.map((m) => [m.id, m.color]));
+  // Open on the most-played rivalry among current managers.
+  const games = (x: string, y: string) => (d.league.h2h[x]?.[y] ?? 0) + (d.league.h2h[y]?.[x] ?? 0);
+  const cur = [...current];
+  let initial: [string, string] = [cur[0], cur[1] ?? cur[0]];
+  for (const x of cur) for (const y of cur) if (x < y && games(x, y) > games(...initial)) initial = [x, y];
   return (
-    <main>
-      <Section level={1}
-        id="rivals"
-        title="Rivals"
-        lede="Any two managers, every time they've met. Built from Sleeper's weekly matchup scores, so it's per Sleeper: those don't always match the official totals."
-      >
-        {!p.analysis ? (
-          <p className="text-[var(--muted)]">Rivalries appear once the league&apos;s import finishes. Check the overview for progress.</p>
-        ) : managers.length < 2 ? (
-          <p className="text-[var(--muted)]">Not enough managers yet.</p>
-        ) : (
-          <Rivals leagueId={p.leagueId} managers={managers} games={games} a0={a0} b0={b0} />
-        )}
-      </Section>
-      {owned.length ? (
-        <Section id="owned" title="Who owns who" lede="The most one-sided rivalries with at least four meetings, per Sleeper.">
-          <ol className="grid gap-x-8 sm:grid-cols-2">
-            {owned.map((r) => (
-              <li key={`${r.a}-${r.b}`} className="border-b border-[var(--line)]">
-                <a href={href(r)} className="flex items-center justify-between gap-3 py-3 text-sm tabular-nums">
-                  <span className="min-w-0 truncate">
-                    <span className="font-semibold">{p.nameOf(r.a)}</span> <span className="text-[var(--muted)]">over</span> {p.nameOf(r.b)}
-                  </span>
-                  <span className="shrink-0 font-semibold">
-                    {r.aw}–{r.bw}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ol>
-        </Section>
-      ) : null}
+    <main className="overflow-x-clip">
+      <Intro title="Rivals">Some rivalries are rivalries. Some are ownership. Pick any two managers and settle it.</Intro>
+
+      <section aria-labelledby="rivalry" className="py-16 md:py-24">
+        <SectionHead id="rivalry" title="Rivalry machine">
+          Every meeting, every trade between them and a verdict on who really has the upper hand.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <RivalryMachine managers={d.league.managers} seasons={d.league.seasons} h2h={d.league.h2h} initial={initial} />
+        </div>
+      </section>
+
+      <section aria-labelledby="owns" className="py-24 md:py-32">
+        <SectionHead id="owns" title="Who owns who">
+          Every meeting, per Sleeper&apos;s weekly scores.
+        </SectionHead>
+        <OwnsGrid names={names} h2h={d.league.h2h} colors={colors} />
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <Explain>
+            <p>
+              Each square is how many games the row manager won against the column manager, every season combined. Gold
+              squares are winning matchups, red are losing ones. &ldquo;Owns&rdquo; means a winning record of at least 5
+              games with no more than 1 loss.
+            </p>
+            <p>
+              These come from Sleeper&apos;s week-by-week scores, which don&apos;t always match the official standings,
+              so treat them as league lore rather than gospel.
+            </p>
+          </Explain>
+        </div>
+      </section>
     </main>
   );
 }

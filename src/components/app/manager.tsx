@@ -122,7 +122,7 @@ export function ManagerProfile({ p, ownerId }: { p: LeaguePage; ownerId: string 
                 {vs.map((r) => (
                   <li key={r.opp} className="border-b border-[var(--line)]">
                     <Link
-                      href={`/l/${p.leagueId}/rivals?a=${ownerId}&b=${r.opp}`}
+                      href={`/l/${p.leagueId}/rivals`}
                       className="flex items-center justify-between gap-3 py-3 text-sm tabular-nums hover:text-[var(--paper)]"
                     >
                       <span className="min-w-0 truncate font-semibold">vs {p.nameOf(r.opp)}</span>

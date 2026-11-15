@@ -152,6 +152,7 @@ export async function housekeeping() {
   }
   await sql`delete from rate_events where at < now() - interval '2 days'`;
   await sql`delete from removal_challenges where created_at < now() - interval '1 day'`;
+  await sql`delete from game_scores where day < now() - interval '40 days'`;
   await sql`delete from api_budget where window_start < now() - interval '1 day'`;
   return { purged: due.length };
 }

@@ -153,6 +153,18 @@ create table if not exists removal_challenges (
   created_at  timestamptz not null default now()
 );
 create index if not exists removal_challenges_family on removal_challenges(family_id, user_id);
+
+-- Daily-game leaderboards (honor system, like the Trash site's). Kept 40 days.
+create table if not exists game_scores (
+  family_id   text not null references families(id) on delete cascade,
+  game        text not null,
+  day         date not null,
+  manager     text not null,
+  score       int not null,
+  label       text not null default '',
+  created_at  timestamptz not null default now(),
+  primary key (family_id, game, day, manager)
+);
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

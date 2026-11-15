@@ -10,7 +10,7 @@ import {
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { Manager } from "@/lib/league";
-import { MgrPhoto, MgrLink } from "@/components/trash/brand";
+import { Handle, MgrPhoto, MgrLink } from "@/components/trash/brand";
 
 /** Reduced-motion preference, read after hydration so server and client HTML always match. */
 function useCalm() {
@@ -78,7 +78,7 @@ export function OwnsGrid({
   const [hover, setHover] = useState<{ a: string; b: string } | null>(null);
   const rec = (a: string, b: string) =>
     [h2h[a]?.[b] ?? 0, h2h[b]?.[a] ?? 0] as const;
-  const sel = hover ?? { a: "jgood432", b: "Edizzle6" };
+  const sel = hover ?? (names.includes("jgood432") && names.includes("Edizzle6") ? { a: "jgood432", b: "Edizzle6" } : { a: names[0], b: names[1] ?? names[0] });
   const [w, l] = rec(sel.a, sel.b);
   const verdict =
     w === l
@@ -255,13 +255,13 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
           <p className="font-display text-3xl leading-none font-black">
             {m.nick}
           </p>
-          <p className="mt-1 text-xs text-[#5b5444]">{m.id}</p>
+          <p className="mt-1 text-xs text-[#5b5444]"><Handle id={m.id} /></p>
           <dl className="mt-4 grid grid-cols-3 gap-1 text-center">
             {[
               ["Record", `${m.w}–${m.l}${m.t ? `–${m.t}` : ""}`],
               [
                 "Playoffs",
-                `${m.playoffs}/${Math.min(3, m.seasons.filter((s) => s.code !== "s4").length)}`,
+                `${m.playoffs}/${m.seasons.filter((s) => s.finish !== "In progress").length}`,
               ],
               ["Trades", String(m.trades)],
             ].map(([k, v]) => (

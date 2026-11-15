@@ -6,9 +6,10 @@ import { AppNav } from "@/components/app/chrome";
 import { loadLeague, type LeaguePage } from "@/lib/app/league-page";
 import { isSleeperId } from "@/lib/app/validate";
 import { PackOverlay } from "@/packs/overlay";
+import { BrandProvider } from "@/components/trash/brand";
 
 /** One load per request, shared by the page and its metadata. */
-export const load = cache((leagueId: string, snapshots = false) => loadLeague(leagueId, { snapshots }));
+export const load = cache((leagueId: string, snapshots = false, dataset = false) => loadLeague(leagueId, { snapshots, dataset }));
 
 /**
  * Loads a league for one of its pages and handles every outcome: not a league, rate limited,
@@ -17,15 +18,18 @@ export const load = cache((leagueId: string, snapshots = false) => loadLeague(le
 export async function LeagueGate({
   leagueId,
   snapshots,
+  dataset,
   children,
 }: {
   leagueId: string;
   snapshots?: boolean;
+  /** Load the league's full dataset (the shared Trash-style features). */
+  dataset?: boolean;
   children: (p: LeaguePage) => React.ReactNode;
 }) {
   if (!isSleeperId(leagueId)) notFound();
   await connection(); // per request: database reads, in-season data, rate limits
-  const r = await load(leagueId, snapshots);
+  const r = await load(leagueId, snapshots, dataset);
   if (r.status === "not_found") notFound();
   if (r.status === "limited")
     return (
@@ -57,7 +61,7 @@ export async function LeagueGate({
   return (
     <>
       <AppNav league={{ name: p.view.name, id: leagueId, live: p.view.current.status === "in_season" }} />
-      {children(p)}
+      <BrandProvider config={p.brand}>{children(p)}</BrandProvider>
       {p.pack ? <PackOverlay id={p.pack.id} props={p.pack.overlay} /> : null}
     </>
   );

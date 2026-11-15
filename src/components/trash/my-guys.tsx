@@ -6,10 +6,10 @@ import type { Guy, GuysRow, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain } from "./intel";
 import { Face, pname } from "./player";
-import { MgrPhoto } from "@/components/trash/brand";
+import { MgrPhoto, useBrand } from "@/components/trash/brand";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
-const yrs: Record<string, string> = { s1: "’23", s2: "’24", s3: "’25", s4: "’26" };
+const TRASH_YRS: Record<string, string> = { s1: "’23", s2: "’24", s3: "’25", s4: "’26" };
 
 function List({
   title,
@@ -22,6 +22,7 @@ function List({
   metric: "weeks" | "pts";
   players: Players;
 }) {
+  const short = useBrand().short;
   const reduce = useReducedMotion();
   const max = Math.max(...guys.map((g) => g[metric]));
   return (
@@ -47,7 +48,7 @@ function List({
                 />
               </div>
               <p className="mt-1 text-xs text-[var(--muted)]">
-                {g.starts} starts, seasons {g.seasons.map((s) => yrs[s]).join(" ")}
+                {g.starts} starts, seasons {g.seasons.map((s) => (short ?? TRASH_YRS)[s]).join(" ")}
               </p>
             </div>
           </li>
@@ -66,7 +67,7 @@ export function MyGuys({
   players: Players;
   managers: Manager[];
 }) {
-  const [who, setWho] = useState("jgood432");
+  const [who, setWho] = useState(rows.some((r) => r.id === "jgood432") ? "jgood432" : (rows[0]?.id ?? ""));
   const reduce = useReducedMotion();
   const row = rows.find((r) => r.id === who) ?? rows[0];
   const m = managers.find((x) => x.id === row.id)!;

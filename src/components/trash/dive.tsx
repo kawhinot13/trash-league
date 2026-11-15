@@ -315,7 +315,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
                 </p>
                 <ol className="mt-6 space-y-3 text-[var(--paper)]/85">
                   {[
-                    ["1", "Five prompts, like “name a player Rico has started.”"],
+                    ["1", `Five prompts, like “name a player ${people.some((x) => x.nick === "Rico") ? "Rico" : (people[0]?.nick ?? "a manager")} has started.”`],
                     ["2", "Any right answer counts. Toss your player into the bin."],
                     ["3", "Obscure picks sink deep and score up to 100. The obvious star barely gets in."],
                   ].map(([n, t]) => (

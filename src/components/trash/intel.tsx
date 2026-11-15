@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Pickup } from "@/lib/live";
 import type { Manager, Season, Standing } from "@/lib/league";
-import { MgrPhoto, MgrLink } from "@/components/trash/brand";
+import { Handle, MgrLink, MgrPhoto } from "@/components/trash/brand";
 import { useBrand } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
@@ -142,7 +142,7 @@ export function OfficialTable({
               <Av id={r.manager} s={40} />
               <span className="min-w-0">
                 <span className="flex items-center gap-2 truncate font-semibold">
-                  {r.manager}{" "}
+                  <Handle id={r.manager} />{" "}
                   <Move m={r.move ?? 0} label="since last week" />
                   {r.streak ? (
                     <span
@@ -207,7 +207,7 @@ const MatchSide = ({ x, right }: { x: MatchTeam; right?: boolean }) => (
   >
     <Av id={x.manager} s={96} />
     <p className="font-display mt-3 text-3xl leading-none font-black md:text-4xl">
-      {x.manager}
+      <Handle id={x.manager} />
     </p>
     <p className="font-display mt-4 text-5xl leading-none font-black tabular-nums">
       #{x.seed}
@@ -634,7 +634,7 @@ export function Almanac({
                     <Av id={x.manager} s={32} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">
-                        {x.manager}{" "}
+                        <Handle id={x.manager} />{" "}
                         <span className="font-normal text-[var(--muted)]">
                           {x.years}
                         </span>
@@ -671,7 +671,7 @@ export function Almanac({
                       <Av id={x.manager} s={32} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">
-                          {x.manager}{" "}
+                          <Handle id={x.manager} />{" "}
                           <span className="font-normal text-[var(--muted)]">
                             {x.years}
                           </span>
@@ -700,7 +700,7 @@ export function Almanac({
                       className="flex items-center gap-2 rounded-full bg-black/25 py-1 pr-3 pl-1 text-sm"
                     >
                       <Av id={m.id} s={26} />
-                      {m.id}
+                      <Handle id={m.id} />
                       <span
                         className={`font-semibold tabular-nums ${m.luck >= 0 ? "text-[var(--gold)]" : "text-[#ff8a7a]"}`}
                       >
@@ -752,7 +752,7 @@ export function Almanac({
                       <th scope="row" className="px-3 py-2.5">
                         <span className="flex items-center gap-3 font-semibold">
                           <Av id={m.id} s={30} />
-                          {m.id}
+                          <Handle id={m.id} />
                         </span>
                       </th>
                       <td className="px-3 tabular-nums">{m.playoffs}</td>
@@ -826,7 +826,7 @@ export function Almanac({
                     </span>
                     <Av id={m.id} s={30} />
                     <span className="w-40 truncate text-sm font-semibold">
-                      {m.id}
+                      <Handle id={m.id} />
                     </span>
                     <span className="flex-1">
                       <Bar v={m.adds} max={arr[0].adds} color="var(--wood)" />
@@ -857,7 +857,7 @@ export function Almanac({
                         {p.player}
                       </span>
                       <span className="truncate text-[var(--muted)]">
-                        {p.by}
+                        <Handle id={p.by} />
                       </span>
                     </li>
                   ))}
@@ -906,7 +906,7 @@ export function Almanac({
                         <th scope="row" className="px-3">
                           <span className="flex items-center gap-3 font-semibold">
                             <Av id={r.manager} s={28} />
-                            {r.manager}
+                            <Handle id={r.manager} />
                             {seasons.find((s) => s.code === season)!
                               .champion === r.manager ? (
                               <span className="text-[var(--gold)]">★</span>
@@ -1067,7 +1067,7 @@ function Oddities({ seasons }: { seasons: Season[] }) {
                   {p.years}: {p.player}
                 </span>
                 <span className="block truncate text-xs text-[var(--muted)]">
-                  {p.by}
+                  <Handle id={p.by} />
                 </span>
               </span>
               <span
@@ -1091,7 +1091,7 @@ function Oddities({ seasons }: { seasons: Season[] }) {
             >
               <Av id={r.manager} s={30} />
               <span className="flex-1 truncate font-semibold">
-                {r.manager}{" "}
+                <Handle id={r.manager} />{" "}
                 <span className="font-normal text-[var(--muted)]">
                   {r.years}, #{r.seed}
                 </span>
@@ -1113,7 +1113,7 @@ function Oddities({ seasons }: { seasons: Season[] }) {
             >
               <Av id={r.manager} s={30} />
               <span className="flex-1 truncate font-semibold">
-                {r.manager}{" "}
+                <Handle id={r.manager} />{" "}
                 <span className="font-normal text-[var(--muted)]">
                   {r.years}, went {rec(r.w, r.l, r.t)}
                 </span>
