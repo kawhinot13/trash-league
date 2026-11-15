@@ -84,12 +84,12 @@ export function divePool(d: Dataset): Prompt[] {
     const ids = [...signal.keys()].filter((p) => players[p]?.[0]);
     const local = pct(new Map(ids.map((p) => [p, signal.get(p)!])));
     const obvious = ids.map((p) => [p, weight * local.get(p)! + (1 - weight) * (fame.get(p) ?? 0)] as const);
-    const n = obvious.length;
-    return obvious
-      .map(([p, o]) => {
-        const more = obvious.filter(([, x]) => x > o).length; // answers more obvious than this one
-        return [p, Math.round((100 * more) / Math.max(1, n - 1))] as [string, number];
-      })
+    // Rank from most obvious (0) to deepest (100). Ties break by league fame, then id, so every
+    // prompt has exactly one 100-point answer and one 0.
+    const order = [...obvious].sort(([pa, a], [pb, b]) => b - a || (fame.get(pb) ?? 0) - (fame.get(pa) ?? 0) || (pa < pb ? -1 : pa > pb ? 1 : 0));
+    const n = order.length;
+    return order
+      .map(([p], i) => [p, i === n - 1 ? 100 : Math.min(99, Math.round((100 * i) / Math.max(1, n - 1)))] as [string, number])
       .sort((a, b) => b[1] - a[1]);
   }
 
