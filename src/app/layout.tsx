@@ -7,6 +7,7 @@ import { Footer } from "@/components/trash/sections";
 import { league } from "@/lib/league";
 import { HOLIDAY } from "@/lib/holiday";
 import { Snowfall } from "@/components/holiday/snowfall";
+import { PigRide } from "@/components/pig/pig-ride";
 import "./globals.css";
 
 const display = Big_Shoulders({
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <GlassNav />
           {children}
           <Footer />
+          <PigRide />
           <RicoPeek trades={rico?.trades ?? 0} record={rico ? `${rico.w}–${rico.l}` : ""} />
         </SmoothScroll>
       </body>

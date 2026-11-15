@@ -37,7 +37,7 @@ const EYES = [
   },
 ];
 
-function RicoFace({
+export function RicoFace({
   look,
   blink,
   brow,

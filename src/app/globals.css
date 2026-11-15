@@ -399,3 +399,8 @@ body {
   .xmas-snow { display: none; }
   .xmas-bulb { animation: none; }
 }
+
+/* Flying pig wings */
+.pig-wing { animation: pig-flap 0.32s ease-in-out infinite alternate; }
+.pig-wing-back { animation-delay: -0.16s; }
+@keyframes pig-flap { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
