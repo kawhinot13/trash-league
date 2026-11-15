@@ -22,6 +22,7 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
   return (
     <GlassNav
       logo={league.name}
+      product={{ name: PRODUCT, href: "/l" }}
       home={home}
       links={[
         [home, "Home"],

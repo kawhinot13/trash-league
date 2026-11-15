@@ -120,6 +120,7 @@ export function OfficialTable({
   opp: Record<string, string>;
 }) {
   const games = Math.max(1, ...official.map((r) => r.w + r.l + r.t));
+  const names = useBrand().names;
   return (
     <div>
       <p className="mb-6 max-w-[60ch] text-sm font-medium">
@@ -153,7 +154,7 @@ export function OfficialTable({
                   ) : null}
                 </span>
                 <span className="block truncate text-xs text-[var(--muted)]">
-                  {opp[r.manager] ? `This week: vs ${opp[r.manager]}` : r.team}
+                  {opp[r.manager] ? `This week: vs ${names?.[opp[r.manager]] ?? opp[r.manager]}` : r.team}
                 </span>
               </span>
               <span className="hidden md:block">

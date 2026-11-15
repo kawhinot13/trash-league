@@ -34,9 +34,12 @@ export function GlassNav({
   links = LINKS,
   cta = { href: "/#dive", label: "Daily games" },
   holiday = HOLIDAY,
+  product,
 }: {
   /** Wordmark at the left (the league's name). */
   logo?: string;
+  /** A small product mark above the wordmark, linking to `product.href` (Rafterlore; Trash has none). */
+  product?: { name: string; href: string };
   /** Where the wordmark and the "Home" section point. */
   home?: string;
   links?: readonly (readonly [string, string])[];
@@ -66,12 +69,26 @@ export function GlassNav({
           }`}
         >
           {holiday && scrolled ? <StringLights /> : null}
-          <Link
-            href={home}
-            className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[52vw] truncate md:max-w-[16rem]"}`}
-          >
-            {logo}
-          </Link>
+          {product ? (
+            <span className="flex min-w-0 flex-col">
+              <Link
+                href={product.href}
+                className="text-[10px] leading-3 font-bold tracking-[0.22em] text-[var(--wood)] uppercase hover:text-[var(--paper)]"
+              >
+                {product.name}
+              </Link>
+              <Link href={home} className="font-display max-w-[52vw] truncate text-2xl leading-7 font-black tracking-tight md:max-w-[16rem]">
+                {logo}
+              </Link>
+            </span>
+          ) : (
+            <Link
+              href={home}
+              className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[52vw] truncate md:max-w-[16rem]"}`}
+            >
+              {logo}
+            </Link>
+          )}
           <ul className="hidden items-center gap-0.5 text-sm whitespace-nowrap md:flex">
             {links.map(([href, label]) => {
               const on = isOn(href);
