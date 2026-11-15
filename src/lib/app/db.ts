@@ -138,6 +138,21 @@ create table if not exists removals (
   purged        boolean not null default false
 );
 create index if not exists removals_family on removals(family_id);
+
+-- One-time codes proving someone manages a team before a removal or restore (removal.ts).
+create table if not exists removal_challenges (
+  id          text primary key,
+  family_id   text not null,
+  league_id   text not null,
+  user_id     text not null,
+  intent      text not null,
+  code        text not null,
+  checks      int not null default 0,
+  used        boolean not null default false,
+  expires_at  timestamptz not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists removal_challenges_family on removal_challenges(family_id, user_id);
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

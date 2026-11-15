@@ -46,8 +46,11 @@ export default function Privacy() {
       <section>
         <h2>Removing a league</h2>
         <p>
-          Any manager in a league can remove it from Rafterlore: <Contact />. Its pages disappear right away, nothing more
-          is saved, and the stored data is deleted for good after seven days. The league won&apos;t be imported again.
+          Any manager in a league can remove it from Rafterlore: <Contact />. To prove the request is theirs, they put a
+          one-time code in their own Sleeper team name, which only they or their commissioner can change; Rafterlore
+          keeps the code and their public Sleeper user id for at most a day. The league&apos;s pages disappear right
+          away, nothing more is saved, and the stored data is deleted for good after seven days. The league won&apos;t be
+          imported again.
         </p>
       </section>
       <section>

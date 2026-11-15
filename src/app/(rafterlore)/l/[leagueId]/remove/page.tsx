@@ -21,9 +21,10 @@ export default function RemovePage({ params }: PageProps<"/l/[leagueId]/remove">
             <main className="mx-auto max-w-3xl px-4 py-16 md:px-10 md:py-24">
               <h1 className="font-display text-5xl leading-[0.9] font-black md:text-7xl">Remove this league from Rafterlore</h1>
               <p className="mt-6 text-lg text-[var(--muted)]">
-                Any manager in the league can do this. Its pages disappear and Rafterlore stops saving anything for it right
-                away. The stored data is deleted for good after seven days, and until then any manager can restore it. The
-                league won&apos;t be imported again.
+                Any manager with a team in the league&apos;s latest season can do this, after proving it&apos;s
+                their team with a one-time code in their Sleeper team name. Its pages disappear and Rafterlore stops
+                saving anything for it right away. The stored data is deleted for good after seven days, and until then
+                any manager can restore it the same way. The league won&apos;t be imported again.
               </p>
               {hasDb() ? (
                 <div className="mt-10">

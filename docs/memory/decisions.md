@@ -4,6 +4,17 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Verified league removal
+- A Sleeper username is public, so it can't authorize removal. Removal and restore now need a
+  one-time code (`RFL-XXXXXX`, 30 min, 8 checks) placed in the requester's own team name in the
+  league's newest season; Rafterlore re-reads the league from Sleeper to confirm (`removal.ts`).
+  Sleeper has no OAuth for third parties, so this is the strongest proof available without accounts.
+  Accepted limits: any verified manager (or the commissioner, who can edit team names) can act for
+  the league; the 7-day restore window covers a disgruntled member.
+- Licensing: Sleeper's API docs allow non-commercial use and route commercial use to Sleeper for a
+  license; their broader terms restrict third-party access. Get written authorization from Sleeper
+  before any major public launch or anything commercial.
+
 ## 2026-11-15: Claude Code environment
 - Kept Claude Code's own model connection. OmniRoute and Headroom's proxy both replace the
   connection the cloud workspace manages (would change auth, could send code to other providers,

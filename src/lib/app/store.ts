@@ -150,13 +150,16 @@ export async function housekeeping() {
     await sql`update removals set purged = true where family_id = ${family_id}`;
   }
   await sql`delete from rate_events where at < now() - interval '2 days'`;
+  await sql`delete from removal_challenges where created_at < now() - interval '1 day'`;
   await sql`delete from api_budget where window_start < now() - interval '1 day'`;
   return { purged: due.length };
 }
 
-export async function familyUsers(familyId: string): Promise<Set<string>> {
+/** The family's newest season: where a manager proves who they are (their current team name). */
+export async function newestSeason(familyId: string): Promise<{ leagueId: string; name: string; season: string; users: Set<string> } | null> {
   const f = await readFamily(familyId);
-  return new Set(f?.seasons.flatMap((s) => s.users.map((u) => u.user_id)) ?? []);
+  const s = f?.seasons[f.seasons.length - 1];
+  return s ? { leagueId: s.league.league_id, name: s.league.name, season: s.league.season, users: new Set(s.users.map((u) => u.user_id)) } : null;
 }
 
 /** Nightly: refresh in-progress seasons and look for a renewed season. */
