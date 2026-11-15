@@ -201,6 +201,8 @@ async function grade(familyId: string) {
     if (!p.startsWith("pick:") && !a.players[p]) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];
   // The full dataset (Trash's league.json + extras.json shapes) that the league's pages are built from.
   const ds = buildDataset(bs[bs.length - 1]?.league.name ?? "League", inputs, a, exact, dir);
+  // First results: show them right away. A regrade or catch-up: rebuild pages in the background.
+  const [had] = await sql<{ n: number }[]>`select count(*)::int as n from analyses where family_id = ${familyId} and kind = 'dataset'`;
   await sql.begin(async (tx) => {
     await tx`
       insert into analyses (family_id, kind, data) values (${familyId}, 'v1', ${tx.json(a as never)})
@@ -209,7 +211,7 @@ async function grade(familyId: string) {
       insert into analyses (family_id, kind, data) values (${familyId}, 'dataset', ${tx.json(ds as never)})
       on conflict (family_id, kind) do update set data = excluded.data, computed_at = now()`;
   });
-  invalidateFamily(familyId);
+  invalidateFamily(familyId, had?.n ? "soon" : "now");
 }
 
 /** Work one job until `deadline`. Returns true when the job has more to do. */

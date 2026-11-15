@@ -35,7 +35,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   `Date.now()` in their render path. They read `storedLeague()` (`'use cache: remote'`, tagged `family:<id>` and
   `league:<id>`), never the database directly. Unstored leagues render `<Importer>`, which calls the rate-limited
   import API; the client pings `/api/l/[id]/refresh` for in-season Sleeper refreshes and regrades. Call
-  `invalidateFamily()` whenever stored data changes (`saveFamily` also drops `league:<id>`). Live features use the remote cache too.
+  `invalidateFamily()` whenever stored data changes (`saveFamily` also drops `league:<id>`). Routine updates use
+  "soon" (stale-while-revalidate, nobody waits); "now" only for first import/grade, removal and restore. Live features use the remote cache too.
 - Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
   instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are
