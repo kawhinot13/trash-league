@@ -3,6 +3,7 @@
  * the Trash site keeps its own fetchers. Every call is uncached here: callers decide caching
  * (the database, or a 'use cache' wrapper).
  */
+import { seasonLabel, type Sport } from "@/lib/core/sport";
 import { acquire, rateLimited, succeeded } from "@/lib/app/throttle";
 
 export const SLEEPER = "https://api.sleeper.app";
@@ -66,6 +67,8 @@ export type SMatchup = {
   players: string[] | null;
   starters: string[] | null;
   starters_points: number[] | null;
+  /** Points for every rostered player that week, bench included. */
+  players_points?: Record<string, number> | null;
 };
 export type STransaction = {
   transaction_id: string;
@@ -126,13 +129,15 @@ export async function sleeper<T>(path: string, tries = 4): Promise<T> {
   throw last;
 }
 
-export const nbaState = () => sleeper<SState>("/v1/state/nba");
+/** Sleeper's season state (current season, week) for a sport. */
+export const sportState = (sport: Sport = "nba") => sleeper<SState>(`/v1/state/${sport}`);
+export const nbaState = () => sportState("nba");
 
 /** A user by username or user id. null when no such user. */
 export const sleeperUser = (name: string) => sleeper<SUser | null>(`/v1/user/${encodeURIComponent(name.trim())}`);
 
-export const userLeagues = (userId: string, season: string) =>
-  sleeper<SLeague[] | null>(`/v1/user/${userId}/leagues/nba/${season}`).then((x) => x ?? []);
+export const userLeagues = (userId: string, season: string, sport: Sport = "nba") =>
+  sleeper<SLeague[] | null>(`/v1/user/${userId}/leagues/${sport}/${season}`).then((x) => x ?? []);
 
 /**
  * Sleeper's matchups endpoint can return a different score for the same finished week on different
@@ -168,8 +173,5 @@ export const official = (s: Record<string, number>) => ({
 export const avatarUrl = (id: string | null | undefined, thumb = true) =>
   id ? (id.startsWith("http") ? id : `https://sleepercdn.com/avatars/${thumb ? "thumbs/" : ""}${id}`) : null;
 
-/** NBA seasons span two calendar years: Sleeper's "2025" is the 2025–26 season. */
-export const seasonYears = (season: string) => {
-  const y = Number(season);
-  return Number.isFinite(y) ? `${y}–${String((y + 1) % 100).padStart(2, "0")}` : season;
-};
+/** Season label: basketball spans two years (Sleeper's "2025" is 2025–26), football one. */
+export const seasonYears = (season: string, sport: Sport = "nba") => seasonLabel(season, sport);

@@ -76,7 +76,8 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
       leagueId,
       view,
       format: formatOf(family.seasons[family.seasons.length - 1].league),
-      scoring: scoringOf(family.seasons.map((b) => b.league), analysis?.model),
+      // Lock-in vs daily is a basketball distinction (football is one game a week).
+      scoring: view.sport === "nba" ? scoringOf(family.seasons.map((b) => b.league), analysis?.model) : null,
       analysis: analysis && (analysis.version ?? 1) >= 1 ? { ...analysis, games: analysis.games ?? [] } : null,
       weekly: exactWeekly(snaps),
       nights: new Set(snaps.map((s) => s.day)).size,
@@ -109,6 +110,7 @@ function brandFor(leagueId: string, view: ReturnType<typeof familyView>, d: Data
   return {
     name: view.name,
     tag: "League",
+    sport: view.sport,
     base: `/l/${leagueId}`,
     storage: `rl:${view.id}:`,
     scores: `/api/l/${leagueId}/scores`,

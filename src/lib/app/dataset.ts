@@ -1,3 +1,4 @@
+import { sportOf } from "@/lib/core/sport";
 import type { Analysis } from "@/lib/app/analysis";
 import { seasonView, type Finish } from "@/lib/app/model";
 import { seasonYears } from "@/lib/app/sleeper";
@@ -203,7 +204,7 @@ export function buildDataset(
 
     lgSeasons.push({
       code,
-      years: seasonYears(lg.season),
+      years: seasonYears(lg.season, sportOf(lg)),
       name: lg.name,
       status: lg.status,
       leagueId: lg.league_id,
@@ -300,5 +301,6 @@ export function buildDataset(
         .sort((x, y) => y.n - x.n),
     },
     extras: { asOf: new Date().toISOString(), seasons: exSeasons, players },
+    sport: sportOf(inputs[inputs.length - 1]?.bundle.league),
   };
 }

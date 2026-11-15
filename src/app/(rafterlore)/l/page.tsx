@@ -10,7 +10,7 @@ export default function FindPage() {
           Hang your league&apos;s history in the rafters
         </h1>
         <p className="mt-6 max-w-[54ch] text-lg text-[var(--muted)]">
-          Every season of your Sleeper NBA league in one place: champions, all-time records, every trade graded and
+          Every season of your Sleeper basketball or football league in one place: champions, all-time records, every trade graded and
           every lineup replayed from the box scores. Head-to-head points leagues for now.
         </p>
         <div className="mt-10">

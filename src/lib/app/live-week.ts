@@ -1,6 +1,7 @@
 import "server-only";
 import { cacheLife } from "next/cache";
-import { consensusMatchups, nbaState } from "@/lib/app/sleeper";
+import { consensusMatchups, sportState } from "@/lib/app/sleeper";
+import type { Sport } from "@/lib/core/sport";
 import { playerDirectory } from "@/lib/app/sleeper-cache";
 
 /**
@@ -14,15 +15,15 @@ export type LiveSide = {
 };
 export type LiveWeek = { week: number; asOf: string; games: [LiveSide, LiveSide][] } | null;
 
-export async function liveWeek(leagueId: string, season: string): Promise<LiveWeek> {
+export async function liveWeek(leagueId: string, season: string, sport: Sport = "nba"): Promise<LiveWeek> {
   "use cache: remote";
   cacheLife("minutes");
-  const state = await nbaState();
+  const state = await sportState(sport);
   const inSeason = state.season_type === "regular" || state.season_type === "post";
   if ((state.league_season || state.season) !== season || !inSeason) return null;
   const week = state.week;
   if (!week) return null;
-  const [mus, dir] = await Promise.all([consensusMatchups(leagueId, week, 4), playerDirectory().catch(() => ({}) as Awaited<ReturnType<typeof playerDirectory>>)]);
+  const [mus, dir] = await Promise.all([consensusMatchups(leagueId, week, 4), playerDirectory(sport).catch(() => ({}) as Awaited<ReturnType<typeof playerDirectory>>)]);
   const side = (m: (typeof mus)[number]): LiveSide => ({
     rosterId: m.roster_id,
     pts: Math.round((m.points ?? 0) * 10) / 10,

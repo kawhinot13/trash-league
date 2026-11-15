@@ -22,7 +22,7 @@ export default function FrontOfficePage({ params }: PageProps<"/l/[leagueId]/fro
 }
 
 async function Tools({ p }: { p: LeaguePage }) {
-  const data = await frontOffice(p.view.current.leagueId).catch((e) => (logError("front office", e), null));
+  const data = await frontOffice(p.view.current.leagueId, p.view.sport).catch((e) => (logError("front office", e), null));
   if (!data || !data.teams.length)
     return <p className="text-[var(--muted)]">Live rosters are unavailable right now. Sleeper didn&apos;t answer, or the season hasn&apos;t started.</p>;
   return <FrontOfficeTools data={data} managers={p.dataset!.league.managers} local={[]} />;

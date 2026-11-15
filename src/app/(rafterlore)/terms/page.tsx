@@ -9,7 +9,7 @@ export default function Terms() {
       <section>
         <h2>What Rafterlore is</h2>
         <p>
-          Rafterlore is a free, non-commercial fan project that shows the history of fantasy basketball leagues hosted on
+          Rafterlore is a free, non-commercial fan project that shows the history of fantasy basketball and football leagues hosted on
           Sleeper. There are no payments, ads or paid features.
         </p>
       </section>

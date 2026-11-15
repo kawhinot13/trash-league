@@ -13,7 +13,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`)
-- Product name: Rafterlore (`src/lib/app/brand.ts`). Any Sleeper NBA head-to-head points league. Pages live in
+- Product name: Rafterlore (`src/lib/app/brand.ts`). Any Sleeper NBA or NFL head-to-head points league. Sport is
+  per league (`src/lib/core/sport.ts`, `FamilyView.sport`, `brand.sport`, `LiveSource.sport`); basketball is the
+  default everywhere so Trash is untouched. Football replays weeks from matchup `players_points` (no box scores).
+  No player photos on Rafterlore: designed badges (`brand.headshots = "badge"`, `PlayerBadge`); Trash keeps photos. Pages live in
   `src/app/(rafterlore)/` with their own shell; the Trash site lives in `src/app/(trash)/`. Rafterlore never imports Trash
   data or chrome. League pages: overview, this week (live, per Sleeper), rivals, managers + profiles, remove.
 - Shared features: `src/lib/core/` holds every league feature as pure functions over a `Dataset` (Trash's

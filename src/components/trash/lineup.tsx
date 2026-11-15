@@ -56,8 +56,8 @@ function clues(g: Suspect, t: Suspect, nick: (id: string) => string, league = "T
 }
 
 /** What every column means, shown in the header popovers and the key. */
-const colsFor = (league: string): { label: string; info: string }[] => [
-  { label: "Team", info: "His NBA team right now. Brown means same conference." },
+const colsFor = (league: string, sport: "nba" | "nfl" = "nba"): { label: string; info: string }[] => [
+  { label: "Team", info: `His ${sport === "nfl" ? "NFL" : "NBA"} team right now. Brown means same conference.` },
   { label: "Pos", info: "Fantasy positions on Sleeper. Brown means at least one position in common." },
   { label: "Height", info: "Brown means within 2 inches. The arrow points toward the suspect's height." },
   { label: "Age", info: "Age today. Brown means within 2 years." },
@@ -123,7 +123,7 @@ function Key() {
         suspect is taller, older, has more weeks, and so on.
       </p>
       <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-        {colsFor(brand.tag ?? brand.name).map((c) => (
+        {colsFor(brand.tag ?? brand.name, brand.sport).map((c) => (
           <div key={c.label}>
             <dt className="font-semibold">{c.label}</dt>
             <dd className="text-[var(--muted)]">{c.info}</dd>
@@ -491,7 +491,7 @@ export function Lineup({
                       .map((w) => w[0])
                       .join(".")}.`,
                   },
-                  { at: 7, label: "Tip", text: target.team === "FA" ? "No current NBA team" : `Plays for ${target.team}` },
+                  { at: 7, label: "Tip", text: target.team === "FA" ? `No current ${brand.sport === "nfl" ? "NFL" : "NBA"} team` : `Plays for ${target.team}` },
                 ].map((h) => {
                   const misses = guesses.filter((g) => g !== target.pid).length;
                   const open = misses >= h.at || over;
@@ -605,7 +605,7 @@ export function Lineup({
           {/* statements */}
           <div className="mt-5">
             <div className={`hidden gap-1.5 px-1.5 pb-2 text-[11px] font-semibold text-[var(--muted)] md:grid ${GRID}`}>
-              {colsFor(brand.tag ?? brand.name).map((c) => (
+              {colsFor(brand.tag ?? brand.name, brand.sport).map((c) => (
                 <ColHead key={c.label} {...c} />
               ))}
             </div>

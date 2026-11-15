@@ -14,7 +14,7 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/l/[leagueId]/i
   if (!isSleeperId(leagueId)) return Response.json({ error: "That isn't a Sleeper league id." }, { status: 400 });
   try {
     const got = await getFamily(leagueId, await clientIp());
-    if (got.status === "not_found") return Response.json({ error: "That isn't a Sleeper NBA league." }, { status: 404 });
+    if (got.status === "not_found") return Response.json({ error: "That isn't a Sleeper basketball or football league." }, { status: 404 });
     if (got.status === "removed") return Response.json({ error: "This league asked to be removed from Rafterlore." }, { status: 410 });
     if (got.status === "limited")
       return Response.json({ error: `Too many new leagues from your network. Try again in ${got.minutes} minutes.` }, { status: 429 });

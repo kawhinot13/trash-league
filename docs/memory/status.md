@@ -11,6 +11,8 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
   Lock-In, quiz, profiles), rivals (machine, who owns who), history (seasons, trade court, generated
   trade crimes, almanac, re-draft, time machine, pickups), front office; verified removal; /privacy, /terms;
   share cards (league, manager, rivals); "see an example league" link; /l/status (nightly runs, queue, budget).
+- Sports: Sleeper basketball and football (2026-11-15). Basketball leagues are labeled lock-in or daily
+  lineups (detected from games). Player photos replaced by badges on Rafterlore.
 - Infrastructure: Neon Postgres in production, nightly cron (10:17 UTC), job queue, shared Sleeper
   throttle, caches, rate limits, redacted logging. League pages are pre-built (ISR) and served from the cache.
 - Claude Code setup: secret guard and TypeScript stop hooks, mobile-qa (Haiku) and rules-reviewer
@@ -25,6 +27,10 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 ## Open tasks and ideas
 - Before a major public or commercial launch: written authorization from Sleeper (see decisions.md).
 - Category (non-points) leagues: detection is a heuristic; not supported yet.
+- Yahoo (football + basketball, points and categories): parked by the owner. Needs a Yahoo developer app,
+  the signed API agreement, user sign-in (OAuth) and network access to Yahoo's hosts.
+- Football: the Lineup game still uses basketball-tuned brown thresholds (height within 2 in, etc.); fine but
+  could be tuned. Best-ball leagues of either sport are not supported.
 - More custom-pack tooling (how other leagues would get their own pack).
 - Optional public contact address: set `RAFTERLORE_CONTACT_EMAIL` in Vercel to show it on /privacy and /terms.
 

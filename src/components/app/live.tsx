@@ -9,7 +9,7 @@ const fmt = (x: number) => x.toLocaleString("en-US", { minimumFractionDigits: 1,
 export async function LiveGames({ p }: { p: LeaguePage }) {
   const s = p.view.current;
   if (s.status !== "in_season") return <p className="text-[var(--muted)]">No games this week. The season isn&apos;t underway.</p>;
-  const lw = await liveWeek(s.leagueId, s.season).catch((e) => {
+  const lw = await liveWeek(s.leagueId, s.season, p.view.sport).catch((e) => {
     logError(`live ${s.leagueId}`, e);
     return undefined;
   });

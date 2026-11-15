@@ -1,3 +1,4 @@
+import { sportOf } from "@/lib/core/sport";
 import type { SeasonBundle } from "@/lib/app/family";
 import type { WeekData } from "@/lib/app/replay";
 import { official, seasonYears, type SLeague } from "@/lib/app/sleeper";
@@ -48,7 +49,7 @@ export type Pickup = { who: Who; pid: string; season: string; years: string; wee
 /** One head-to-head game, per Sleeper's weekly matchup scores. */
 export type Game = { season: string; years: string; week: number; a: Who; b: Who; pa: number; pb: number; playoff: boolean };
 
-export const ANALYSIS_VERSION = 4;
+export const ANALYSIS_VERSION = 5;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */
@@ -94,7 +95,7 @@ export function analyse(
 
   for (const { bundle, weeks, regEnd, current } of seasons) {
     const lg = bundle.league;
-    const years = seasonYears(lg.season);
+    const years = seasonYears(lg.season, sportOf(lg));
     const who = new Map<number, Who>(bundle.rosters.map((r) => [r.roster_id, r.owner_id ?? `r${r.roster_id}`]));
     const W = (rid: number | string) => who.get(Number(rid)) ?? `r${rid}`;
     for (const w of weeks) Object.assign(players, w.names);

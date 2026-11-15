@@ -11,4 +11,9 @@ export type LiveSource = {
   get: <T>(path: string) => Promise<T>;
   /** A manager's id in this site's data. */
   idOf: (u: SleeperUserLike) => string;
+  /** Sleeper sport for state, stats, projections and trending paths. Basketball when unset. */
+  sport?: "nba" | "nfl";
 };
+
+/** The sport segment for a source's Sleeper paths. */
+export const sportPath = (src: LiveSource) => src.sport ?? "nba";

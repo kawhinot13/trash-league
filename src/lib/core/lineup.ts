@@ -8,7 +8,7 @@ export type Suspect = {
   pid: string;
   name: string;
   team: string;
-  conf: "East" | "West" | "";
+  conf: "East" | "West" | "AFC" | "NFC" | "";
   pos: string[];
   height: number;
   /** Total weeks on any Trash roster. */
@@ -24,6 +24,7 @@ export type Suspect = {
 };
 
 const EAST = new Set(["ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND", "MIA", "MIL", "NYK", "ORL", "PHI", "TOR", "WAS"]);
+const AFC = new Set(["BAL", "BUF", "CIN", "CLE", "DEN", "HOU", "IND", "JAX", "KC", "LV", "LAC", "MIA", "NE", "NYJ", "PIT", "TEN"]);
 export function lineup(d: Dataset): { suspects: Suspect[]; answers: string[]; nicks: Record<string, string> } {
   const raw = d.extras;
   const players = d.extras.players;
@@ -50,7 +51,7 @@ export function lineup(d: Dataset): { suspects: Suspect[]; answers: string[]; ni
       pid,
       name: p[0],
       team: p[2] || "FA",
-      conf: p[2] ? (EAST.has(p[2]) ? "East" : "West") : "",
+      conf: !p[2] ? "" : d.sport === "nfl" ? (AFC.has(p[2]) ? "AFC" : "NFC") : EAST.has(p[2]) ? "East" : "West",
       pos: p[1],
       height: p[4],
       weeks: owners.reduce((t, [, w]) => t + w, 0),

@@ -10,7 +10,22 @@ const SLOT_OK: Record<string, string[]> = {
   F: ["SF", "PF"],
   C: ["C"],
   UTIL: ["PG", "SG", "SF", "PF", "C"],
+  // Football
+  QB: ["QB"],
+  RB: ["RB"],
+  WR: ["WR"],
+  TE: ["TE"],
+  K: ["K"],
+  DEF: ["DEF"],
+  FLEX: ["RB", "WR", "TE"],
+  SUPER_FLEX: ["QB", "RB", "WR", "TE"],
+  REC_FLEX: ["WR", "TE"],
+  WRRB_FLEX: ["WR", "RB"],
 };
+
+export type Sport = "nba" | "nfl";
+/** Football values are one game a week (basketball: the week's best game), so its scale is smaller. */
+const SCALE: Record<Sport, number> = { nba: 1, nfl: 0.35 };
 
 /** Value a player brings right now: injured players count for less (Out and IR barely count). */
 export const avail = (p: FOPlayer) => {
@@ -51,7 +66,7 @@ export function bestLineup(pl: FOPlayer[], slots: string[], worth: (p: FOPlayer)
   return { total: top.v, starters, bench };
 }
 
-export type Metric = "stars" | "lineup" | "depth" | "guards" | "forwards" | "centers" | "health";
+export type Metric = "stars" | "lineup" | "depth" | "guards" | "forwards" | "centers" | "health" | "qb" | "rb" | "wr" | "te";
 export const METRICS: { key: Metric; label: string; info: string }[] = [
   { key: "stars", label: "Star power", info: "Your three best players' weekly value. Stars win this format: every slot only counts one game." },
   { key: "lineup", label: "Starting nine", info: "Your best legal lineup's weekly value, the number that actually wins matchups." },
@@ -62,9 +77,22 @@ export const METRICS: { key: Metric; label: string; info: string }[] = [
   { key: "health", label: "Health", info: "How much of your rotation is available right now (injuries and IR count against it)." },
 ];
 
+export const METRICS_NFL: { key: Metric; label: string; info: string }[] = [
+  { key: "stars", label: "Star power", info: "Your three best players' weekly value." },
+  { key: "lineup", label: "Starting lineup", info: "Your best legal lineup's weekly value, the number that actually wins matchups." },
+  { key: "depth", label: "Depth", info: "Your best five bench players: who starts on bye weeks and when someone gets hurt." },
+  { key: "qb", label: "Quarterbacks", info: "Your best QB." },
+  { key: "rb", label: "Running backs", info: "Your best two RBs." },
+  { key: "wr", label: "Receivers", info: "Your best three WRs." },
+  { key: "te", label: "Tight ends", info: "Your best TE." },
+  { key: "health", label: "Health", info: "How much of your roster is available right now (injuries and IR count against it)." },
+];
+
+export const metricsFor = (sport: Sport = "nba") => (sport === "nfl" ? METRICS_NFL : METRICS);
+
 const topN = (xs: number[], n: number) => [...xs].sort((a, b) => b - a).slice(0, n).reduce((a, x) => a + x, 0);
 
-export function profile(t: FOTeam, P: Record<string, FOPlayer>, slots: string[]) {
+export function profile(t: FOTeam, P: Record<string, FOPlayer>, slots: string[], sport: Sport = "nba") {
   const pl = t.players.map((id) => P[id]).filter(Boolean);
   const lu = bestLineup(pl, slots);
   const group = (pos: string[], n: number) => topN(pl.filter((p) => p.pos.some((x) => pos.includes(x))).map(avail), n);
@@ -73,10 +101,14 @@ export function profile(t: FOTeam, P: Record<string, FOPlayer>, slots: string[])
     stars: topN(pl.map(avail), 3),
     lineup: lu.total,
     depth: lu.bench.slice(0, 5).reduce((a, id) => a + avail(P[id]), 0),
-    guards: group(["PG", "SG"], 3),
-    forwards: group(["SF", "PF"], 3),
-    centers: group(["C"], 2),
+    guards: sport === "nba" ? group(["PG", "SG"], 3) : 0,
+    forwards: sport === "nba" ? group(["SF", "PF"], 3) : 0,
+    centers: sport === "nba" ? group(["C"], 2) : 0,
     health: full ? topN(pl.map(avail), 9) / full : 1,
+    qb: sport === "nfl" ? group(["QB"], 1) : 0,
+    rb: sport === "nfl" ? group(["RB"], 2) : 0,
+    wr: sport === "nfl" ? group(["WR"], 3) : 0,
+    te: sport === "nfl" ? group(["TE"], 1) : 0,
   };
   return { id: t.id, lineup: lu, m };
 }
@@ -84,9 +116,9 @@ export function profile(t: FOTeam, P: Record<string, FOPlayer>, slots: string[])
 export type Profile = ReturnType<typeof profile>;
 
 /** League rank (1 = best) of each team on each metric. */
-export function ranks(all: Profile[]) {
+export function ranks(all: Profile[], sport: Sport = "nba") {
   const r: Record<string, Record<Metric, number>> = {};
-  for (const { key } of METRICS) {
+  for (const { key } of metricsFor(sport)) {
     const sorted = [...all].sort((a, b) => b.m[key] - a.m[key]);
     sorted.forEach((p, i) => ((r[p.id] ??= {} as Record<Metric, number>)[key] = i + 1));
   }
@@ -96,8 +128,18 @@ export function ranks(all: Profile[]) {
 export type Advice = { title: string; text: string; targets?: { pid: string; owner: string | null; why: string }[] };
 
 /** Plain-English diagnosis: what kind of team this is, what it's good at, what it's missing, and what to do. */
-export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer>, teams: FOTeam[], free: string[], slots: string[]) {
-  const R = ranks(all);
+export function diagnose(
+  me: Profile,
+  all: Profile[],
+  P: Record<string, FOPlayer>,
+  teams: FOTeam[],
+  free: string[],
+  slots: string[],
+  sport: Sport = "nba",
+) {
+  const nfl = sport === "nfl";
+  const k = SCALE[sport];
+  const R = ranks(all, sport);
   const r = R[me.id];
   const n = all.length;
   const top = (k: Metric) => r[k] <= Math.ceil(n / 3);
@@ -110,20 +152,28 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
   let pitch = "No glaring hole. Small upgrades at your weakest spot are the way to climb.";
   if (top("stars") && low("depth")) {
     archetype = "Top-heavy";
-    pitch = "Real stars, thin depth. On days your stars sit or get hurt, there's no one good to swap in. Add cheap depth without giving up a star.";
+    pitch = nfl
+      ? "Real stars, thin depth. Bye weeks and injuries will leave holes in your lineup. Add cheap depth without giving up a star."
+      : "Real stars, thin depth. On days your stars sit or get hurt, there's no one good to swap in. Add cheap depth without giving up a star.";
   } else if (top("depth") && !top("stars")) {
     archetype = "Deep, no ceiling";
-    pitch = "Plenty of bodies, not enough big games. In a one-game-per-slot league, consolidate: package two pieces for one star.";
+    pitch = nfl
+      ? "Plenty of bodies, not enough difference-makers. Only your starters score, so consolidate: package two pieces for one star."
+      : "Plenty of bodies, not enough big games. In a one-game-per-slot league, consolidate: package two pieces for one star.";
   } else if (top("lineup")) {
     archetype = "Contender";
-    pitch = "One of the best starting nines in the league. Protect it and patch the weak spot.";
+    pitch = nfl
+      ? "One of the best starting lineups in the league. Protect it and patch the weak spot."
+      : "One of the best starting nines in the league. Protect it and patch the weak spot.";
   } else if (low("lineup")) {
     archetype = "Retooling";
-    pitch = "The starting nine is near the bottom. Sell depth for upside and hit the waiver wire hard.";
+    pitch = nfl
+      ? "The starting lineup is near the bottom. Sell depth for upside and hit the waiver wire hard."
+      : "The starting nine is near the bottom. Sell depth for upside and hit the waiver wire hard.";
   }
 
-  const strengths = METRICS.filter((x) => top(x.key)).map((x) => x.label);
-  const weaknesses = METRICS.filter((x) => low(x.key)).map((x) => x.label);
+  const strengths = metricsFor(sport).filter((x) => top(x.key)).map((x) => x.label);
+  const weaknesses = metricsFor(sport).filter((x) => low(x.key)).map((x) => x.label);
   const advice: Advice[] = [];
 
   // How much a team's best lineup drops without a player. Lineups change daily, so "on the bench"
@@ -134,21 +184,28 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
     const without = bestLineup(t.players.filter((x) => x !== pid).map((x) => P[x]).filter(Boolean), slots).total;
     // Daily swaps mean even a player outside the top nine adds something (some days his game is
     // the best one available), so nobody counts as free: at least 15% of his value.
-    return Math.max(base - without, P[pid].value * 0.15);
+    return Math.max(base - without, P[pid].value * (nfl ? 0.05 : 0.15));
   };
 
   // Weakest position group -> good players whose teams can spare them.
-  const groups: { key: Metric; label: string; pos: string[] }[] = [
-    { key: "guards", label: "guard", pos: ["PG", "SG"] },
-    { key: "forwards", label: "forward", pos: ["SF", "PF"] },
-    { key: "centers", label: "center", pos: ["C"] },
-  ];
+  const groups: { key: Metric; label: string; pos: string[] }[] = nfl
+    ? [
+        { key: "qb", label: "quarterback", pos: ["QB"] },
+        { key: "rb", label: "running back", pos: ["RB"] },
+        { key: "wr", label: "receiver", pos: ["WR"] },
+        { key: "te", label: "tight end", pos: ["TE"] },
+      ]
+    : [
+        { key: "guards", label: "guard", pos: ["PG", "SG"] },
+        { key: "forwards", label: "forward", pos: ["SF", "PF"] },
+        { key: "centers", label: "center", pos: ["C"] },
+      ];
   const weakest = [...groups].sort((a, b) => r[b.key] - r[a.key])[0];
   if (r[weakest.key] > n / 2) {
     const surplus = teams
       .filter((t) => t.id !== me.id)
       .flatMap((t) => t.players.map((pid) => ({ pid, owner: t.id })))
-      .filter(({ pid }) => P[pid]?.pos.some((x) => weakest.pos.includes(x)) && !P[pid].onIR && P[pid].value >= 30)
+      .filter(({ pid }) => P[pid]?.pos.some((x) => weakest.pos.includes(x)) && !P[pid].onIR && P[pid].value >= 30 * k)
       .map((x) => ({ ...x, cost: lineupCost(x.owner, x.pid) }))
       .filter((x) => x.cost <= P[x.pid].value * 0.45)
       .sort((a, b) => P[b.pid].value - 1.5 * b.cost - (P[a.pid].value - 1.5 * a.cost))
@@ -173,7 +230,9 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
       .slice(0, 3);
     advice.push({
       title: "Consolidate: two for one",
-      text: `You're deep beyond your top nine (${chips.map((c) => c.name).join(", ")}). Teams with thin depth will pay for it with a star, and in a lock-in league one big game beats two average ones.`,
+      text: nfl
+        ? `You're deep on the bench (${chips.map((c) => c.name).join(", ")}). Teams with thin depth will pay for it with a star, and only starters score.`
+        : `You're deep beyond your top nine (${chips.map((c) => c.name).join(", ")}). Teams with thin depth will pay for it with a star, and in a lock-in league one big game beats two average ones.`,
       targets: stars.map((s) => ({ pid: s.pid, owner: s.owner, why: "their depth is thin" })),
     });
   }
@@ -182,12 +241,14 @@ export function diagnose(me: Profile, all: Profile[], P: Record<string, FOPlayer
     const pickups = free.filter((pid) => !P[pid].injury).slice(0, 3);
     advice.push({
       title: "Add depth off the wire",
-      text: "Your depth is among the thinnest in the league, so on game days there's often no one good to swap in. These free agents cost nothing.",
+      text: nfl
+        ? "Your depth is among the thinnest in the league, so bye weeks and injuries leave you starting nobodies. These free agents cost nothing."
+        : "Your depth is among the thinnest in the league, so on game days there's often no one good to swap in. These free agents cost nothing.",
       targets: pickups.map((pid) => ({ pid, owner: null, why: `${P[pid].value.toFixed(0)} a week` })),
     });
   }
 
-  const hurt = mine.filter((p) => (p.injury || p.onIR) && p.value >= 20);
+  const hurt = mine.filter((p) => (p.injury || p.onIR) && p.value >= 20 * k);
   if (hurt.length)
     advice.push({
       title: "Injury watch",
@@ -209,7 +270,9 @@ export function evaluateTrade(
   P: Record<string, FOPlayer>,
   slots: string[],
   roster = 15,
+  sport: Sport = "nba",
 ) {
+  const k = SCALE[sport];
   // Trades are for the rest of the season, so value players at expected health.
   const before = (t: FOTeam) => bestLineup(t.players.map((id) => P[id]).filter(Boolean), slots, healthy);
   const after = (t: FOTeam, out: string[], inn: string[]) => {
@@ -230,8 +293,8 @@ export function evaluateTrade(
   const sum = (ids: string[]) => ids.reduce((a, id) => a + (P[id]?.value ?? 0), 0);
   const meDelta = meA.lu.total - meB.total;
   const themDelta = themA.lu.total - themB.total;
-  const verdict = meDelta >= 12 ? "win" : meDelta <= -12 ? "lose" : "fair";
-  const accept = themDelta >= -8 ? "likely" : themDelta >= -25 ? "maybe" : "unlikely";
+  const verdict = meDelta >= 12 * k ? "win" : meDelta <= -12 * k ? "lose" : "fair";
+  const accept = themDelta >= -8 * k ? "likely" : themDelta >= -25 * k ? "maybe" : "unlikely";
   return {
     meDelta,
     themDelta,
@@ -254,7 +317,9 @@ export type Mover = { pid: string; owner: string | null; gap: number; reasons: s
  * worth (last season and Sleeper's projection, as a weekly ceiling). Hot well above it: sell high.
  * Healthy and well below it: buy low. Recent games and minutes decide how loud the call is.
  */
-export function market(P: Record<string, FOPlayer>, teams: FOTeam[]) {
+export function market(P: Record<string, FOPlayer>, teams: FOTeam[], sport: Sport = "nba") {
+  const nfl = sport === "nfl";
+  const k = SCALE[sport];
   const owner = (pid: string) => teams.find((t) => t.players.includes(pid))?.id ?? null;
   const n0 = (x: number) => Math.round(x);
   const sell: (Mover & { score: number })[] = [];
@@ -262,21 +327,23 @@ export function market(P: Record<string, FOPlayer>, teams: FOTeam[]) {
   for (const t of teams)
     for (const pid of t.players) {
       const p = P[pid];
-      if (!p || p.onIR || p.injury === "Out" || p.weeks < 2 || p.expected < 30) continue;
+      if (!p || p.onIR || p.injury === "Out" || p.weeks < 2 || p.expected < 30 * k) continue;
       const gap = (p.now - p.expected) / p.expected;
-      const reasons: string[] = [`Locking in ${n0(p.now)} a week; expected about ${n0(p.expected)}.`];
-      const recentCeil = p.recent * 1.3; // last 3 games, as a weekly-best estimate
+      const reasons: string[] = [
+        nfl ? `Scoring ${n0(p.now)} a week; expected about ${n0(p.expected)}.` : `Locking in ${n0(p.now)} a week; expected about ${n0(p.expected)}.`,
+      ];
+      const recentCeil = p.recent * (nfl ? 1 : 1.3); // last 3 games, as a weekly-best estimate
       const minDelta = p.minRecent - p.min;
-      if (gap >= 0.15 && p.now >= 35) {
+      if (gap >= 0.15 && p.now >= 35 * k) {
         if (recentCeil < p.now * 0.9) reasons.push(`Already cooling: last 3 games average ${n0(p.recent)}.`);
-        if (minDelta <= -3) reasons.push(`Minutes slipping (${n0(p.minRecent)} lately vs ${n0(p.min)}).`);
+        if (!nfl && minDelta <= -3) reasons.push(`Minutes slipping (${n0(p.minRecent)} lately vs ${n0(p.min)}).`);
         if (p.prev) reasons.push(`Averaged ${n0(p.prev)} a game last season.`);
         const heat = recentCeil < p.now * 0.9 ? 1.25 : 1;
         sell.push({ pid, owner: owner(pid), gap, reasons, score: gap * p.expected * heat });
       } else if (gap <= -0.15) {
         if (recentCeil > p.now) reasons.push(`Bouncing back: last 3 games average ${n0(p.recent)}.`);
-        if (minDelta >= 2) reasons.push(`Minutes rising (${n0(p.minRecent)} lately vs ${n0(p.min)}).`);
-        else if (minDelta > -2) reasons.push("Minutes are steady, so the role is still there.");
+        if (!nfl && minDelta >= 2) reasons.push(`Minutes rising (${n0(p.minRecent)} lately vs ${n0(p.min)}).`);
+        else if (!nfl && minDelta > -2) reasons.push("Minutes are steady, so the role is still there.");
         if (p.prev) reasons.push(`Averaged ${n0(p.prev)} a game last season.`);
         const heat = recentCeil > p.now ? 1.25 : 1;
         buy.push({ pid, owner: owner(pid), gap, reasons, score: -gap * p.expected * heat });

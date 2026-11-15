@@ -21,6 +21,7 @@ import { lockIn, tradeCourt } from "@/lib/core/extras";
 import { lineup } from "@/lib/core/lineup";
 import { trashle } from "@/lib/core/trashle";
 import type { Dataset } from "@/lib/core/types";
+import { SPORT } from "@/lib/core/sport";
 
 /** Tab title from Sleeper's public league name (cached; no database or rate limit involved). */
 export async function leagueName(id: string) {
@@ -75,8 +76,8 @@ async function LiveTicker({ p, d }: { p: LeaguePage; d: Dataset }) {
   const lid = p.view.current.leagueId;
   const cur = d.league.seasons[d.league.seasons.length - 1];
   const [table, wire] = await Promise.all([
-    liveTable(lid, cur.standings).catch(() => null),
-    waivers(lid).catch(() => null),
+    liveTable(lid, cur.standings, p.view.sport).catch(() => null),
+    waivers(lid, p.view.sport).catch(() => null),
   ]);
   const items: { tag: string; text: string }[] = [];
   const rows = table?.live ? table.rows : [];
@@ -100,7 +101,7 @@ function blurb(p: LeaguePage) {
   const champs = view.seasons.filter((s) => s.champion);
   const distinct = new Set(champs.map((s) => s.champion?.ownerId)).size;
   const trades = p.dataset?.league.totals.trades;
-  return `A fantasy basketball league since ${view.seasons[0].years.slice(0, 4)}. ${n} season${n === 1 ? "" : "s"}${
+  return `A fantasy ${SPORT[view.sport].word} league since ${view.seasons[0].years.slice(0, 4)}. ${n} season${n === 1 ? "" : "s"}${
     champs.length ? `, ${distinct} champion${distinct === 1 ? "" : "s"}` : ""
   }${trades ? `, ${trades} trades` : ""}${champs.length && distinct === champs.length && champs.length > 1 ? ", and nobody has won it twice" : ""}.${
     p.scoring === "lock-in" ? " Lock-in scoring: one game counts per lineup spot each week." : p.scoring === "daily" ? " Daily lineups: every game a starter plays counts." : ""

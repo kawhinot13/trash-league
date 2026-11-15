@@ -1,4 +1,4 @@
-import type { LiveSource } from "@/lib/core/live-source";
+import { sportPath, type LiveSource } from "@/lib/core/live-source";
 
 /**
  * Live league intel from Sleeper's public endpoints: this week's pairings and the waiver wire,
@@ -42,7 +42,7 @@ const todayET = () =>
  */
 export async function weekPairings(src: LiveSource): Promise<{ week: number; opp: Record<string, string> } | null> {
   try {
-    const state = await src.get<{ week: number }>("/v1/state/nba");
+    const state = await src.get<{ week: number }>(`/v1/state/${sportPath(src)}`);
     const [rosters, users, matchups] = await Promise.all([
       src.get<{ roster_id: number; owner_id: string }[]>(`/v1/league/${src.leagueId}/rosters`),
       src.get<{ user_id: string; display_name: string }[]>(`/v1/league/${src.leagueId}/users`),
@@ -89,7 +89,7 @@ export async function waiverIntel(src: LiveSource): Promise<{
   players: Pickup[];
 } | null> {
   try {
-    const state = await src.get<{ week: number; season: string }>("/v1/state/nba");
+    const state = await src.get<{ week: number; season: string }>(`/v1/state/${sportPath(src)}`);
     const { week, season } = state;
     const [
       lg,
@@ -103,17 +103,17 @@ export async function waiverIntel(src: LiveSource): Promise<{
     ] = await Promise.all([
       src.get<{ scoring_settings: Stats }>(`/v1/league/${src.leagueId}`),
       src.get<{ players: string[] | null }[]>(`/v1/league/${src.leagueId}/rosters`),
-      src.get<Row[]>(`/stats/nba/${season}?season_type=regular`),
-      src.get<Row[]>(`/stats/nba/${season}/${week}?season_type=regular`),
+      src.get<Row[]>(`/stats/${sportPath(src)}/${season}?season_type=regular`),
+      src.get<Row[]>(`/stats/${sportPath(src)}/${season}/${week}?season_type=regular`),
       week > 1
-        ? src.get<Row[]>(`/stats/nba/${season}/${week - 1}?season_type=regular`)
+        ? src.get<Row[]>(`/stats/${sportPath(src)}/${season}/${week - 1}?season_type=regular`)
         : Promise.resolve([] as Row[]),
-      src.get<Row[]>(`/projections/nba/${season}/${week}?season_type=regular`),
+      src.get<Row[]>(`/projections/${sportPath(src)}/${season}/${week}?season_type=regular`),
       src.get<Row[]>(
-        `/projections/nba/${season}/${week + 1}?season_type=regular`,
+        `/projections/${sportPath(src)}/${season}/${week + 1}?season_type=regular`,
       ).catch(() => [] as Row[]),
       src.get<{ player_id: string; count: number }[]>(
-        `/v1/players/nba/trending/add?lookback_hours=48&limit=100`,
+        `/v1/players/${sportPath(src)}/trending/add?lookback_hours=48&limit=100`,
       ),
     ]);
     const sc = lg.scoring_settings;

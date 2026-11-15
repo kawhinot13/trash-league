@@ -3,7 +3,7 @@ import { AppFooter } from "@/components/app/chrome";
 import { PRODUCT, TAGLINE } from "@/lib/app/brand";
 
 export const metadata: Metadata = {
-  title: { default: `${PRODUCT}: fantasy basketball league history`, template: `%s · ${PRODUCT}` },
+  title: { default: `${PRODUCT}: fantasy league history`, template: `%s · ${PRODUCT}` },
   description: TAGLINE,
 };
 export const viewport: Viewport = { themeColor: "#0b2419" };

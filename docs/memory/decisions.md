@@ -4,6 +4,21 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Sleeper football, player badges, lock-in labels
+- Football reuses everything: sport is a per-league property threaded through the Sleeper client, discovery,
+  jobs, live features and shared UI (brand.sport, default basketball, so Trash's HTML is unchanged; verified
+  against a fresh build of the previous commit). Football weeks come from matchup `players_points` (every
+  rostered player's points), so no box scores; "one" and "all" models are identical for football.
+  Verified on a real 3-season dynasty league: every team-season's W/L/PF matches Sleeper's rosters exactly.
+- Front office: football groups (QB/RB/WR/TE), "starting lineup" wording, values = weekly points (no 1.3x
+  best-of-week lift), thresholds scaled 0.35x. Waiver wire: football positions, no minutes, bye/plays.
+- Player photos removed from Rafterlore (licensing: photos are copyrighted and likenesses are licensed by the
+  players' unions): initials + position badges. Cartoons were rejected: a recognizable drawing still uses the
+  player's likeness. Trash keeps photos (owner's call).
+- Sleeper basketball "lock-in" (one game per lineup spot a week) vs daily lineups is detected from games
+  (Sleeper's settings don't expose it) and shown on the league home.
+- Yahoo was requested then parked by the owner before any code was written.
+
 ## 2026-11-15: Dumpster Dive no-repeat schedule (and today's reset)
 - Prompts repeated too often: 7 kinds, 5 picked a day independently, and "First round"/"Journeymen" had one
   prompt each, so the same question showed up ~70% of days. Now `dailyPrompts` (core/dive.ts) plans days in

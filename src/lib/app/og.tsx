@@ -35,7 +35,7 @@ export function ogCard(title: string, line: string, banners: { label: string; go
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 18, height: 18, borderRadius: 999, background: "#c98a4b" }} />
           <div style={{ fontSize: 30, fontWeight: 800 }}>{PRODUCT}</div>
-          <div style={{ fontSize: 24, color: "#98a4b9" }}>fantasy basketball league history</div>
+          <div style={{ fontSize: 24, color: "#98a4b9" }}>fantasy league history</div>
         </div>
       </div>
     ),

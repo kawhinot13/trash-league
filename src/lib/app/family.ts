@@ -1,6 +1,7 @@
 import { isSleeperId } from "@/lib/app/validate";
+import { isSport, sportOf, SPORT } from "@/lib/core/sport";
 import {
-  nbaState,
+  sportState,
   sleeper,
   userLeagues,
   type SBracket,
@@ -35,7 +36,7 @@ export type Format = { supported: boolean; label: string; reason?: string };
 
 /** Phase 1 supports head-to-head points leagues. */
 export function formatOf(l: Pick<SLeague, "scoring_settings" | "settings" | "sport">): Format {
-  if (l.sport && l.sport !== "nba") return { supported: false, label: l.sport.toUpperCase(), reason: "Only NBA leagues for now." };
+  if (l.sport && !isSport(l.sport)) return { supported: false, label: l.sport.toUpperCase(), reason: "Only basketball and football leagues for now." };
   const s = l.settings ?? {};
   const weights = Object.values(l.scoring_settings ?? {}).filter((v) => v !== 0);
   // Sleeper marks category scoring on the league settings; points leagues carry point weights.
@@ -44,7 +45,7 @@ export function formatOf(l: Pick<SLeague, "scoring_settings" | "settings" | "spo
   if (!weights.length) return { supported: false, label: "Unknown scoring", reason: "This league has no point scoring." };
   if (s.best_ball) return { supported: false, label: "Best ball", reason: "Best-ball leagues are coming later." };
   const kind = s.type === 2 ? "Dynasty" : s.type === 1 ? "Keeper" : "Redraft";
-  return { supported: true, label: `Head-to-head points, ${kind.toLowerCase()}` };
+  return { supported: true, label: `${SPORT[sportOf(l)].label} head-to-head points, ${kind.toLowerCase()}` };
 }
 
 const MAX_SEASONS = 20;
@@ -153,7 +154,8 @@ async function walkBack(start: SLeague): Promise<SLeague[]> {
 
 /** Seasons newer than `newest`: a member's league that links back to it. */
 export async function walkForward(newest: SLeague, memberIds: string[]): Promise<SLeague[]> {
-  const state = await nbaState().catch(() => null);
+  const sport = sportOf(newest);
+  const state = await sportState(sport).catch(() => null);
   const latest = Number(state?.league_season ?? state?.season ?? newest.season);
   const out: SLeague[] = [];
   let cur = newest;
@@ -163,7 +165,7 @@ export async function walkForward(newest: SLeague, memberIds: string[]): Promise
     let found: SLeague | undefined;
     // A few members is plenty: everyone who stayed is in the renewed league.
     for (const uid of members.slice(0, 4)) {
-      const ls = await userLeagues(uid, next).catch(() => []);
+      const ls = await userLeagues(uid, next, sport).catch(() => []);
       found = ls.find((l) => linksTo(l, cur));
       if (found) break;
     }
@@ -180,7 +182,7 @@ export async function walkForward(newest: SLeague, memberIds: string[]): Promise
 export async function discoverFamily(leagueId: string): Promise<Family | null> {
   if (!isSleeperId(leagueId)) return null;
   const start = await sleeper<SLeague | null>(`/v1/league/${leagueId}`).catch(() => null);
-  if (!start || (start.sport && start.sport !== "nba")) return null;
+  if (!start || (start.sport && !isSport(start.sport))) return null;
   const back = await walkBack(start);
   const newest = back[back.length - 1];
   const newestUsers = await sleeper<SUser[] | null>(`/v1/league/${newest.league_id}/users`).catch(() => null);

@@ -22,6 +22,14 @@ const SLOT_OK: Record<string, string[]> = {
   GF: ["SG", "SF"],
   C: ["C"],
   UTIL: ["PG", "SG", "SF", "PF", "C"],
+  // Football (no overlap with basketball's slot names).
+  FLEX: ["RB", "WR", "TE"],
+  SUPER_FLEX: ["QB", "RB", "WR", "TE"],
+  REC_FLEX: ["WR", "TE"],
+  WRRB_FLEX: ["WR", "RB"],
+  IDP_FLEX: ["DL", "LB", "DB", "DE", "DT", "CB", "S"],
+  DL: ["DL", "DE", "DT"],
+  DB: ["DB", "CB", "S"],
 };
 const NON_STARTING = new Set(["BN", "IR", "IL", "TAXI", "NA"]);
 export const startingSlots = (rp: string[]) => rp.filter((s) => !NON_STARTING.has(s));
@@ -172,5 +180,56 @@ export function replayWeek(
   });
   const best: Record<string, [number, number]> = {};
   for (const [pid, gl] of games) best[pid] = [Math.max(...gl.map((g) => g.pts)), gl.filter((g) => g.pts !== 0).length];
+  return { week, teams, trades, adds, names, best, v: REPLAY_VERSION };
+}
+
+/**
+ * Football week: one game per player per week, and Sleeper's matchup already lists every rostered
+ * player's points (players_points), bench included. So the best lineup comes straight from that
+ * week's roster, no box scores or tip-off replay needed. "one" and "all" are the same thing here.
+ */
+export function replayFootballWeek(
+  league: Pick<SLeague, "roster_positions">,
+  week: number,
+  matchups: SMatchup[],
+  txs: STransaction[],
+  dir: Record<string, [string, string[], ...unknown[]]>,
+): WeekData {
+  const slots = startingSlots(league.roster_positions);
+  const names: WeekData["names"] = {};
+  const best: Record<string, [number, number]> = {};
+  const teams: TeamWeek[] = matchups.map((m) => {
+    const pp = m.players_points ?? {};
+    const cands = (m.players ?? []).map((pid) => {
+      const d = dir[pid];
+      if (d) names[pid] = [d[0], d[1]];
+      const pts = r1(pp[pid] ?? 0);
+      if (pp[pid] != null) best[pid] = [pts, pts !== 0 ? 1 : 0];
+      return { pts, pos: d?.[1] ?? [] };
+    });
+    const opt = r1(bestLineup(slots, cands));
+    return {
+      rid: m.roster_id,
+      mid: m.matchup_id ?? null,
+      pts: r1(m.points ?? 0),
+      one: opt,
+      all: opt,
+      st: (m.starters ?? []).filter((p) => p && p !== "0"),
+      sp: (m.starters ?? []).map((p, i) => [p, m.starters_points?.[i] ?? 0] as const).filter(([p]) => p && p !== "0").map(([, x]) => r1(x)),
+      pl: m.players ?? [],
+    };
+  });
+  const trades: WeekData["trades"] = [];
+  const adds: WeekData["adds"] = [];
+  for (const t of txs) {
+    if (t.status !== "complete") continue;
+    const ts = t.status_updated || t.created;
+    if (t.type === "trade") {
+      const sides: Record<string, string[]> = {};
+      for (const [pid, rid] of Object.entries(t.adds ?? {})) (sides[rid] ??= []).push(pid);
+      for (const pk of t.draft_picks ?? []) (sides[pk.owner_id] ??= []).push(`pick:${pk.season} R${pk.round}`);
+      trades.push({ ts, sides });
+    } else for (const [pid, rid] of Object.entries(t.adds ?? {})) adds.push([rid, pid]);
+  }
   return { week, teams, trades, adds, names, best, v: REPLAY_VERSION };
 }

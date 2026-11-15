@@ -35,8 +35,8 @@ async function Table({ p, d }: { p: LeaguePage; d: Dataset }) {
   const cur = d.league.seasons[d.league.seasons.length - 1];
   const lid = p.view.current.leagueId;
   const [{ rows: official, live: ok, week }, pairs] = await Promise.all([
-    liveTable(lid, cur.standings),
-    pairings(lid).catch((e) => (logError(`pairings ${lid}`, e), null)),
+    liveTable(lid, cur.standings, p.view.sport),
+    pairings(lid, p.view.sport).catch((e) => (logError(`pairings ${lid}`, e), null)),
   ]);
   if (!ok || !week || p.view.current.status !== "in_season") return <div className="mx-auto max-w-6xl px-5 md:px-10"><CurrentTable p={p} /></div>;
   const opp = pairs?.week === week ? pairs.opp : {};
@@ -62,13 +62,13 @@ async function Table({ p, d }: { p: LeaguePage; d: Dataset }) {
 }
 
 async function Power({ p, d }: { p: LeaguePage; d: Dataset }) {
-  const r = await power(p.view.current.leagueId, d).catch((e) => (logError("power", e), null));
+  const r = await power(p.view.current.leagueId, d, p.view.sport).catch((e) => (logError("power", e), null));
   if (!r) return <Loading what="Power rankings are unavailable right now. Sleeper didn't answer." />;
   return <PowerRankings rows={r.rows} week={r.week} weights={r.weights} />;
 }
 
 async function Waivers({ p }: { p: LeaguePage }) {
-  const w = await waivers(p.view.current.leagueId).catch((e) => (logError("waivers", e), null));
+  const w = await waivers(p.view.current.leagueId, p.view.sport).catch((e) => (logError("waivers", e), null));
   if (!w) return <Loading what="Waiver intel is unavailable right now because Sleeper did not respond. Try again in a few minutes." />;
   return (
     <div className="mx-auto max-w-6xl px-5 md:px-10">

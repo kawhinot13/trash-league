@@ -81,7 +81,7 @@ export function Finder() {
           <div className="flex items-center gap-3">
             <Avatar src={res.user.avatar} name={res.user.name} size={36} />
             <p className="font-semibold">
-              {res.user.name}&apos;s NBA leagues
+              {res.user.name}&apos;s leagues
             </p>
           </div>
           {res.leagues.length ? (
@@ -105,7 +105,7 @@ export function Finder() {
               ))}
             </ul>
           ) : (
-            <p className="mt-4 text-[var(--muted)]">No NBA leagues this season or last. Check the username, or paste a league id.</p>
+            <p className="mt-4 text-[var(--muted)]">No basketball or football leagues this season or last. Check the username, or paste a league id.</p>
           )}
         </div>
       ) : null}

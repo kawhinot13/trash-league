@@ -4,7 +4,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { FrontOffice } from "@/lib/front-office";
-import { METRICS, diagnose, evaluateTrade, market, profile, type Metric, type Mover } from "@/lib/fo-analysis";
+import { diagnose, evaluateTrade, market, metricsFor, profile, type Metric, type Mover } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Handle, MgrPhoto } from "@/components/trash/brand";
@@ -172,17 +172,21 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
     } catch {}
   };
 
-  const profiles = useMemo(() => data.teams.map((t) => profile(t, P, data.slots)), [data, P]);
+  // Football leagues get football groups, wording and scale; basketball (Trash) is unchanged.
+  const sport = data.sport ?? "nba";
+  const nfl = sport === "nfl";
+  const METRICS = metricsFor(sport);
+  const profiles = useMemo(() => data.teams.map((t) => profile(t, P, data.slots, sport)), [data, P, sport]);
   const mine = profiles.find((p) => p.id === me)!;
-  const d = useMemo(() => diagnose(mine, profiles, P, data.teams, data.free, data.slots), [mine, profiles, P, data]);
+  const d = useMemo(() => diagnose(mine, profiles, P, data.teams, data.free, data.slots, sport), [mine, profiles, P, data, sport]);
   // The trade partner can never be your own team (e.g. after your team is restored from a past
   // visit); fall back to the first other team so the picker, titles and rosters always agree.
   const partner = them !== me && ids.includes(them) ? them : ids.find((x) => x !== me)!;
   const meTeam = data.teams.find((t) => t.id === me)!;
   const themTeam = data.teams.find((t) => t.id === partner)!;
-  const trade = give.length && get.length ? evaluateTrade(give, get, meTeam, themTeam, P, data.slots) : null;
+  const trade = give.length && get.length ? evaluateTrade(give, get, meTeam, themTeam, P, data.slots, undefined, sport) : null;
 
-  const mk = useMemo(() => market(P, data.teams), [P, data]);
+  const mk = useMemo(() => market(P, data.teams, sport), [P, data, sport]);
   const sellMine = (pid: string) => {
     setGive([pid]);
     setGet([]);
@@ -332,7 +336,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
             {/* top nine + depth */}
             <div className="mt-10 grid gap-6 md:grid-cols-2">
               <section>
-                <h3 className="font-display text-3xl font-black">Top nine on paper</h3>
+                <h3 className="font-display text-3xl font-black">{nfl ? "Starting lineup on paper" : "Top nine on paper"}</h3>
                 <p className="text-sm text-[var(--muted)]">{n0(mine.lineup.total)} points a week at full strength</p>
                 <ul className="mt-3 space-y-1.5">
                   {data.slots.map((slot, i) => {
@@ -352,7 +356,11 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
               </section>
               <section>
                 <h3 className="font-display text-3xl font-black">Depth</h3>
-                <p className="text-sm text-[var(--muted)]">Outside your top nine on paper. With daily swaps they still play whenever a starter sits.</p>
+                <p className="text-sm text-[var(--muted)]">
+                  {nfl
+                    ? "Your bench: who starts on bye weeks and when someone gets hurt."
+                    : "Outside your top nine on paper. With daily swaps they still play whenever a starter sits."}
+                </p>
                 <ul className="mt-3 space-y-1.5">
                   {mine.lineup.bench.map((pid) => {
                     const p = P[pid];
@@ -464,7 +472,9 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                       { who: nick(partner), d: trade.themDelta },
                     ].map((x) => (
                       <div key={x.who} className="rounded-2xl bg-black/25 p-4">
-                        <p className="text-sm text-[var(--muted)]"><Handle id={x.who} />&apos;s starting nine</p>
+                        <p className="text-sm text-[var(--muted)]"><Handle id={x.who} />
+                          {nfl ? "'s starting lineup" : "'s starting nine"}
+                        </p>
                         <p className="font-display text-4xl font-black tabular-nums" style={{ color: x.d >= 0 ? GOOD : BAD }}>
                           {x.d >= 0 ? "+" : ""}
                           {n0(x.d)}
@@ -478,7 +488,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                     {trade.meDrops.length ? `You'd have to drop ${trade.meDrops.map((id) => P[id].name).join(", ")}. ` : ""}
                     {trade.themDrops.length ? `${nick(partner)} would drop ${trade.themDrops.map((id) => P[id].name).join(", ")}.` : ""}
                   </p>
-                  <h4 className="mt-5 font-semibold">Your new starting nine</h4>
+                  <h4 className="mt-5 font-semibold">{nfl ? "Your new starting lineup" : "Your new starting nine"}</h4>
                   <ul className="mt-2 grid gap-1.5 sm:grid-cols-3">
                     {data.slots.map((slot, i) => {
                       const pid = trade.meAfter.starters[i];
@@ -503,6 +513,21 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
       </AnimatePresence>
 
       <Explain>
+        {nfl ? (
+          <>
+            <p>
+              A player&apos;s value is his weekly points in this league&apos;s scoring: this season so far, blended with
+              last season until there are enough games, and Sleeper&apos;s projection. Injured players count for less
+              until they&apos;re back.
+            </p>
+            <p>
+              Trades are judged by what really wins matchups: how each team&apos;s best legal starting lineup changes per
+              week, so roster fit and depth are counted, not just adding up names. Within about 4 points a week is
+              called fair.
+            </p>
+          </>
+        ) : (
+          <>
         <p>
           In <LeagueName /> every lineup slot counts one game a week, so a player&apos;s value is his typical best game each
           week: this season&apos;s weekly best, blended with last season (points per game × 1.3) until there are
@@ -513,6 +538,8 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
           week, so roster fit and depth are counted, not just adding up names. Within 12 points a week is called
           fair.
         </p>
+          </>
+        )}
       </Explain>
     </div>
       </Who.Provider>

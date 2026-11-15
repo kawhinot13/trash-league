@@ -430,7 +430,7 @@ export function Pickups({ p }: { p: LeaguePage }) {
           <span className="min-w-0">
             <span className="block truncate font-semibold">{a.players[x.pid]?.[0] ?? "Unknown player"}</span>
             <span className="text-xs text-[var(--muted)]">
-              {p.nameOf(x.who)}, {seasonYears(x.season)} week {x.week}
+              {p.nameOf(x.who)}, {seasonYears(x.season, p.view.sport)} week {x.week}
             </span>
           </span>
           <span className="shrink-0 text-right">

@@ -1,3 +1,4 @@
+import { sportOf, type Sport } from "@/lib/core/sport";
 import type { Family, SeasonBundle } from "@/lib/app/family";
 import { avatarUrl, official, seasonYears, type SBracket } from "@/lib/app/sleeper";
 
@@ -103,7 +104,7 @@ export function seasonView(b: SeasonBundle): SeasonView {
   return {
     leagueId: b.league.league_id,
     season: b.league.season,
-    years: seasonYears(b.league.season),
+    years: seasonYears(b.league.season, sportOf(b.league)),
     name: b.league.name,
     status: b.league.status,
     complete,
@@ -175,6 +176,8 @@ export type FamilyView = {
   current: SeasonView;
   careers: Career[];
   avatar: string | null;
+  /** Basketball or football (from the newest season). */
+  sport: Sport;
 };
 
 export function familyView(f: Family): FamilyView {
@@ -187,6 +190,7 @@ export function familyView(f: Family): FamilyView {
     current,
     careers: careers(seasons),
     avatar: avatarUrl(f.seasons[f.seasons.length - 1].league.avatar),
+    sport: sportOf(f.seasons[f.seasons.length - 1].league),
   };
 }
 

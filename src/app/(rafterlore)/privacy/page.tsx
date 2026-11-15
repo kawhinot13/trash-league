@@ -9,7 +9,7 @@ export default function Privacy() {
       <section>
         <h2>The short version</h2>
         <p>
-          Rafterlore has no accounts, no ads and no tracking cookies. It shows fantasy basketball league history built from
+          Rafterlore has no accounts, no ads and no tracking cookies. It shows fantasy basketball and football league history built from
           data Sleeper already makes public, and it keeps only what it needs to do that.
         </p>
       </section>

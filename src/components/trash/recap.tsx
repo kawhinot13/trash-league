@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
+import { useBrand } from "@/components/trash/brand";
 import type { Players, RecapWeek } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Segmented } from "./intel";
@@ -53,6 +54,7 @@ export function WeeklyRecap({
   managers: Manager[];
 }) {
   const [wk, setWk] = useState(weeks[0]?.week ?? 1);
+  const sport = useBrand().sport;
   const nick = (id: string) => managers.find((m) => m.id === id)?.nick ?? id;
   const r = weeks.find((w) => w.week === wk);
   if (!weeks.length || !r)
@@ -190,7 +192,9 @@ export function WeeklyRecap({
         </motion.ul>
       </AnimatePresence>
       <p className="mt-4 text-xs text-[var(--muted)]">
-        Results and team scores come from Sleeper&apos;s official records and season points totals. Player performances come from NBA box scores.
+        {`Results and team scores come from Sleeper's official records and season points totals. Player performances come from ${
+          sport === "nfl" ? "Sleeper's weekly player scores." : "NBA box scores."
+        }`}
       </p>
     </div>
   );

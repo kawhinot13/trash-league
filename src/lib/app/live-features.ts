@@ -7,6 +7,7 @@ import * as coreLive from "@/lib/core/live";
 import * as corePower from "@/lib/core/power";
 import * as coreStandings from "@/lib/core/standings";
 import type { LiveSource } from "@/lib/core/live-source";
+import type { Sport } from "@/lib/core/sport";
 import type { Dataset, Standing } from "@/lib/core/types";
 
 /**
@@ -15,7 +16,7 @@ import type { Dataset, Standing } from "@/lib/core/types";
  * shared throttle; league-independent responses (box scores, projections, trending players) are
  * shared between leagues for a few minutes, so ten leagues don't fetch the same stats ten times.
  */
-const SHARED = /^\/(stats|projections)\/|^\/v1\/players\/nba\/trending|^\/v1\/state\//;
+const SHARED = /^\/(stats|projections)\/|^\/v1\/players\/(nba|nfl)\/trending|^\/v1\/state\//;
 const memo = new Map<string, { at: number; p: Promise<unknown> }>();
 const get = <T,>(path: string): Promise<T> => {
   if (!SHARED.test(path)) return sleeper<T>(path);
@@ -27,7 +28,7 @@ const get = <T,>(path: string): Promise<T> => {
   while (memo.size > 40) memo.delete(memo.keys().next().value!);
   return p;
 };
-const source = (leagueId: string): LiveSource => ({ leagueId, get, idOf: (u) => u.user_id });
+const source = (leagueId: string, sport: Sport = "nba"): LiveSource => ({ leagueId, get, idOf: (u) => u.user_id, sport });
 
 /** Official points-for totals after k finished weeks, per manager, from the nightly snapshots. */
 async function snapshotTotals(leagueId: string): Promise<Record<number, Record<string, number>>> {
@@ -43,37 +44,37 @@ async function snapshotTotals(leagueId: string): Promise<Record<number, Record<s
   return out;
 }
 
-export async function liveTable(leagueId: string, fallback: Standing[]) {
+export async function liveTable(leagueId: string, fallback: Standing[], sport: Sport = "nba") {
   "use cache: remote";
   cacheLife("minutes");
   const totals = await snapshotTotals(leagueId).catch(() => ({}) as Record<number, Record<string, number>>);
-  return coreStandings.liveStandings(source(leagueId), fallback, (k) => totals[k] ?? null);
+  return coreStandings.liveStandings(source(leagueId, sport), fallback, (k) => totals[k] ?? null);
 }
 
-export async function pairings(leagueId: string) {
+export async function pairings(leagueId: string, sport: Sport = "nba") {
   "use cache: remote";
   cacheLife("minutes");
-  return coreLive.weekPairings(source(leagueId));
+  return coreLive.weekPairings(source(leagueId, sport));
 }
 
-export async function waivers(leagueId: string) {
+export async function waivers(leagueId: string, sport: Sport = "nba") {
   "use cache: remote";
   cacheLife("minutes");
-  return coreLive.waiverIntel(source(leagueId));
+  return coreLive.waiverIntel(source(leagueId, sport));
 }
 
-export async function frontOffice(leagueId: string) {
+export async function frontOffice(leagueId: string, sport: Sport = "nba") {
   "use cache: remote";
   cacheLife("hours");
-  return coreFO.frontOffice(source(leagueId));
+  return coreFO.frontOffice(source(leagueId, sport));
 }
 
 /** Power rankings: live table + front office + this season's lineups + exact weekly scores. */
-export async function power(leagueId: string, d: Dataset) {
+export async function power(leagueId: string, d: Dataset, sport: Sport = "nba") {
   const cur = d.league.seasons[d.league.seasons.length - 1];
   const [{ rows: table, week }, fo, totals] = await Promise.all([
-    liveTable(leagueId, cur.standings),
-    frontOffice(leagueId),
+    liveTable(leagueId, cur.standings, sport),
+    frontOffice(leagueId, sport),
     snapshotTotals(leagueId).catch(() => ({}) as Record<number, Record<string, number>>),
   ]);
   const officialWeek = (w: number) => {

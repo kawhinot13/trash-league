@@ -1,4 +1,4 @@
-import type { LiveSource } from "@/lib/core/live-source";
+import { sportPath, type LiveSource } from "@/lib/core/live-source";
 import type { Standing } from "@/lib/core/types";
 
 type R = {
@@ -28,7 +28,7 @@ export async function liveStandings(
     const [rosters, users, state] = await Promise.all([
       src.get<R[]>(`/v1/league/${src.leagueId}/rosters`),
       src.get<U[]>(`/v1/league/${src.leagueId}/users`),
-      src.get<{ week?: number }>("/v1/state/nba"),
+      src.get<{ week?: number }>(`/v1/state/${sportPath(src)}`),
     ]);
     const week: number | null =
       typeof state?.week === "number" ? state.week : null;

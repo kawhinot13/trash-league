@@ -1,10 +1,12 @@
 import "server-only";
 import { db, hasDb } from "@/lib/app/db";
 import { sleeper, type SStatRow, type Stats } from "@/lib/app/sleeper";
+import type { Sport } from "@/lib/core/sport";
 
 /**
  * Big Sleeper responses, fetched rarely:
- *  - the NBA player list (2.5 MB raw): at most once a day, kept trimmed to name, positions, team;
+ *  - each sport's player list (2.5 MB raw for basketball, ~5 MB for football): at most once a day,
+ *    kept trimmed to name, positions, team;
  *  - a week of box scores (~1.7 MB raw): a finished week never changes, so it's fetched once and
  *    shared by every league in that NBA season (an unfinished week is kept for an hour).
  * Kept in Postgres (shared by every instance) and in memory.
@@ -54,10 +56,10 @@ type RawPlayer = {
   birth_date?: string | null;
 };
 
-/** Every NBA player Sleeper knows (trimmed). Refreshed at most daily. */
-export function playerDirectory(): Promise<PlayerDir> {
-  return cached("players/nba/v2", DAY, async () => {
-    const all = (await sleeper<Record<string, RawPlayer> | null>("/v1/players/nba")) ?? {};
+/** Every player Sleeper knows in a sport (trimmed). Refreshed at most daily. */
+export function playerDirectory(sport: Sport = "nba"): Promise<PlayerDir> {
+  return cached(`players/${sport}/v2`, DAY, async () => {
+    const all = (await sleeper<Record<string, RawPlayer> | null>(`/v1/players/${sport}`)) ?? {};
     const out: PlayerDir = {};
     for (const [pid, p] of Object.entries(all))
       out[pid] = [

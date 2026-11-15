@@ -35,6 +35,8 @@ export type BrandConfig = {
   games: { dive: string; wordle: string; lineup: string };
   /** Manager id -> Sleeper display name (handles, monograms). Trash's ids are its handles. */
   names?: Record<string, string>;
+  /** The league's sport. Basketball when unset (the Trash site). */
+  sport?: "nba" | "nfl";
   /** Season code -> short year label ("’25"), for compact season lists. */
   short?: Record<string, string>;
 };

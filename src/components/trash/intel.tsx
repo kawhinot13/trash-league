@@ -293,14 +293,19 @@ export function WaiverWire({
   players: Pickup[];
   week: number;
 }) {
-  const [pos, setPos] = useState<"ALL" | "G" | "F" | "C">("ALL");
+  // Football: one game a week, no minutes, football positions. Basketball (Trash) unchanged.
+  const nfl = useBrand().sport === "nfl";
+  const [pos, setPos] = useState<string>("ALL");
   const [sort, setSort] = useState<SortKey>("score");
   const list = useMemo(() => {
     const f = players.filter(
       (p) =>
         pos === "ALL" ||
+        (nfl && p.pos.includes(pos)) ||
         p.pos.some((x) =>
-          pos === "G"
+          nfl
+            ? false
+            : pos === "G"
             ? x === "PG" || x === "SG"
             : pos === "F"
               ? x === "SF" || x === "PF"
@@ -310,7 +315,7 @@ export function WaiverWire({
     const v = (p: Pickup) =>
       sort === "minDelta" ? p.minRecent - p.minSeason : p[sort];
     return [...f].sort((a, b) => v(b) - v(a)).slice(0, 25);
-  }, [players, pos, sort]);
+  }, [players, pos, sort, nfl]);
   const best = {
     stream: [...players].sort((a, b) => b.projLeft - a.projLeft)[0],
     hot: [...players]
@@ -326,8 +331,8 @@ export function WaiverWire({
     ["score", "Pickup score"],
     ["recentAvg", "Last 5"],
     ["seasonAvg", "Season"],
-    ["projLeft", "Rest of week"],
-    ["minDelta", "Minutes trend"],
+    ["projLeft", nfl ? "This week" : "Rest of week"],
+    ...(nfl ? [] : ([["minDelta", "Minutes trend"]] as [SortKey, string][])),
     ["trend", "Adds, 48h"],
   ];
   return (
@@ -338,7 +343,9 @@ export function WaiverWire({
             "Best stream this week",
             best.stream,
             best.stream &&
-              `Best game left projects ${n1(best.stream.projLeft)} pts (${best.stream.gamesLeft} game${best.stream.gamesLeft === 1 ? "" : "s"} to pick from)`,
+              (nfl
+                ? `Projects ${n1(best.stream.projLeft)} pts this week`
+                : `Best game left projects ${n1(best.stream.projLeft)} pts (${best.stream.gamesLeft} game${best.stream.gamesLeft === 1 ? "" : "s"} to pick from)`),
           ],
           [
             "Heating up",
@@ -346,12 +353,16 @@ export function WaiverWire({
             best.hot &&
               `${n1(best.hot.recentAvg)} a game lately, up from ${n1(best.hot.seasonAvg)}`,
           ],
-          [
-            "Minutes rising",
-            best.mins,
-            best.mins &&
-              `${n1(best.mins.minRecent)} min lately, up from ${n1(best.mins.minSeason)}`,
-          ],
+          ...(nfl
+            ? []
+            : [
+                [
+                  "Minutes rising",
+                  best.mins,
+                  best.mins &&
+                    `${n1(best.mins.minRecent)} min lately, up from ${n1(best.mins.minSeason)}`,
+                ],
+              ]),
         ].map(([label, p, why]) =>
           p ? (
             <div
@@ -389,12 +400,24 @@ export function WaiverWire({
           id="pos"
           value={pos}
           onChange={setPos}
-          options={[
-            ["ALL", "All"],
-            ["G", "Guards"],
-            ["F", "Forwards"],
-            ["C", "Centers"],
-          ]}
+          options={
+            nfl
+              ? [
+                  ["ALL", "All"],
+                  ["QB", "QB"],
+                  ["RB", "RB"],
+                  ["WR", "WR"],
+                  ["TE", "TE"],
+                  ["K", "K"],
+                  ["DEF", "DEF"],
+                ]
+              : [
+                  ["ALL", "All"],
+                  ["G", "Guards"],
+                  ["F", "Forwards"],
+                  ["C", "Centers"],
+                ]
+          }
         />
         <p className="text-sm text-[var(--muted)]">
           Unrostered in <LeagueName />, scored with this league&apos;s settings. Week{" "}
@@ -478,22 +501,29 @@ export function WaiverWire({
                     {n1(p.seasonAvg)}
                   </td>
                   <td className="px-3 text-right tabular-nums">
-                    {n1(p.projLeft)}{" "}
-                    <span className="text-xs text-[var(--muted)]">
-                      ({p.gamesLeft}g)
-                    </span>
+                    {n1(p.projLeft)}
+                    {nfl ? null : (
+                      <>
+                        {" "}
+                        <span className="text-xs text-[var(--muted)]">
+                          ({p.gamesLeft}g)
+                        </span>
+                      </>
+                    )}
                   </td>
-                  <td
-                    className={`px-3 text-right tabular-nums ${dm >= 2 ? "text-[#7fd49a]" : dm <= -2 ? "text-[#ff8a7a]" : ""}`}
-                  >
-                    {dm > 0 ? "+" : ""}
-                    {n1(dm)} min
-                  </td>
+                  {nfl ? null : (
+                    <td
+                      className={`px-3 text-right tabular-nums ${dm >= 2 ? "text-[#7fd49a]" : dm <= -2 ? "text-[#ff8a7a]" : ""}`}
+                    >
+                      {dm > 0 ? "+" : ""}
+                      {n1(dm)} min
+                    </td>
+                  )}
                   <td className="px-3 text-right tabular-nums">
                     {p.trend ? p.trend.toLocaleString() : "–"}
                   </td>
                   <td className="px-4 text-right tabular-nums">
-                    {p.gamesNext || "–"}g
+                    {nfl ? (p.gamesNext ? "Plays" : "Bye") : <>{p.gamesNext || "–"}g</>}
                   </td>
                 </tr>
               );
@@ -503,16 +533,23 @@ export function WaiverWire({
       </div>
       <Explain title="What each column means">
         <p>
-          <strong>Pickup score:</strong> our blend of last-5 form (45%), season
-          average (25%), projected points left this week (20%), minutes trend
-          and how fast Sleeper users are adding them. Injured players are marked
-          down (Out −50%, Doubtful −30%, Questionable −15%).
+          <strong>Pickup score:</strong>
+          {nfl
+            ? " our blend of last-5 form (45%), season average (25%), this week's projection (20%) and how fast Sleeper users are adding them. Injured players are marked down (Out −50%, Doubtful −30%, Questionable −15%)."
+            : " our blend of last-5 form (45%), season average (25%), projected points left this week (20%), minutes trend and how fast Sleeper users are adding them. Injured players are marked down (Out −50%, Doubtful −30%, Questionable −15%)."}
         </p>
         <p>
           <strong>Last 5 / Season:</strong> fantasy points per game in this
           league&apos;s scoring, over the last five games played and the whole
           season.
         </p>
+        {nfl ? (
+          <p>
+            <strong>This week:</strong> his projected points for this week&apos;s game in this league&apos;s
+            scoring.
+          </p>
+        ) : (
+          <>
         <p>
           <strong>Rest of week:</strong> the projection for his best single game
           still to play this week. <LeagueName /> only counts one locked-in game per
@@ -523,12 +560,15 @@ export function WaiverWire({
           <strong>Minutes trend:</strong> minutes per game lately minus season
           average. Rising minutes usually come before rising production.
         </p>
+          </>
+        )}
         <p>
           <strong>Adds, 48h:</strong> how many Sleeper leagues added the player
           in the last two days, across all of Sleeper.
         </p>
         <p>
-          <strong>Next week:</strong> games scheduled next week.
+          <strong>Next week:</strong>
+          {nfl ? " whether he plays next week or has a bye." : " games scheduled next week."}
         </p>
       </Explain>
     </div>

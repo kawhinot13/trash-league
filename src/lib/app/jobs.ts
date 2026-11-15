@@ -4,8 +4,9 @@ import type { SeasonBundle } from "@/lib/app/family";
 import { analyse, seasonWeeks } from "@/lib/app/analysis";
 import { buildDataset } from "@/lib/app/dataset";
 import { invalidateFamily } from "@/lib/app/store";
-import { REPLAY_VERSION, replayWeek, type WeekData } from "@/lib/app/replay";
-import { consensusMatchups, nbaState, sleeper, type STransaction } from "@/lib/app/sleeper";
+import { REPLAY_VERSION, replayFootballWeek, replayWeek, type WeekData } from "@/lib/app/replay";
+import { consensusMatchups, sportState, sleeper, type STransaction } from "@/lib/app/sleeper";
+import { sportOf, type Sport } from "@/lib/core/sport";
 import { playerDirectory, weekStats, type PlayerDir } from "@/lib/app/sleeper-cache";
 import { safeMessage } from "@/lib/app/safe";
 
@@ -100,7 +101,8 @@ async function bundles(familyId: string): Promise<SeasonBundle[]> {
 
 async function plan(familyId: string): Promise<[string, number, boolean][]> {
   const sql = await db();
-  const state = await nbaState();
+  const fam = await bundles(familyId);
+  const state = await sportState(sportOf(fam[fam.length - 1]?.league));
   const have = new Set(
     (
       await sql<{ league_id: string; week: number }[]>`
@@ -109,7 +111,7 @@ async function plan(familyId: string): Promise<[string, number, boolean][]> {
     ).map((r) => `${r.league_id}|${r.week}`),
   );
   const items: [string, number, boolean][] = [];
-  for (const b of await bundles(familyId)) {
+  for (const b of fam) {
     const { weeks, finalUpTo } = seasonWeeks(b.league, state.league_season || state.season, state.week);
     for (const w of weeks)
       if (!have.has(`${b.league.league_id}|${w}`)) items.push([b.league.league_id, w, w <= finalUpTo]);
@@ -119,6 +121,20 @@ async function plan(familyId: string): Promise<[string, number, boolean][]> {
 
 async function replayOne(b: SeasonBundle, week: number, final: boolean) {
   const lid = b.league.league_id;
+  if (sportOf(b.league) === "nfl") {
+    // Football: the matchup lists every rostered player's points; no box scores needed.
+    const [mus, txs, dir] = await Promise.all([
+      consensusMatchups(lid, week, b.league.status === "complete" ? 1 : 3),
+      sleeper<STransaction[] | null>(`/v1/league/${lid}/transactions/${week}`).then((x) => x ?? []),
+      playerDirectory("nfl"),
+    ]);
+    const data = replayFootballWeek(b.league, week, mus, txs, dir);
+    const sql = await db();
+    await sql`
+      insert into league_weeks (league_id, week, data, final) values (${lid}, ${week}, ${sql.json(data as never)}, ${final})
+      on conflict (league_id, week) do update set data = excluded.data, final = excluded.final, updated_at = now()`;
+    return;
+  }
   const [mus, txs, stats] = await Promise.all([
     consensusMatchups(lid, week, b.league.status === "complete" ? 3 : 10),
     sleeper<STransaction[] | null>(`/v1/league/${lid}/transactions/${week}`).then((x) => x ?? []),
@@ -154,8 +170,9 @@ async function exactWeeks(bs: SeasonBundle[]): Promise<Map<string, number>> {
 
 async function grade(familyId: string) {
   const sql = await db();
-  const state = await nbaState();
   const bs = await bundles(familyId);
+  const sport: Sport = sportOf(bs[bs.length - 1]?.league);
+  const state = await sportState(sport);
   const rows = await sql<{ league_id: string; data: WeekData }[]>`
     select w.league_id, w.data from league_weeks w join leagues l using (league_id)
     where l.family_id = ${familyId} order by w.week`;
@@ -178,7 +195,7 @@ async function grade(familyId: string) {
   );
   const exact = await exactWeeks(bs);
   const a = analyse(inputs, exact);
-  const dir = await playerDirectory().catch(() => ({}) as PlayerDir);
+  const dir = await playerDirectory(sport).catch(() => ({}) as PlayerDir);
   // Names for traded players who never logged a game in a replayed week.
   for (const p of new Set(a.trades.flatMap((t) => t.sides.flatMap((s) => s.got))))
     if (!p.startsWith("pick:") && !a.players[p]) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];

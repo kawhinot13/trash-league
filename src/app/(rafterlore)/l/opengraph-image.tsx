@@ -5,7 +5,7 @@ export const size = ogSize;
 export const contentType = "image/png";
 
 export default function Image() {
-  return ogCard("Your league, in the rafters", "Every season of your Sleeper NBA league: champions, records, trades graded and daily games.", [
+  return ogCard("Your league, in the rafters", "Every season of your Sleeper basketball or football league: champions, records, trades graded and daily games.", [
     { label: "’23", gold: true },
     { label: "’24", gold: true },
     { label: "’25", gold: true },
