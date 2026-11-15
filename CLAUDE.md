@@ -28,9 +28,11 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   found / limited / removed / error and wraps pages in the league's brand.
 - Look: identical to the Trash site (same palette, GlassNav, Hero with the league name centered, PageIntro, footer),
   minus holiday decor (`holiday={false}`, `.rafterlore .xmas-drift::after` hidden).
-- Speed: league pages read `storedLeague()` (`'use cache: remote'`, tagged `family:<id>`), never the database
-  directly; in-season Sleeper refreshes run in `after()`. Call `invalidateFamily()` whenever stored data changes
-  (grading, removal, restore, refresh). Live features use the remote cache too.
+- Speed: league pages are pre-built and served from the cache (ISR): no `connection()`, headers, cookies or
+  `Date.now()` in their render path. They read `storedLeague()` (`'use cache: remote'`, tagged `family:<id>` and
+  `league:<id>`), never the database directly. Unstored leagues render `<Importer>`, which calls the rate-limited
+  import API; the client pings `/api/l/[id]/refresh` for in-season Sleeper refreshes and regrades. Call
+  `invalidateFamily()` whenever stored data changes (`saveFamily` also drops `league:<id>`). Live features use the remote cache too.
 - Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
   instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are

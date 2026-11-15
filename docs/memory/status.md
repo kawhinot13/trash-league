@@ -12,7 +12,7 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
   trade crimes, almanac, re-draft, time machine, pickups), front office; verified removal; /privacy, /terms;
   share cards (league, manager, rivals); "see an example league" link; /l/status (nightly runs, queue, budget).
 - Infrastructure: Neon Postgres in production, nightly cron (10:17 UTC), job queue, shared Sleeper
-  throttle, caches, rate limits, redacted logging.
+  throttle, caches, rate limits, redacted logging. League pages are pre-built (ISR) and served from the cache.
 - Claude Code setup: secret guard and TypeScript stop hooks, mobile-qa (Haiku) and rules-reviewer
   (Sonnet) agents, `scripts/qa-mobile.mjs`, this memory folder, environment setup script, Sonnet default.
 - Design tools kept: UI UX Pro Max and the other design skills, shadcn MCP, 21st.dev Magic MCP

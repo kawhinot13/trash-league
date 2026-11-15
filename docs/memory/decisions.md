@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: League pages are pre-built (ISR), like Trash's
+- Still slow in production after the cache change: pages were rendered per visit (`connection()` in the gate, a
+  visitor-IP rate-limit check in the loader), so each visit paid a serverless start. Now pages have no request
+  APIs and are served from the cache (~4 ms warm locally), regenerated when data changes or every few minutes.
+- First imports moved to the browser (`<Importer>` → rate-limited import API); background refresh/regrade moved
+  to `/api/l/[id]/refresh` (pinged after load, at most every 5 min per browser) because pre-built renders can't
+  read the clock. Rejected: keeping `after()` refreshes in render (breaks prerendering).
+
 ## 2026-11-15: Rafterlore looks exactly like Trash, and is fast
 - Owner wants Trash's exact look: dropped the navy "arena" palette; Rafterlore uses Trash's tokens, glass nav,
   hero (league name centered; trophy behind names longer than 8 characters so every word stays readable),

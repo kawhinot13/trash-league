@@ -1,13 +1,11 @@
 import "server-only";
-import { after } from "next/server";
-import { ANALYSIS_VERSION } from "@/lib/app/analysis";
 import { hasDb } from "@/lib/app/db";
-import { enqueueImport, kick, latestJob, runJobs, type Progress } from "@/lib/app/jobs";
+import { latestJob, type Progress } from "@/lib/app/jobs";
 import { familyView } from "@/lib/app/model";
 import { formatOf } from "@/lib/app/family";
 import { clientIp } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
-import { analysisOf, datasetOf, getFamily, refreshStale, snapshots, storedLeague, type Snapshot, type StoredLeague } from "@/lib/app/store";
+import { analysisOf, datasetOf, getFamily, snapshots, storedLeague, type Snapshot, type StoredLeague } from "@/lib/app/store";
 import type { BrandConfig } from "@/components/trash/brand";
 import type { Dataset } from "@/lib/core/types";
 import { packIdFor } from "@/packs/ids";
@@ -16,6 +14,8 @@ import { loadPack } from "@/packs";
 export type LoadResult =
   | { status: "ok"; page: LeaguePage }
   | { status: "not_found" }
+  /** Not stored yet: the page asks the import API (rate limited per network) to fetch it. */
+  | { status: "missing" }
   | { status: "limited"; minutes: number }
   | { status: "removed"; purgeAfter: string | null }
   | { status: "error" };
@@ -33,11 +33,13 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
   let family;
   if (stored) {
     if (stored.removed) return { status: "removed", purgeAfter: stored.removed.purgeAfter };
-    family = stored.family;
-    const fam = family;
-    after(() => refreshStale(fam).catch((e) => logError(`refresh ${fam.id}`, e)));
+    family = stored.family; // refreshed from Sleeper via /api/l/[id]/refresh (the page is cached)
+  } else if (hasDb()) {
+    // Not stored yet. Pages stay cacheable (no per-visitor work here); the browser starts the
+    // import through the rate-limited API and the page refreshes once the league is saved.
+    return { status: "missing" };
   } else {
-    // First visit (or no database): discover the league, within the import rate limits.
+    // No database (local development): discover the league on every visit.
     let got;
     try {
       got = await getFamily(leagueId, await clientIp());
@@ -59,14 +61,6 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
     loadPack(packIdFor(ids)),
     !opts.dataset ? null : stored ? stored.dataset : datasetOf(view.id).catch(() => null),
   ]);
-  // Results from an older version of the grading: regrade in the background (no new weeks to fetch).
-  const open = !!job && (job.status === "queued" || job.status === "running");
-  if (hasDb() && analysis && (analysis.version ?? 1) < ANALYSIS_VERSION && !open)
-    after(async () => {
-      await enqueueImport(view.id);
-      const r = await runJobs(50_000);
-      if (r.more) await kick();
-    });
   // Names: newest display name per Sleeper user, or the pack's nickname for them.
   const names = new Map<string, string>();
   for (const c of view.careers) names.set(c.ownerId, pack?.nicknames[c.name] ?? c.name);

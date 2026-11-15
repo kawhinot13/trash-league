@@ -31,6 +31,8 @@ const source = (leagueId: string): LiveSource => ({ leagueId, get, idOf: (u) => 
 
 /** Official points-for totals after k finished weeks, per manager, from the nightly snapshots. */
 async function snapshotTotals(leagueId: string): Promise<Record<number, Record<string, number>>> {
+  "use cache: remote";
+  cacheLife("minutes");
   if (!hasDb()) return {};
   const sql = await db();
   const rows = await sql<{ owner_id: string | null; roster_id: number; weeks_done: number; pf: string }[]>`

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { cache } from "react";
 import { AppNav } from "@/components/app/chrome";
+import { Freshen } from "@/components/app/freshen";
+import { Importer } from "@/components/app/importer";
 import { loadLeague, type LeaguePage } from "@/lib/app/league-page";
 import { isSleeperId } from "@/lib/app/validate";
 import { PackOverlay } from "@/packs/overlay";
@@ -28,9 +29,17 @@ export async function LeagueGate({
   children: (p: LeaguePage) => React.ReactNode;
 }) {
   if (!isSleeperId(leagueId)) notFound();
-  await connection(); // per request: database reads, in-season data, rate limits
+  // No per-request APIs here: league pages are built once and served from the cache until the
+  // league's data changes (invalidateFamily / the league:<id> tag).
   const r = await load(leagueId, snapshots, dataset);
   if (r.status === "not_found") notFound();
+  if (r.status === "missing")
+    return (
+      <>
+        <AppNav />
+        <Importer leagueId={leagueId} />
+      </>
+    );
   if (r.status === "limited")
     return (
       <Notice title="Slow down a little">
@@ -62,6 +71,7 @@ export async function LeagueGate({
     <>
       <AppNav league={{ name: p.view.name, id: leagueId, live: p.view.current.status === "in_season" }} />
       <BrandProvider config={p.brand}>{children(p)}</BrandProvider>
+      {p.db ? <Freshen leagueId={leagueId} /> : null}
       {p.pack ? <PackOverlay id={p.pack.id} props={p.pack.overlay} /> : null}
     </>
   );

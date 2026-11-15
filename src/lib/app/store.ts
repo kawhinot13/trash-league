@@ -41,6 +41,9 @@ export async function saveFamily(f: Family): Promise<void> {
           status = excluded.status, name = excluded.name, bundle = excluded.bundle, fetched_at = excluded.fetched_at`;
     if (old.length) await tx`delete from families where id in ${tx(old)}`;
   });
+  // Pages cached while a season wasn't stored yet ("import this league") now have data.
+  for (const s of f.seasons) dropTag(leagueTag(s.league.league_id));
+  dropTag(familyTag(f.id));
 }
 
 async function readFamily(familyId: string): Promise<Family | null> {
@@ -59,13 +62,20 @@ export async function familyIdOf(leagueId: string): Promise<string | null> {
 /** Cache tag for everything stored about one league family. */
 export const familyTag = (familyId: string) => `family:${familyId}`;
 
-/** Drop a family's cached pages so the next visit reads fresh data (after an import, a removal...). */
-export function invalidateFamily(familyId: string) {
+/** Cache tag for one Sleeper league id, stored or not (pages cache "not imported yet" too). */
+export const leagueTag = (leagueId: string) => `league:${leagueId}`;
+
+function dropTag(tag: string) {
   try {
-    revalidateTag(familyTag(familyId), { expire: 0 });
+    revalidateTag(tag, { expire: 0 });
   } catch {
     // Outside a request (a script or test): nothing cached to drop.
   }
+}
+
+/** Drop a family's cached pages so the next visit reads fresh data (after an import, a removal...). */
+export function invalidateFamily(familyId: string) {
+  dropTag(familyTag(familyId));
 }
 
 export type StoredLeague = {
@@ -88,6 +98,7 @@ export async function storedLeague(leagueId: string): Promise<StoredLeague | nul
   "use cache: remote";
   cacheLife({ stale: 60, revalidate: 300, expire: 86_400 });
   if (!hasDb() || !isSleeperId(leagueId)) return null;
+  cacheTag(leagueTag(leagueId));
   const fid = await familyIdOf(leagueId);
   if (!fid) return null;
   cacheTag(familyTag(fid));
