@@ -99,6 +99,45 @@ create table if not exists jobs (
 );
 create unique index if not exists jobs_one_open on jobs(kind, family_id) where status in ('queued', 'running');
 create index if not exists jobs_ready on jobs(status, run_after);
+
+-- Shared Sleeper API budget: calls reserved per minute across every instance, and a shared
+-- cooldown after a 429 (see throttle.ts).
+create table if not exists api_budget (
+  window_start  timestamptz primary key,
+  used          int not null
+);
+create table if not exists api_state (
+  key    text primary key,
+  until  timestamptz not null
+);
+
+-- Big Sleeper responses kept so they're fetched rarely (the player list at most once a day,
+-- finished weeks of box scores shared between leagues).
+create table if not exists sleeper_cache (
+  key         text primary key,
+  data        jsonb not null,
+  fetched_at  timestamptz not null default now(),
+  used_at     timestamptz not null default now()
+);
+
+-- Import rate limits. Only a salted hash of the address is kept, and only for two days.
+create table if not exists rate_events (
+  ip_hash  text not null,
+  kind     text not null,
+  at       timestamptz not null default now()
+);
+create index if not exists rate_events_lookup on rate_events(ip_hash, kind, at);
+
+-- Leagues that asked to be removed. Data is deleted after a grace period; the ids stay so the
+-- league isn't imported again.
+create table if not exists removals (
+  league_id     text primary key,
+  family_id     text not null,
+  requested_at  timestamptz not null default now(),
+  purge_after   timestamptz not null default now() + interval '7 days',
+  purged        boolean not null default false
+);
+create index if not exists removals_family on removals(family_id);
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

@@ -412,7 +412,7 @@ body {
 
 /* ── Multi-league app (/l) ─────────────────────────────────────────────
  * Arena steel instead of Trash's dumpster green; gold stays champions-only. */
-.rafters {
+.rafterlore {
   --bin: #111a2c;      /* the arena ceiling: the page */
   --bin-2: #18233a;    /* raised surfaces */
   --bin-3: #22304d;
@@ -428,8 +428,8 @@ body {
   color: var(--paper);
   min-height: 100dvh;
 }
-html:has(.rafters) { background-color: #111a2c; }
-.rafters ::selection { background: var(--gold); color: var(--bin); }
+html:has(.rafterlore) { background-color: #111a2c; }
+.rafterlore ::selection { background: var(--gold); color: var(--bin); }
 
 /* Hardwood: the floor under the current table. */
 .hardwood {

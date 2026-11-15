@@ -3,7 +3,9 @@ import { db, hasDb } from "@/lib/app/db";
 import type { SeasonBundle } from "@/lib/app/family";
 import { analyse, seasonWeeks } from "@/lib/app/analysis";
 import { replayWeek, type WeekData } from "@/lib/app/replay";
-import { consensusMatchups, nbaState, sleeper, type SStatRow, type STransaction } from "@/lib/app/sleeper";
+import { consensusMatchups, nbaState, sleeper, type STransaction } from "@/lib/app/sleeper";
+import { playerDirectory, weekStats, type PlayerDir } from "@/lib/app/sleeper-cache";
+import { safeMessage } from "@/lib/app/safe";
 
 /**
  * Background jobs in Postgres: no extra service. A job is a list of small steps with its progress
@@ -54,9 +56,18 @@ export async function latestJob(familyId: string): Promise<JobRow | null> {
   return row ?? null;
 }
 
+/** At most this many imports run at once across every instance; the rest wait their turn. */
+const MAX_RUNNING = Math.max(1, Number(process.env.MAX_IMPORT_JOBS) || 2);
+
 async function claim(): Promise<JobRow | null> {
   const sql = await db();
-  const [row] = await sql<JobRow[]>`
+  // One claim at a time (advisory lock), so the running count can't be overshot by a race.
+  return sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(727275)`;
+    const [{ n }] = await tx<{ n: number }[]>`
+      select count(*)::int as n from jobs where status = 'running' and locked_until > now()`;
+    if (n >= MAX_RUNNING) return null;
+    const [row] = await tx<JobRow[]>`
     update jobs set status = 'running', locked_until = now() + ${`${LEASE_S} seconds`}::interval,
       attempts = attempts + 1, updated_at = now()
     where id = (
@@ -64,7 +75,8 @@ async function claim(): Promise<JobRow | null> {
       where (status = 'queued' and run_after <= now()) or (status = 'running' and locked_until < now())
       order by id for update skip locked limit 1)
     returning *`;
-  return row ?? null;
+    return row ?? null;
+  });
 }
 
 async function save(job: JobRow, patch: { status?: string; state?: ImportState; error?: string | null }) {
@@ -82,20 +94,6 @@ async function bundles(familyId: string): Promise<SeasonBundle[]> {
   const rows = await sql<{ bundle: SeasonBundle }[]>`
     select bundle from leagues where family_id = ${familyId} order by season, league_id`;
   return rows.map((r) => r.bundle);
-}
-
-// Weekly stats are ~2 MB and shared by every league in the same NBA season: keep the last few.
-const statsCache = new Map<string, Promise<SStatRow[]>>();
-function weekStats(season: string, week: number) {
-  const k = `${season}/${week}`;
-  let p = statsCache.get(k);
-  if (!p) {
-    p = sleeper<SStatRow[] | null>(`/stats/nba/${season}/${week}?season_type=regular`).then((x) => x ?? []);
-    p.catch(() => statsCache.delete(k));
-    statsCache.set(k, p);
-    while (statsCache.size > 4) statsCache.delete(statsCache.keys().next().value!);
-  }
-  return p;
 }
 
 async function plan(familyId: string): Promise<[string, number, boolean][]> {
@@ -122,7 +120,7 @@ async function replayOne(b: SeasonBundle, week: number, final: boolean) {
   const [mus, txs, stats] = await Promise.all([
     consensusMatchups(lid, week, b.league.status === "complete" ? 3 : 10),
     sleeper<STransaction[] | null>(`/v1/league/${lid}/transactions/${week}`).then((x) => x ?? []),
-    weekStats(b.league.season, week),
+    weekStats(b.league.season, week, final),
   ]);
   const data = replayWeek(b.league, week, mus, txs, stats);
   const sql = await db();
@@ -172,13 +170,8 @@ async function grade(familyId: string) {
     (p) => !p.startsWith("pick:") && !a.players[p],
   );
   if (missing.length) {
-    const all = await sleeper<Record<string, { full_name?: string; first_name?: string; last_name?: string; fantasy_positions?: string[] }>>(
-      "/v1/players/nba",
-    ).catch(() => ({}) as Record<string, never>);
-    for (const p of missing) {
-      const x = all[p];
-      a.players[p] = [x?.full_name || `${x?.first_name ?? ""} ${x?.last_name ?? ""}`.trim() || "Unknown player", x?.fantasy_positions ?? []];
-    }
+    const dir = await playerDirectory().catch(() => ({}) as PlayerDir);
+    for (const p of missing) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];
   }
   await sql`
     insert into analyses (family_id, kind, data) values (${familyId}, 'v1', ${sql.json(a as never)})
@@ -239,7 +232,8 @@ export async function runJobs(budgetMs = 45_000): Promise<{ ran: number; more: b
         break;
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = safeMessage(e);
+      console.error(`[jobs] job ${job.id} failed: ${msg}`);
       // Back off and retry; the lease expiring would also release it.
       const sql = await db();
       await sql`
@@ -256,9 +250,23 @@ export async function runJobs(budgetMs = 45_000): Promise<{ ran: number; more: b
   return { ran, more };
 }
 
+/**
+ * Where to send the job-runner ping. Never taken from the request: the secret goes along, so it
+ * only ever goes to this deployment's own production domain (or localhost in development).
+ */
+function selfOrigin(): string | null {
+  const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (process.env.VERCEL_ENV === "production" && prod) return `https://${prod}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  if (process.env.NODE_ENV !== "production") return `http://localhost:${process.env.PORT || 3000}`;
+  return null;
+}
+
 /** Ask the deployment to run another round of jobs in a fresh invocation (fire and forget). */
-export async function kick(origin: string) {
-  const secret = process.env.JOBS_SECRET || process.env.CRON_SECRET;
+export async function kick() {
+  const origin = selfOrigin();
+  if (!origin) return;
+  const secret = process.env.CRON_SECRET || process.env.JOBS_SECRET;
   await fetch(`${origin}/api/jobs/tick`, {
     method: "POST",
     headers: secret ? { authorization: `Bearer ${secret}` } : {},
@@ -276,7 +284,7 @@ export function progress(job: JobRow | null) {
     done,
     total,
     pct: job.status === "done" ? 1 : total ? Math.min(0.97, done / total) : 0.02,
-    error: job.status === "failed" ? job.error : null,
+    error: job.status === "failed" ? "Sleeper didn't answer" : null,
   };
 }
 export type Progress = NonNullable<ReturnType<typeof progress>>;

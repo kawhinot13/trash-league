@@ -7,10 +7,9 @@ export const maxDuration = 60;
 /** Run queued background jobs in this invocation, and chain another while work remains. */
 async function tick(req: Request) {
   if (!authorized(req)) return new Response("unauthorized", { status: 401 });
-  const origin = new URL(req.url).origin;
   after(async () => {
     const r = await runJobs(50_000);
-    if (r.more) await kick(origin);
+    if (r.more) await kick();
   });
   return Response.json({ ok: true }, { status: 202 });
 }

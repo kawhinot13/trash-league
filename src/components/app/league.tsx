@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Avatar } from "@/components/app/avatar";
 import type { LeaguePage } from "@/lib/app/league-page";
 import { recordStr, type SeasonView, type Team } from "@/lib/app/model";
@@ -19,7 +20,7 @@ export function Section({ id, title, lede, children }: { id: string; title: stri
 }
 
 /* ── The rafters: one banner per season ─────────────────────────────── */
-export function Rafters({ p }: { p: LeaguePage }) {
+export function Banners({ p }: { p: LeaguePage }) {
   const seasons = [...p.view.seasons].reverse();
   return (
     <div className="relative">
@@ -176,7 +177,8 @@ function PointsLog({ p, hasExact }: { p: LeaguePage; hasExact: boolean }) {
 }
 
 /* ── All-time records ───────────────────────────────────────────────── */
-export function Careers({ p }: { p: LeaguePage }) {
+export function Careers({ p, limit }: { p: LeaguePage; limit?: number }) {
+  const rows = limit ? p.view.careers.slice(0, limit) : p.view.careers;
   return (
     <div className="overflow-x-auto rounded-2xl border border-[var(--line)]">
       <table className="w-full text-sm tabular-nums">
@@ -192,13 +194,15 @@ export function Careers({ p }: { p: LeaguePage }) {
           </tr>
         </thead>
         <tbody>
-          {p.view.careers.map((c) => (
+          {rows.map((c) => (
             <tr key={c.ownerId} className="border-b border-[var(--line)] last:border-0">
               <td className="w-full max-w-0 py-3 pr-2 pl-4 md:pl-6">
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar src={c.avatar} name={p.nameOf(c.ownerId)} />
                   <div className="min-w-0">
-                    <p className="truncate font-semibold">{p.nameOf(c.ownerId)}</p>
+                    <Link href={`/l/${p.leagueId}/managers/${c.ownerId}`} className="block truncate font-semibold underline-offset-4 hover:underline">
+                      {p.nameOf(c.ownerId)}
+                    </Link>
                     <p className="truncate text-xs text-[var(--muted)]">{c.team}</p>
                   </div>
                 </div>
@@ -275,9 +279,12 @@ function Fact({ label, team, p, gold, extra }: { label: string; team: Team | nul
 }
 
 /* ── Trade court ────────────────────────────────────────────────────── */
-export function TradeCourt({ p }: { p: LeaguePage }) {
-  const a = p.analysis!;
-  if (!a.trades.length) return <p className="text-[var(--muted)]">No trades yet. Somebody has to go first.</p>;
+/** Every trade with its grade. With `only`, just that manager's trades and no dealer table. */
+export function TradeCourt({ p, only }: { p: LeaguePage; only?: string }) {
+  const a0 = p.analysis!;
+  const a = only ? { ...a0, trades: a0.trades.filter((t) => t.sides.some((s) => s.who === only)) } : a0;
+  if (!a.trades.length)
+    return <p className="text-[var(--muted)]">{only ? "No trades yet." : "No trades yet. Somebody has to go first."}</p>;
   const name = (pid: string) => (pid.startsWith("pick:") ? pid.slice(5).replace(" R", " round ") + " pick" : (a.players[pid]?.[0] ?? "Unknown player"));
   const card = (t: (typeof a.trades)[number], i: number) => (
     <li key={`${t.ts}-${i}`} className="py-5">
@@ -307,8 +314,8 @@ export function TradeCourt({ p }: { p: LeaguePage }) {
     </li>
   );
   return (
-    <div className="grid gap-10 lg:grid-cols-[18rem_1fr]">
-      <div>
+    <div className={only ? "" : "grid gap-10 lg:grid-cols-[18rem_1fr]"}>
+      <div className={only ? "hidden" : ""}>
         <p className="font-display text-2xl font-black">Best dealers</p>
         <ol className="mt-3 divide-y divide-[var(--line)] text-sm">
           {a.dealers.slice(0, 8).map((d) => (

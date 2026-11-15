@@ -12,24 +12,33 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - `src/data/extras.json` is rebuilt by `python3 scripts/build-extras.py <cache-dir> src/data/extras.json` (Sleeper lineups, box scores, transactions, live player bios). A daily scheduled task reruns it and pushes to `main`.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
-## Multi-league app (`/l`, product name in `src/lib/app/brand.ts`)
-- Any Sleeper NBA head-to-head points league: `/l` finds leagues by username, `/l/[leagueId]` is the league page
-  (any season's id works). The Trash site's pages live in `src/app/(trash)/` with their own layout; `/l` has its own
-  shell (`src/app/l/layout.tsx`) and never imports Trash data or chrome.
-- Code: `src/lib/app/` (Sleeper client, season discovery via `previous_league_id` with a `copy_from_league_id`
-  fallback, pure model, lineup replay, grading, Postgres store, jobs). UI in `src/components/app/`.
-- Database: any Postgres via `DATABASE_URL` (or `POSTGRES_URL`); the schema is created on first use (`db.ts`).
-  Without it, league pages still render from Sleeper, but the import and nightly snapshots are off.
-- Background jobs live in the `jobs` table (no extra service). They're started after the import request, by the league
-  page's progress poll, by `/api/jobs/tick` (chains itself) and by the nightly cron. Set `CRON_SECRET` in production.
-- Nightly cron (`vercel.json` → `/api/cron/nightly`, 10:17 UTC): refreshes every family, finds renewed seasons, saves
-  official points for into `pf_snapshots` (one row per team per night, from a league's first visit), queues the
-  incremental import. Exact weekly scores = the difference between snapshots on either side of a week.
-- Season efficiency uses official totals; single-week numbers from matchups are labelled "per Sleeper".
-- Custom packs (`src/packs/`): league-only features layered on the generic page. `ids.ts` maps leagues to packs; the
-  Trash pack (Rico, the pig, music, nicknames, links to the story, movie, storm and Mickey Mouse inquiry) loads only
-  for Trash's seasons. Never add league-specific features to the generic components; add them to a pack.
-- Local testing: start a Postgres (`/usr/lib/postgresql/16/bin`) and run `DATABASE_URL=... NODE_USE_ENV_PROXY=1 next dev`.
+## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`)
+- Product name: Rafterlore (`src/lib/app/brand.ts`). Any Sleeper NBA head-to-head points league. Pages live in
+  `src/app/(rafterlore)/` with their own shell; the Trash site lives in `src/app/(trash)/`. Rafterlore never imports Trash
+  data or chrome. League pages: overview, this week (live, per Sleeper), rivals, managers + profiles, remove.
+- Code: `src/lib/app/` (Sleeper client + shared throttle, caches, season discovery, model, replay, grading, Postgres
+  store, jobs, rate limits, validation, redaction). UI in `src/components/app/`; `gate.tsx` loads a league and
+  handles not found / rate limited / removed / error for every league page.
+- Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
+- Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
+  instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are
+  cached in `sleeper_cache` (`sleeper-cache.ts`). Never call Sleeper with raw `fetch`.
+- Safety: per-network limits (`ratelimit.ts`: 4 new leagues/hour, 10/day; lookups; removals), only salted IP hashes,
+  kept 2 days. At most 2 import jobs run at once. Validate every id/username (`validate.ts`). Log errors with
+  `logError`/`safeMessage` (`safe.ts`), never raw errors; visitors only see plain messages. Secrets stay server-side.
+- Legal: free and non-commercial (Sleeper's API terms). No payments, ads or paywalls; no Sleeper logo; footer says
+  "works with Sleeper leagues, not affiliated with or endorsed by Sleeper". Store only public league data
+  (`sanitizeBundle` in `family.ts` strips everything else). Optional `RAFTERLORE_CONTACT_EMAIL` shows on /privacy and /terms.
+- Removal: any league manager (proved by Sleeper username) can remove a league at `/l/[id]/remove`. Hidden at once,
+  deleted after 7 days by the nightly job, ids kept so it isn't re-imported; restorable until then.
+- Background jobs: `jobs` table, started after an import, by the page's progress poll, `/api/jobs/tick` and the
+  nightly cron. Grading output is versioned (`ANALYSIS_VERSION`); older results regrade on the next visit.
+- Nightly cron (`vercel.json`, 10:17 UTC, needs `CRON_SECRET`): housekeeping and purges, refresh every league, save
+  official points for into `pf_snapshots`, queue the incremental import.
+- Numbers: season efficiency uses official totals; anything from weekly matchups (H2H, live, single weeks) says "per Sleeper".
+- Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.
+  Never put league-specific features in the generic components.
+- Local testing: Postgres binaries in `/usr/lib/postgresql/16/bin`; run `DATABASE_URL=... NODE_USE_ENV_PROXY=1 next dev`.
 
 ## Shipping
 - The owner wants finished work live: after committing, always push it to `main` too (the site deploys from `main`). No need to ask first.

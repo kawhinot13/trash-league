@@ -1,3 +1,4 @@
+import { isSleeperId } from "@/lib/app/validate";
 import {
   nbaState,
   sleeper,
@@ -48,6 +49,49 @@ export function formatOf(l: Pick<SLeague, "scoring_settings" | "settings" | "spo
 
 const MAX_SEASONS = 20;
 
+/**
+ * Keep only the public league data Rafterlore uses. Sleeper's payloads carry more (the league's last
+ * chat message, notification settings and so on); none of that is stored.
+ */
+const pick = <T extends object>(o: T | null | undefined, keys: string[]) =>
+  o ? (Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, (o as Record<string, unknown>)[k]])) as Partial<T>) : null;
+
+export function sanitizeLeague(l: SLeague): SLeague {
+  return {
+    ...(pick(l, ["league_id", "name", "season", "status", "sport", "avatar", "total_rosters", "draft_id", "previous_league_id", "roster_positions", "scoring_settings", "settings"]) as SLeague),
+    metadata: pick(l.metadata, ["copy_from_league_id", "latest_league_winner_roster_id"]) as Record<string, string> | null,
+  };
+}
+
+export function sanitizeBundle(b: SeasonBundle): SeasonBundle {
+  return {
+    league: sanitizeLeague(b.league),
+    users: b.users.map((u) => ({
+      user_id: u.user_id,
+      display_name: u.display_name,
+      avatar: u.avatar ?? null,
+      metadata: pick(u.metadata, ["team_name", "avatar"]),
+    })),
+    rosters: b.rosters.map(
+      (r) =>
+        ({
+          ...pick(r, ["roster_id", "owner_id", "co_owners", "players", "starters", "reserve", "settings"]),
+          metadata: pick(r.metadata, ["record", "streak"]),
+        }) as SRoster,
+    ),
+    winners: b.winners,
+    losers: b.losers,
+    picks: b.picks.map(
+      (p) =>
+        ({
+          ...pick(p, ["pick_no", "round", "roster_id", "player_id", "picked_by"]),
+          metadata: pick(p.metadata, ["first_name", "last_name", "position", "team"]),
+        }) as SPick,
+    ),
+    fetchedAt: b.fetchedAt,
+  };
+}
+
 async function seasonBundle(league: SLeague): Promise<SeasonBundle> {
   const id = league.league_id;
   const [users, rosters, winners, losers, picks] = await Promise.all([
@@ -59,7 +103,7 @@ async function seasonBundle(league: SLeague): Promise<SeasonBundle> {
       ? sleeper<SPick[] | null>(`/v1/draft/${league.draft_id}/picks`).catch(() => null)
       : Promise.resolve(null),
   ]);
-  return {
+  return sanitizeBundle({
     league,
     users: users ?? [],
     rosters: rosters ?? [],
@@ -67,7 +111,7 @@ async function seasonBundle(league: SLeague): Promise<SeasonBundle> {
     losers: losers ?? [],
     picks: picks ?? [],
     fetchedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /** Fetch one season's bundle again (in-season refresh). */
@@ -134,7 +178,7 @@ export async function walkForward(newest: SLeague, memberIds: string[]): Promise
 
 /** Discover every season of the league `leagueId` belongs to and fetch their data. */
 export async function discoverFamily(leagueId: string): Promise<Family | null> {
-  if (!/^\d{6,25}$/.test(leagueId)) return null;
+  if (!isSleeperId(leagueId)) return null;
   const start = await sleeper<SLeague | null>(`/v1/league/${leagueId}`).catch(() => null);
   if (!start || (start.sport && start.sport !== "nba")) return null;
   const back = await walkBack(start);

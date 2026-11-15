@@ -1,0 +1,96 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { cache } from "react";
+import { AppNav } from "@/components/app/chrome";
+import { loadLeague, type LeaguePage } from "@/lib/app/league-page";
+import { isSleeperId } from "@/lib/app/validate";
+import { PackOverlay } from "@/packs/overlay";
+
+/** One load per request, shared by the page and its metadata. */
+export const load = cache((leagueId: string, snapshots = false) => loadLeague(leagueId, { snapshots }));
+
+/**
+ * Loads a league for one of its pages and handles every outcome: not a league, rate limited,
+ * removed by its members, or Sleeper/database trouble. `children` renders the page itself.
+ */
+export async function LeagueGate({
+  leagueId,
+  snapshots,
+  children,
+}: {
+  leagueId: string;
+  snapshots?: boolean;
+  children: (p: LeaguePage) => React.ReactNode;
+}) {
+  if (!isSleeperId(leagueId)) notFound();
+  await connection(); // per request: database reads, in-season data, rate limits
+  const r = await load(leagueId, snapshots);
+  if (r.status === "not_found") notFound();
+  if (r.status === "limited")
+    return (
+      <Notice title="Slow down a little">
+        Rafterlore only imports a few new leagues per network each hour, to stay gentle on Sleeper. Try this one again in{" "}
+        {r.minutes} minute{r.minutes === 1 ? "" : "s"}. Leagues already on Rafterlore open as usual.
+      </Notice>
+    );
+  if (r.status === "removed")
+    return (
+      <Notice title="This league was removed">
+        Its managers asked for it to be taken off Rafterlore, so nothing is shown and nothing new is saved.
+        {r.purgeAfter ? (
+          <>
+            {" "}
+            Its stored data is deleted on {new Date(r.purgeAfter).toLocaleDateString("en-US", { month: "long", day: "numeric" })}. Changed
+            your mind?{" "}
+            <Link href={`/l/${leagueId}/remove`} className="font-semibold text-[var(--paper)] underline underline-offset-4">
+              Restore it
+            </Link>
+            .
+          </>
+        ) : null}
+      </Notice>
+    );
+  if (r.status === "error")
+    return <Notice title="Couldn't load this league">Sleeper or the database didn&apos;t answer. Reload in a moment.</Notice>;
+  const p = r.page;
+  return (
+    <>
+      <AppNav league={{ name: p.view.name, id: leagueId, live: p.view.current.status === "in_season" }} />
+      {children(p)}
+      {p.pack ? <PackOverlay id={p.pack.id} props={p.pack.overlay} /> : null}
+    </>
+  );
+}
+
+export function Notice({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <>
+      <AppNav />
+      <main className="mx-auto max-w-6xl px-4 py-24 md:px-10">
+        <h1 className="font-display text-5xl font-black md:text-7xl">{title}</h1>
+        <p className="mt-4 max-w-[56ch] text-lg text-[var(--muted)]">{children}</p>
+        <Link href="/l" className="mt-8 inline-block rounded-full bg-[var(--paper)] px-6 py-3 font-semibold text-[var(--bin)]">
+          Find a league
+        </Link>
+      </main>
+    </>
+  );
+}
+
+/** Loading state shared by league pages. */
+export function LeagueLoading() {
+  return (
+    <>
+      <AppNav />
+      <main className="mx-auto max-w-6xl px-4 pt-24 md:px-10" aria-busy>
+        <div className="flex gap-3 overflow-hidden">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="banner h-52 w-32 shrink-0 animate-pulse bg-[var(--bin-2)] md:h-60 md:w-36" />
+          ))}
+        </div>
+        <p className="mt-10 text-[var(--muted)]">Loading the league…</p>
+      </main>
+    </>
+  );
+}

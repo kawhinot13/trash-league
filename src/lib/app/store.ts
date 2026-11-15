@@ -1,7 +1,9 @@
 import "server-only";
 import { cacheLife } from "next/cache";
 import { db, hasDb, todayET } from "@/lib/app/db";
-import { discoverFamily, refreshSeason, walkForward, type Family, type SeasonBundle } from "@/lib/app/family";
+import { discoverFamily, refreshSeason, sanitizeBundle, walkForward, type Family, type SeasonBundle } from "@/lib/app/family";
+import { take } from "@/lib/app/ratelimit";
+import { isSleeperId } from "@/lib/app/validate";
 import { official } from "@/lib/app/sleeper";
 import type { Analysis } from "@/lib/app/analysis";
 import { packIdFor } from "@/packs/ids";
@@ -18,6 +20,7 @@ const live = (b: SeasonBundle) => b.league.status !== "complete";
 
 export async function saveFamily(f: Family): Promise<void> {
   const sql = await db();
+  f = { ...f, seasons: f.seasons.map(sanitizeBundle) };
   const newest = f.seasons[f.seasons.length - 1].league;
   const pack = packIdFor(f.seasons.map((s) => s.league.league_id));
   await sql.begin(async (tx) => {
@@ -52,24 +55,52 @@ export async function familyIdOf(leagueId: string): Promise<string | null> {
   return row?.family_id ?? null;
 }
 
+export type FamilyResult =
+  | { status: "ok"; family: Family; isNew: boolean }
+  | { status: "not_found" }
+  | { status: "limited"; minutes: number }
+  | { status: "removed"; familyId: string; purgeAfter: Date | null };
+
+/** Leagues that asked to be removed: any of these ids, or the family. */
+async function removalOf(ids: string[], familyId?: string): Promise<{ familyId: string; purgeAfter: Date | null } | null> {
+  const sql = await db();
+  const [r] = await sql<{ family_id: string; purge_after: Date; purged: boolean }[]>`
+    select family_id, purge_after, purged from removals
+    where league_id in ${sql(ids)} ${familyId ? sql`or family_id = ${familyId}` : sql``} limit 1`;
+  return r ? { familyId: r.family_id, purgeAfter: r.purged ? null : r.purge_after } : null;
+}
+
 /**
  * The family `leagueId` belongs to. With a database: read it, refreshing an in-progress season
- * that's more than a few minutes old; first sight discovers every season, saves it, and takes
- * day one's points-for snapshot. Without one: straight from Sleeper.
+ * that's more than a few minutes old. A league Rafterlore hasn't seen is discovered (every season),
+ * saved, and gets day one's points-for snapshot, as long as the visitor is within the import
+ * rate limit (`ip`; internal callers pass null to skip it). Without a database: straight from Sleeper.
  */
-export async function getFamily(leagueId: string): Promise<{ family: Family; isNew: boolean } | null> {
+export async function getFamily(leagueId: string, ip: string | null): Promise<FamilyResult> {
+  if (!isSleeperId(leagueId)) return { status: "not_found" };
   if (!hasDb()) {
     const family = await discoverCached(leagueId);
-    return family ? { family, isNew: false } : null;
+    return family ? { status: "ok", family, isNew: false } : { status: "not_found" };
   }
   const fid = await familyIdOf(leagueId);
   if (!fid) {
+    const gone = await removalOf([leagueId]);
+    if (gone) return { status: "removed", ...gone };
+    if (ip !== null) {
+      const ok = await take("new_league", ip);
+      if (!ok.ok) return { status: "limited", minutes: ok.minutes };
+    }
     const family = await discoverFamily(leagueId);
-    if (!family) return null;
+    if (!family) return { status: "not_found" };
+    // A renewed season of a league that opted out stays out.
+    const goneFamily = await removalOf(family.seasons.map((s) => s.league.league_id));
+    if (goneFamily) return { status: "removed", ...goneFamily };
     await saveFamily(family);
     await snapshotFamily(family).catch(() => {});
-    return { family, isNew: true };
+    return { status: "ok", family, isNew: true };
   }
+  const gone = await removalOf([leagueId], fid);
+  if (gone) return { status: "removed", ...gone };
   const family = (await readFamily(fid))!;
   const stale = family.seasons.filter((s) => live(s) && Date.now() - Date.parse(s.fetchedAt) > STALE_MS);
   if (stale.length) {
@@ -80,7 +111,52 @@ export async function getFamily(leagueId: string): Promise<{ family: Family; isN
       await saveFamily(family);
     }
   }
-  return { family, isNew: false };
+  return { status: "ok", family, isNew: false };
+}
+
+/**
+ * A league asks to be removed. Its pages disappear and tracking stops right away; the stored data
+ * is deleted after a seven-day grace period (in case of a mistake), and its ids are kept so it
+ * isn't imported again.
+ */
+export async function removeFamily(familyId: string): Promise<Date> {
+  const sql = await db();
+  const ids = (await sql<{ league_id: string }[]>`select league_id from leagues where family_id = ${familyId}`).map((r) => r.league_id);
+  const purge = new Date(Date.now() + 7 * 86_400_000);
+  await sql.begin(async (tx) => {
+    for (const id of ids)
+      await tx`
+        insert into removals (league_id, family_id, purge_after) values (${id}, ${familyId}, ${purge})
+        on conflict (league_id) do update set requested_at = now(), purge_after = excluded.purge_after, purged = false`;
+    await tx`update jobs set status = 'done', state = ${tx.json({ phase: "done" })} where family_id = ${familyId} and status in ('queued','running')`;
+  });
+  return purge;
+}
+
+/** Undo a removal during the grace period. */
+export async function restoreFamily(familyId: string): Promise<boolean> {
+  const sql = await db();
+  const rows = await sql`delete from removals where family_id = ${familyId} and not purged returning league_id`;
+  return rows.length > 0;
+}
+
+/** Nightly: delete removed leagues past their grace period, and old rate-limit and budget rows. */
+export async function housekeeping() {
+  const sql = await db();
+  const due = await sql<{ family_id: string }[]>`
+    select distinct family_id from removals where not purged and purge_after < now()`;
+  for (const { family_id } of due) {
+    await sql`delete from families where id = ${family_id}`; // cascades to seasons, weeks, snapshots, jobs
+    await sql`update removals set purged = true where family_id = ${family_id}`;
+  }
+  await sql`delete from rate_events where at < now() - interval '2 days'`;
+  await sql`delete from api_budget where window_start < now() - interval '1 day'`;
+  return { purged: due.length };
+}
+
+export async function familyUsers(familyId: string): Promise<Set<string>> {
+  const f = await readFamily(familyId);
+  return new Set(f?.seasons.flatMap((s) => s.users.map((u) => u.user_id)) ?? []);
 }
 
 /** Nightly: refresh in-progress seasons and look for a renewed season. */
@@ -158,7 +234,12 @@ export async function packOf(familyId: string): Promise<string | null> {
   return row?.custom_pack ?? null;
 }
 
+/** Families still tracked (not removed). */
 export async function allFamilies(): Promise<string[]> {
   const sql = await db();
-  return (await sql<{ id: string }[]>`select id from families order by created_at`).map((r) => r.id);
+  return (
+    await sql<{ id: string }[]>`
+      select id from families f where not exists (select 1 from removals r where r.family_id = f.id)
+      order by created_at`
+  ).map((r) => r.id);
 }

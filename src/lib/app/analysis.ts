@@ -45,8 +45,14 @@ export type GradedTrade = {
   weeksAfter: number;
 };
 export type Pickup = { who: Who; pid: string; season: string; years: string; week: number; pts: number; starts: number };
+/** One head-to-head game, per Sleeper's weekly matchup scores. */
+export type Game = { season: string; years: string; week: number; a: Who; b: Who; pa: number; pb: number; playoff: boolean };
+
+export const ANALYSIS_VERSION = 2;
 export type Analysis = {
-  version: 1;
+  version: number;
+  /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */
+  games: Game[];
   computedAt: string;
   model: Record<string, "one" | "all">;
   /** Margin under which a trade is called even, scaled to the league's scoring. */
@@ -76,6 +82,7 @@ export function analyse(
   const pickups: Pickup[] = [];
   const players: Analysis["players"] = {};
   const model: Analysis["model"] = {};
+  const games: Game[] = [];
   let weeklyTotal = 0;
   let weeklyN = 0;
   let misfits = 0;
@@ -165,6 +172,24 @@ export function analyse(
         trades.push({ season: lg.season, years, week: w.week, ts: t.ts, sides, winner: null, margin: 0, weeksAfter: later.length });
       }
 
+    // Head-to-head games: teams sharing a matchup id. In the playoffs only real bracket games count
+    // (Sleeper also pairs teams in consolation weeks).
+    const bracketPairs = new Set(
+      bundle.winners.filter((m) => m.t1 != null && m.t2 != null).map((m) => [m.t1, m.t2].sort((x, y) => x! - y!).join("-")),
+    );
+    for (const w of weeks) {
+      const byMid = new Map<number, typeof w.teams>();
+      for (const t of w.teams) if (t.mid != null) (byMid.get(t.mid) ?? byMid.set(t.mid, []).get(t.mid)!).push(t);
+      for (const pair of byMid.values()) {
+        if (pair.length !== 2) continue;
+        const [x, y] = pair.sort((p, q) => p.rid - q.rid);
+        const playoff = w.week > regEnd;
+        if (playoff && !bracketPairs.has(`${x.rid}-${y.rid}`)) continue;
+        if (x.pts === 0 && y.pts === 0) continue;
+        games.push({ season: lg.season, years, week: w.week, a: W(x.rid), b: W(y.rid), pa: x.pts, pb: y.pts, playoff });
+      }
+    }
+
     // Pickups: free-agent and waiver adds, by what they scored as that manager's starter afterwards.
     for (const w of weeks)
       for (const [rid, pid] of w.adds) {
@@ -212,7 +237,8 @@ export function analyse(
     ...top.map((p) => p.pid),
   ]);
   return {
-    version: 1,
+    version: ANALYSIS_VERSION,
+    games,
     computedAt: new Date().toISOString(),
     model,
     even,

@@ -3,6 +3,8 @@
  * the Trash site keeps its own fetchers. Every call is uncached here: callers decide caching
  * (the database, or a 'use cache' wrapper).
  */
+import { acquire, rateLimited, succeeded } from "@/lib/app/throttle";
+
 export const SLEEPER = "https://api.sleeper.app";
 
 export type Stats = Record<string, number>;
@@ -95,20 +97,31 @@ export class SleeperError extends Error {
   }
 }
 
-/** GET with a few retries on network errors and 429/5xx. Sleeper answers unknown ids with `null`. */
+/**
+ * GET from Sleeper, through the shared throttle (see throttle.ts). Retries network errors and 5xx
+ * with backoff; on 429 every instance backs off together. Sleeper answers unknown ids with `null`.
+ */
 export async function sleeper<T>(path: string, tries = 4): Promise<T> {
   let last: unknown;
   for (let i = 0; i < tries; i++) {
+    await acquire();
+    let wait = 400 * 2 ** i;
     try {
       const r = await fetch(`${SLEEPER}${path}`, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
-      if (r.ok) return (await r.json()) as T;
-      if (r.status !== 429 && r.status < 500) throw new SleeperError(path, r.status);
+      if (r.ok) {
+        succeeded();
+        return (await r.json()) as T;
+      }
+      if (r.status === 429) {
+        const ra = Number(r.headers.get("retry-after"));
+        wait = await rateLimited(Number.isFinite(ra) && ra > 0 ? ra : null);
+      } else if (r.status < 500) throw new SleeperError(path, r.status);
       last = new SleeperError(path, r.status);
     } catch (e) {
       if (e instanceof SleeperError && e.status < 500 && e.status !== 429) throw e;
       last = e;
     }
-    await new Promise((res) => setTimeout(res, 400 * 2 ** i));
+    if (i < tries - 1) await new Promise((res) => setTimeout(res, wait));
   }
   throw last;
 }

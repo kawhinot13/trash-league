@@ -1,3 +1,5 @@
-/** The multi-league product's name, in one place so it's easy to change. */
-export const PRODUCT = "Rafters";
-export const TAGLINE = "Your Sleeper league's whole history, hung in the rafters.";
+/** The product's name and line. */
+export const PRODUCT = "Rafterlore";
+export const TAGLINE = "Your fantasy basketball league's whole history, hung in the rafters.";
+/** Optional public contact address for the privacy and terms pages (set RAFTERLORE_CONTACT_EMAIL). */
+export const CONTACT_EMAIL = process.env.RAFTERLORE_CONTACT_EMAIL || null;
