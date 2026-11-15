@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Mobile pass (phones only; desktop unchanged)
+- Owner: pages felt spread out on phones. Section spacing and titles shrink below md; Matchup of the Week is
+  side by side; roster cards are two across; power-ranking cards are tighter; waiver intel shows 10 rows and
+  the trade court 4 trades on phones with "show more" (`usePhone()` in components/trash/use-phone.ts; server
+  render = desktop counts, trimmed after hydration). Live ~25% shorter, Managers ~35%, Stats ~20%.
+- Not changed yet: History's trade crimes, time machine and ring inquiry are still long on phones.
+
 ## 2026-11-15: Trapezoid of Excellence (owner's spec)
 - Kept the open-ended trapezoid (floor + sloped left edge, open top/right) over curved shapes: each edge is a
   one-sentence rule, it's monotonic, and a handful of champions can't justify a curve. Thresholds: <3 champions

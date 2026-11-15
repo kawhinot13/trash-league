@@ -238,17 +238,17 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
     >
       <MgrLink
         id={m.id}
-        className="relative block overflow-hidden rounded-[22px] border-[6px] p-0"
+        className="relative block overflow-hidden rounded-[18px] border-4 p-0 sm:rounded-[22px] sm:border-[6px]"
         style={{
           borderColor: m.titles.length ? "var(--gold)" : "#e8e1cf",
           background: "#e8e1cf",
         }}
       >
         <div
-          className="relative flex h-44 items-end justify-center overflow-hidden"
+          className="relative flex h-24 items-end justify-center overflow-hidden sm:h-44"
           style={{ background: m.color }}
         >
-          <span aria-hidden className="font-display absolute -top-4 -left-1 text-[7rem] leading-none font-black text-black/15">
+          <span aria-hidden className="font-display absolute -top-2 -left-1 text-[4rem] leading-none font-black text-black/15 sm:-top-4 sm:text-[7rem]">
             {place}
           </span>
           <MgrPhoto
@@ -256,15 +256,15 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
             alt=""
             width={120}
             height={120}
-            className="relative mb-[-28px] rounded-full ring-[6px] ring-[#e8e1cf]"
+            className="relative mb-[-20px] size-16 rounded-full ring-4 ring-[#e8e1cf] sm:mb-[-28px] sm:size-[120px] sm:ring-[6px]"
           />
         </div>
-        <div className="px-4 pt-9 pb-4 text-center text-[#1b1710]">
-          <p className="font-display text-3xl leading-none font-black">
+        <div className="px-2 pt-7 pb-3 text-center text-[#1b1710] sm:px-4 sm:pt-9 sm:pb-4">
+          <p className="font-display text-xl leading-none font-black break-words sm:text-3xl">
             {m.nick}
           </p>
-          <p className="mt-1 text-xs text-[#5b5444]"><Handle id={m.id} /></p>
-          <dl className="mt-4 grid grid-cols-3 gap-1 text-center">
+          <p className="mt-1 text-[11px] break-words text-[#5b5444] sm:text-xs"><Handle id={m.id} /></p>
+          <dl className="mt-3 grid grid-cols-3 gap-0.5 text-center sm:mt-4 sm:gap-1">
             {[
               ["Record", `${m.w}–${m.l}${m.t ? `–${m.t}` : ""}`],
               [
@@ -273,13 +273,13 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
               ],
               ["Trades", String(m.trades)],
             ].map(([k, v]) => (
-              <div key={k} className="rounded-lg bg-black/5 py-2">
-                <dt className="text-[10px] text-[#5b5444]">{k}</dt>
-                <dd className="font-display text-xl font-bold">{v}</dd>
+              <div key={k} className="min-w-0 rounded-lg bg-black/5 py-1.5 sm:py-2">
+                <dt className="text-[9px] text-[#5b5444] sm:text-[10px]">{k}</dt>
+                <dd className="font-display text-sm font-bold break-words sm:text-xl">{v}</dd>
               </div>
             ))}
           </dl>
-          <p className="mt-3 h-5 text-sm font-semibold text-[#8a6a12]">
+          <p className="mt-2 min-h-4 text-[11px] leading-tight font-semibold text-[#8a6a12] sm:mt-3 sm:min-h-5 sm:text-sm">
             {m.titles.length
               ? `Champion, ${m.titles.map((t) => t.replace("s", "Season ")).join(", ")}`
               : ""}
@@ -298,7 +298,7 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
 }
 export function ManagerCards({ managers }: { managers: Manager[] }) {
   return (
-    <ul className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-5 sm:grid-cols-2 md:px-10 lg:grid-cols-4">
+    <ul className="mx-auto grid max-w-6xl grid-cols-2 gap-3 px-4 sm:gap-6 sm:px-5 md:px-10 lg:grid-cols-4">
       {managers.map((m, i) => (
         <TiltCard key={m.id} m={m} place={i + 1} />
       ))}

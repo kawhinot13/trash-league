@@ -24,7 +24,7 @@ export default function HistoryPage() {
 
       <Banners />
 
-      <section aria-labelledby="almanac" className="py-24 md:py-32">
+      <section aria-labelledby="almanac" className="py-14 md:py-32">
         <SectionHead id="almanac" title="The almanac">
           Four seasons, sorted by the questions the league actually argues about.
         </SectionHead>
@@ -37,7 +37,7 @@ export default function HistoryPage() {
         </div>
       </section>
 
-      <section aria-labelledby="machine" className="py-24 md:py-32">
+      <section aria-labelledby="machine" className="py-14 md:py-32">
         <SectionHead id="machine" title="Trade time machine">
           Drag through four seasons and watch every roster get built, traded apart and rebuilt, week by week.
         </SectionHead>
@@ -48,14 +48,14 @@ export default function HistoryPage() {
 
       <Crimes />
 
-      <section aria-labelledby="story" className="py-24 md:pt-32 md:pb-0">
+      <section aria-labelledby="story" className="py-14 md:pt-32 md:pb-0">
         <SectionHead id="story" title="The story so far">
           Fifteen moments that made the league, drawn from the animated movie.
         </SectionHead>
         <Story items={STORY} />
       </section>
 
-      <section aria-labelledby="movie" className="py-24 md:py-32">
+      <section aria-labelledby="movie" className="py-14 md:py-32">
         <SectionHead id="movie" title="Trash: the movie">
           The whole history in four and a half minutes, animated and narrated.
         </SectionHead>
@@ -71,7 +71,7 @@ export default function HistoryPage() {
         </div>
       </section>
 
-      <section aria-labelledby="ring" className="py-24 md:py-32">
+      <section aria-labelledby="ring" className="py-14 md:py-32">
         <SectionHead id="ring" title="The Mickey Mouse ring inquiry">
           The whole group chat calls Oscar&apos;s title a Mickey Mouse ring. We pulled the tape on every playoff
           game and let the numbers rule.
@@ -81,7 +81,7 @@ export default function HistoryPage() {
         </div>
       </section>
 
-      <section aria-labelledby="auction" className="relative overflow-hidden bg-[#0a1a14] py-28 md:py-40">
+      <section aria-labelledby="auction" className="relative overflow-hidden bg-[#0a1a14] py-16 md:py-40">
         <Rain />
         <div className="relative mx-auto max-w-4xl px-5 md:px-10">
           <h2

@@ -45,7 +45,7 @@ function History({ p }: { p: LeaguePage }) {
 
       <ChampionBanners d={d} />
 
-      <section aria-labelledby="seasons" className="py-16 md:py-24">
+      <section aria-labelledby="seasons" className="py-10 md:py-24">
         <SectionHead id="seasons" title="Season by season" />
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Archive p={p} />
@@ -53,20 +53,20 @@ function History({ p }: { p: LeaguePage }) {
       </section>
 
       {tradeCourt(d).trades.some((t) => t.winner) ? (
-        <section aria-labelledby="crimes" className="py-24 md:py-32">
+        <section aria-labelledby="crimes" className="py-14 md:py-32">
           <SectionHead id="crimes" title="Trade crimes">The most lopsided deals in league history, with the evidence.</SectionHead>
           <TradeCrimes d={d} />
         </section>
       ) : null}
 
-      <section aria-labelledby="almanac" className="py-24 md:py-32">
+      <section aria-labelledby="almanac" className="py-14 md:py-32">
         <SectionHead id="almanac" title="The almanac">Every season, sorted by the questions the league actually argues about.</SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Almanac managers={d.league.managers} seasons={d.league.seasons} partners={d.league.partners ?? []} />
         </div>
       </section>
 
-      <section aria-labelledby="machine" className="py-24 md:py-32">
+      <section aria-labelledby="machine" className="py-14 md:py-32">
         <SectionHead id="machine" title="Trade time machine">
           Drag through every season and watch every roster get built, traded apart and rebuilt, week by week.
         </SectionHead>

@@ -17,7 +17,7 @@ export default function RivalsPage() {
         Some rivalries are rivalries. Some are ownership. Pick any two managers and settle it.
       </PageIntro>
 
-      <section aria-labelledby="rivalry" className="py-16 md:py-24">
+      <section aria-labelledby="rivalry" className="py-10 md:py-24">
         <SectionHead id="rivalry" title="Rivalry machine">
           Every meeting, every trade between them and a verdict on who really has the upper hand.
         </SectionHead>
@@ -26,7 +26,7 @@ export default function RivalsPage() {
         </div>
       </section>
 
-      <section aria-labelledby="owns" className="py-24 md:py-32">
+      <section aria-labelledby="owns" className="py-14 md:py-32">
         <SectionHead id="owns" title="Who owns who">
           Every regular-season meeting, per Sleeper&apos;s weekly scores.
         </SectionHead>

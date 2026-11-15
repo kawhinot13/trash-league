@@ -11,8 +11,8 @@ export function PageIntro({
   holiday?: boolean;
 }) {
   return (
-    <header className="mx-auto max-w-6xl px-5 pt-32 pb-6 md:px-10 md:pt-40">
-      <h1 className="font-display flex items-start gap-3 text-[clamp(3.6rem,11vw,8rem)] leading-[0.82] font-black">
+    <header className="mx-auto max-w-6xl px-5 pt-28 pb-4 md:px-10 md:pt-40">
+      <h1 className="font-display flex items-start gap-3 text-[clamp(3rem,11vw,8rem)] leading-[0.82] font-black">
         {title}
         {holiday ? (
           <svg viewBox="0 0 60 50" className="mt-1 w-[0.42em] shrink-0" aria-hidden>

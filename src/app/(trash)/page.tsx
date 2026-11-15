@@ -54,7 +54,7 @@ function Doors() {
     },
   ];
   return (
-    <section aria-labelledby="explore" className="pb-28 md:pb-36">
+    <section aria-labelledby="explore" className="pb-16 md:pb-36">
       <SectionHead id="explore" title="Around the league" />
       <ul className="mx-auto grid max-w-6xl gap-4 px-5 sm:grid-cols-2 md:px-10">
         {doors.map((d) => (
@@ -100,7 +100,7 @@ export default function Home() {
         <LiveTicker />
       </Suspense>
 
-      <section id="dive" aria-labelledby="dive-title" className="scroll-mt-24 py-24 md:py-32">
+      <section id="dive" aria-labelledby="dive-title" className="scroll-mt-24 py-14 md:py-32">
         <SectionHead id="dive-title" title="Today's dive">
           Five prompts a day from four seasons of league history. Any right answer counts, but the more niche
           your pick, the more it scores. Same prompts for everyone, so the group chat can compare.

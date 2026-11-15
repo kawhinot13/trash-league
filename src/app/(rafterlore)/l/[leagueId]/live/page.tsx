@@ -97,7 +97,7 @@ function Live({ p }: { p: LeaguePage }) {
       </Suspense>
 
       {inSeason ? (
-        <section aria-labelledby="week" className="py-16 md:py-24">
+        <section aria-labelledby="week" className="py-10 md:py-24">
           <SectionHead id="week" title="This week">
             {p.view.sport === "nfl"
               ? "Live matchup scores, per Sleeper, refreshed every few minutes."
@@ -112,7 +112,7 @@ function Live({ p }: { p: LeaguePage }) {
       ) : null}
 
       {inSeason ? (
-        <section aria-labelledby="power" className="py-16 md:py-24">
+        <section aria-labelledby="power" className="py-10 md:py-24">
           <SectionHead id="power" title="Power rankings">
             Record, scoring, roster strength and recent form, blended into one number.
           </SectionHead>
@@ -125,7 +125,7 @@ function Live({ p }: { p: LeaguePage }) {
       ) : null}
 
       {recap.weeks.length ? (
-        <section aria-labelledby="recap" className="py-16 md:py-24">
+        <section aria-labelledby="recap" className="py-10 md:py-24">
           <SectionHead id="recap" title="Weekly recap">
             Every finished week: the blowout, the nail-biter, the worst benching and the best pickup. Scores per Sleeper.
           </SectionHead>
@@ -136,7 +136,7 @@ function Live({ p }: { p: LeaguePage }) {
       ) : null}
 
       {inSeason ? (
-        <section aria-labelledby="waivers" className="py-16 md:py-24">
+        <section aria-labelledby="waivers" className="py-10 md:py-24">
           <SectionHead id="waivers" title="Waiver intel">
             The best players nobody in the league has, scored with this league&apos;s settings.
           </SectionHead>

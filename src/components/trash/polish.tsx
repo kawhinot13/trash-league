@@ -300,7 +300,7 @@ export function RevealTitle({
     <h2
       ref={ref}
       id={id}
-      className="font-display scroll-mt-28 text-[clamp(3.2rem,9vw,7.5rem)] leading-[0.85] font-black tracking-[-0.02em]"
+      className="font-display scroll-mt-28 text-[clamp(2.5rem,9vw,7.5rem)] leading-[0.85] font-black tracking-[-0.02em]"
     >
       {children}
     </h2>

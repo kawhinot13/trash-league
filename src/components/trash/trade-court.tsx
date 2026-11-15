@@ -8,6 +8,7 @@ import { Explain, Segmented } from "./intel";
 import { Face, pname } from "./player";
 import { MgrPhoto, useBrand } from "@/components/trash/brand";
 import { lineupTerms } from "@/lib/core/lineup-terms";
+import { usePhone } from "./use-phone";
 import { tradeRule } from "@/lib/core/stat-notes";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
@@ -105,7 +106,10 @@ export function TradeCourt({
   const [season, setSeason] = useState("all");
   const [who, setWho] = useState<string | null>(null);
   const [sort, setSort] = useState<"heist" | "recent">("heist");
-  const [shown, setShown] = useState(8);
+  const phone = usePhone();
+  const [more, setShown] = useState(0);
+  // Phones start with 4 trades, bigger screens with 8.
+  const shown = (phone ? 4 : 8) + more;
   const nick = (id: string) => managers.find((m) => m.id === id)?.nick ?? id;
   const list = useMemo(() => {
     const f = trades.filter((t) => (season === "all" || t.code === season) && (!who || t.sides.some((s) => s.who === who)));
@@ -126,7 +130,7 @@ export function TradeCourt({
               type="button"
               onClick={() => {
                 setWho(who === r.id ? null : r.id);
-                setShown(8);
+                setShown(0);
               }}
               aria-pressed={who === r.id}
               className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-150 ${who === r.id ? "bg-white/12 ring-1 ring-[var(--paper)]/50" : "bg-black/20 hover:bg-black/30"}`}
@@ -153,7 +157,7 @@ export function TradeCourt({
           value={season}
           onChange={(v) => {
             setSeason(v);
-            setShown(8);
+            setShown(0);
           }}
           options={[["all", "All"], ...seasons.map((c) => [c, yrs[c]] as [string, string])]}
         />
@@ -179,7 +183,7 @@ export function TradeCourt({
       {list.length > shown ? (
         <button
           type="button"
-          onClick={() => setShown((n) => n + 12)}
+          onClick={() => setShown((n) => n + (phone ? 6 : 12))}
           className="mt-5 inline-flex h-11 cursor-pointer items-center rounded-full border border-white/15 px-5 font-semibold transition-colors hover:bg-white/8"
         >
           Show more trades

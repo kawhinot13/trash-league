@@ -11,10 +11,10 @@ export function SectionHead({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto mb-10 max-w-6xl px-5 md:mb-14 md:px-10">
+    <div className="mx-auto mb-6 max-w-6xl px-5 md:mb-14 md:px-10">
       <RevealTitle id={id}>{title}</RevealTitle>
       {children ? (
-        <div className="mt-5 max-w-[60ch] text-lg leading-relaxed text-[var(--muted)]">
+        <div className="mt-3 max-w-[60ch] text-base leading-relaxed text-[var(--muted)] md:mt-5 md:text-lg">
           {children}
         </div>
       ) : null}
@@ -35,7 +35,7 @@ export function Court({
   return (
     <section
       aria-labelledby={id}
-      className="relative overflow-hidden py-24 text-[#1d140b] md:py-32"
+      className="relative overflow-hidden py-14 text-[#1d140b] md:py-32"
       style={{
         background:
           "repeating-linear-gradient(90deg, var(--wood) 0 84px, var(--wood-2) 84px 86px)",

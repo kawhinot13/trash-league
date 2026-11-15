@@ -19,14 +19,14 @@ export default function ManagersPage() {
         lineup.
       </PageIntro>
 
-      <section aria-labelledby="managers" className="py-16 md:py-24">
+      <section aria-labelledby="managers" className="py-10 md:py-24">
         <SectionHead id="managers" title="The roster">
           Ranked by all-time win rate. Open a card for the full file.
         </SectionHead>
         <ManagerCards managers={league.managers} />
       </section>
 
-      <section aria-labelledby="guys" className="py-24 md:py-32">
+      <section aria-labelledby="guys" className="py-14 md:py-32">
         <SectionHead id="guys" title="My guys">
           Every manager has players they keep coming back to. These are the ones they held the longest and the
           ones who did the most for them.
@@ -36,7 +36,7 @@ export default function ManagersPage() {
         </div>
       </section>
 
-      <section aria-labelledby="lockin" className="py-24 md:py-32">
+      <section aria-labelledby="lockin" className="py-14 md:py-32">
         <SectionHead id="lockin" title="The Lock-In Index">
           Who sets a lineup like a front office and who leaves 70-point nights on the bench. Every
           manager&apos;s real score against the best lineup they could have played. Estimates: built from
@@ -47,7 +47,7 @@ export default function ManagersPage() {
         </div>
       </section>
 
-      <section aria-labelledby="quiz" className="py-24 md:py-32">
+      <section aria-labelledby="quiz" className="py-14 md:py-32">
         <SectionHead id="quiz" title="Which Trash manager are you?">
           Six questions. One match, picked from real Sleeper numbers.
         </SectionHead>

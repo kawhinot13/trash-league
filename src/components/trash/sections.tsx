@@ -306,7 +306,7 @@ const EXHIBITS: {
 
 export function Crimes() {
   return (
-    <section aria-labelledby="crimes" className="py-24 md:py-32">
+    <section aria-labelledby="crimes" className="py-14 md:py-32">
       <SectionHead id="crimes" title="Trade crimes">
         Five trades the league still argues about. Every piece below is pulled
         from the Sleeper transaction log.

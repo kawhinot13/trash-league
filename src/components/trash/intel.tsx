@@ -1,5 +1,7 @@
 "use client";
 
+import { usePhone } from "./use-phone";
+
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Pickup } from "@/lib/live";
@@ -203,20 +205,25 @@ type MatchTeam = {
 };
 const MatchSide = ({ x, right }: { x: MatchTeam; right?: boolean }) => (
   <div
-    className={`flex flex-col items-center text-center ${right ? "md:items-end md:text-right" : "md:items-start md:text-left"}`}
+    className={`flex min-w-0 flex-col items-center text-center ${right ? "md:items-end md:text-right" : "md:items-start md:text-left"}`}
   >
-    <Av id={x.manager} s={96} />
-    <p className="font-display mt-3 text-3xl leading-none font-black md:text-4xl">
+    <span className="md:hidden">
+      <Av id={x.manager} s={60} />
+    </span>
+    <span className="hidden md:block">
+      <Av id={x.manager} s={96} />
+    </span>
+    <p className="font-display mt-2 max-w-full text-[clamp(0.95rem,4.6vw,1.25rem)] leading-tight font-black break-words md:mt-3 md:text-4xl md:leading-none">
       <Handle id={x.manager} />
     </p>
-    <p className="font-display mt-4 text-5xl leading-none font-black tabular-nums">
+    <p className="font-display mt-2 text-3xl leading-none font-black tabular-nums md:mt-4 md:text-5xl">
       #{x.seed}
     </p>
-    <p className="mt-2 text-sm text-[var(--muted)]">
+    <p className="mt-1 text-xs text-[var(--muted)] md:mt-2 md:text-sm">
       {x.rec}
       {x.streak ? `, ${x.streak} streak` : ""}
     </p>
-    <p className="mt-1 text-sm text-[var(--muted)] tabular-nums">
+    <p className="mt-0.5 text-xs text-[var(--muted)] tabular-nums md:mt-1 md:text-sm">
       {x.pf.toLocaleString()} pts for
     </p>
   </div>
@@ -237,30 +244,30 @@ export function MatchupOfWeek({
   h2hB: number;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-[var(--gold)]/30 bg-[#10241b] p-6 text-[var(--paper)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] md:p-10">
+    <div className="relative overflow-hidden rounded-[28px] border border-[var(--gold)]/30 bg-[#10241b] p-4 text-[var(--paper)] sm:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_30px_80px_-30px_rgba(0,0,0,0.7)] md:p-10">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(233,196,106,0.14),transparent_70%)]"
       />
       <div className="relative">
         <div className="text-center">
-          <p className="font-display text-4xl leading-none font-black text-[var(--gold)] md:text-5xl">Matchup of the Week</p>
+          <p className="font-display text-3xl leading-none font-black text-[var(--gold)] md:text-5xl">Matchup of the Week</p>
           <p className="mt-2 text-sm text-[var(--muted)]">Week {week}</p>
         </div>
-        <div className="mt-6 grid items-center gap-8 md:grid-cols-[1fr_auto_1fr]">
+        <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 md:mt-6 md:gap-8">
           <MatchSide x={a} />
           <div className="text-center">
-            <p className="font-display text-5xl font-black text-[var(--muted)]">
+            <p className="font-display text-3xl font-black text-[var(--muted)] md:text-5xl">
               vs
             </p>
-            <p className="mt-3 text-sm text-[var(--muted)]">All-time, per Sleeper</p>
-            <p className="font-display text-3xl font-black tabular-nums">
+            <p className="mt-1 text-[11px] leading-tight text-[var(--muted)] md:mt-3 md:text-sm">All-time,<br className="md:hidden" /> per Sleeper</p>
+            <p className="font-display text-2xl font-black tabular-nums md:text-3xl">
               {h2hA}–{h2hB}
             </p>
           </div>
           <MatchSide x={b} right />
         </div>
-        <p className="mt-8 text-center text-sm text-[var(--muted)]">
+        <p className="mt-5 text-center text-xs text-[var(--muted)] md:mt-8 md:text-sm">
           Final score posts once Sleeper finalizes week {week}.
         </p>
         <Explain>
@@ -316,6 +323,8 @@ export function WaiverWire({
       sort === "minDelta" ? p.minRecent - p.minSeason : p[sort];
     return [...f].sort((a, b) => v(b) - v(a)).slice(0, 25);
   }, [players, pos, sort, nfl]);
+  const phone = usePhone();
+  const [allRows, setAllRows] = useState(false);
   const best = {
     stream: [...players].sort((a, b) => b.projLeft - a.projLeft)[0],
     hot: [...players]
@@ -453,7 +462,7 @@ export function WaiverWire({
             </tr>
           </thead>
           <tbody>
-            {list.map((p) => {
+            {list.slice(0, phone && !allRows ? 10 : list.length).map((p) => {
               const dm = p.minRecent - p.minSeason;
               return (
                 <tr
@@ -531,6 +540,15 @@ export function WaiverWire({
           </tbody>
         </table>
       </div>
+      {phone && !allRows && list.length > 10 ? (
+        <button
+          type="button"
+          onClick={() => setAllRows(true)}
+          className="mt-3 inline-flex h-11 cursor-pointer items-center rounded-full border border-white/15 px-5 text-sm font-semibold"
+        >
+          Show all {list.length}
+        </button>
+      ) : null}
       <Explain title="What each column means">
         <p>
           <strong>Pickup score:</strong>

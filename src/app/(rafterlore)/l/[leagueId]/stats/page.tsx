@@ -42,7 +42,7 @@ function Stats({ p }: { p: LeaguePage }) {
         Sleeper record.
       </Intro>
 
-      <section aria-labelledby="trapezoid" className="py-24 md:py-32">
+      <section aria-labelledby="trapezoid" className="py-14 md:py-32">
         <SectionHead id="trapezoid" title="Trapezoid of Excellence">
           Who scores and wins like a champion? Every manager plotted by regular-season win rate and scoring, against the window
           this league&apos;s own champions set.
@@ -52,7 +52,7 @@ function Stats({ p }: { p: LeaguePage }) {
         </div>
       </section>
 
-      <section aria-labelledby="playoff-report" className="py-24 md:py-32">
+      <section aria-labelledby="playoff-report" className="py-14 md:py-32">
         <SectionHead id="playoff-report" title="Playoff report">
           The postseason, kept separate: who gets in, who wins when it counts and who scores up or down in the playoffs.
         </SectionHead>
@@ -61,7 +61,7 @@ function Stats({ p }: { p: LeaguePage }) {
         </div>
       </section>
 
-      <section aria-labelledby="court" className="py-24 md:py-32">
+      <section aria-labelledby="court" className="py-14 md:py-32">
         <SectionHead id="court" title="Trade court">
           Every trade in league history, judged by what each side actually got out of it. Built from Sleeper&apos;s weekly
           lineups, per Sleeper.
@@ -71,7 +71,7 @@ function Stats({ p }: { p: LeaguePage }) {
         </div>
       </section>
 
-      <section aria-labelledby="redraft" className="py-24 md:py-32">
+      <section aria-labelledby="redraft" className="py-14 md:py-32">
         <SectionHead id="redraft" title="The re-draft">Every first-round pick, done again knowing how the season actually went.</SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <RedraftBoard drafts={redrafts(d)} players={d.extras.players} managers={d.league.managers} />
@@ -79,7 +79,7 @@ function Stats({ p }: { p: LeaguePage }) {
       </section>
 
       {p.analysis?.pickups.length ? (
-        <section aria-labelledby="pickups" className="py-24 md:py-32">
+        <section aria-labelledby="pickups" className="py-14 md:py-32">
           <SectionHead id="pickups" title="Best pickups">Waiver and free-agent adds, by what they scored as starters for the manager who found them.</SectionHead>
           <div className="mx-auto max-w-6xl px-5 md:px-10">
             <Pickups p={p} />

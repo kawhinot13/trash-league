@@ -43,19 +43,19 @@ function Managers({ p }: { p: LeaguePage }) {
     <main className="overflow-x-clip">
       <Intro title="Managers">Everyone who has run a team in {d.name}: their records, their guys and how well they set a lineup.</Intro>
 
-      <section aria-labelledby="managers" className="py-16 md:py-24">
+      <section aria-labelledby="managers" className="py-10 md:py-24">
         <SectionHead id="managers" title="The roster">Tap a card for the full profile.</SectionHead>
         <ManagerCards managers={d.league.managers} />
       </section>
 
-      <section aria-labelledby="alltime" className="py-16 md:py-24">
+      <section aria-labelledby="alltime" className="py-10 md:py-24">
         <SectionHead id="alltime" title="All-time">Every season, every manager, ranked.</SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Careers p={p} />
         </div>
       </section>
 
-      <section aria-labelledby="guys" className="py-16 md:py-24">
+      <section aria-labelledby="guys" className="py-10 md:py-24">
         <SectionHead id="guys" title="My guys">
           Every manager&apos;s most-rostered and most productive players, all seasons. Points are what they scored in that
           manager&apos;s starting lineup.
@@ -65,7 +65,7 @@ function Managers({ p }: { p: LeaguePage }) {
         </div>
       </section>
 
-      <section aria-labelledby="lockin" className="py-16 md:py-24">
+      <section aria-labelledby="lockin" className="py-10 md:py-24">
         <SectionHead id="lockin" title={`The ${lineupTerms(p.brand.lineup).index}`}>
           {p.view.sport === "nfl"
             ? "Every week replayed from Sleeper's player scores: what each team scored against the best lineup it could have set."
@@ -76,7 +76,7 @@ function Managers({ p }: { p: LeaguePage }) {
         </div>
       </section>
 
-      <section aria-labelledby="quiz" className="py-16 md:py-24">
+      <section aria-labelledby="quiz" className="py-10 md:py-24">
         <SectionHead id="quiz" title={`Which ${d.name} manager are you?`}>Six questions. Your match is decided by how they actually play.</SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <ManagerQuiz managers={quizManagers(d)} />

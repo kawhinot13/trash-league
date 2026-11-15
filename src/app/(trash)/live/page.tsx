@@ -34,7 +34,7 @@ export default function LivePage() {
       <Suspense fallback={<Standings rows={league.seasons[3].standings} live={false} week={null} />}>
         <LiveTable />
       </Suspense>
-      <section aria-labelledby="power" className="py-24 md:py-32">
+      <section aria-labelledby="power" className="py-14 md:py-32">
         <SectionHead id="power" title="Power rankings">
           Not the standings: who&apos;s actually best right now, from record, scoring, roster strength and form.
         </SectionHead>
@@ -45,7 +45,7 @@ export default function LivePage() {
         </div>
       </section>
 
-      <section aria-labelledby="recap" className="py-24 md:py-32">
+      <section aria-labelledby="recap" className="py-14 md:py-32">
         <SectionHead id="recap" title="Weekly recap">
           Every finished week of the season in one place: blowouts, nail-biters, bench crimes and who carried who.
         </SectionHead>
@@ -56,7 +56,7 @@ export default function LivePage() {
         </div>
       </section>
 
-      <section aria-labelledby="waivers" className="py-24 md:py-32">
+      <section aria-labelledby="waivers" className="py-14 md:py-32">
         <SectionHead id="waivers" title="Waiver intel">
           Everyone on the wire, ranked for this league&apos;s scoring. Recent form, minutes, games left this week
           and what the rest of Sleeper is grabbing.

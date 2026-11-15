@@ -28,9 +28,9 @@ export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week:
   const parts = PARTS.filter((p) => weights[p.key] > 0).map((p) => ({ ...p, w: Math.round(weights[p.key] * 100) }));
   const reduce = useReducedMotion();
   return (
-    <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-8">
+    <div className="rounded-[24px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-3 sm:p-5 md:rounded-[28px] md:p-8">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <p className="font-display text-4xl font-black">{week ? `Week ${week}` : "This week"}</p>
+        <p className="font-display text-3xl font-black md:text-4xl">{week ? `Week ${week}` : "This week"}</p>
         <div className="flex flex-wrap gap-3 text-xs text-[var(--muted)]">
           {parts.map((p) => (
             <span key={p.key} className="flex items-center gap-1.5">
@@ -40,7 +40,7 @@ export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week:
           ))}
         </div>
       </div>
-      <ol className="mt-6 space-y-2.5">
+      <ol className="mt-4 space-y-2 md:mt-6 md:space-y-2.5">
         {rows.map((r, i) => (
           <motion.li
             key={r.id}
@@ -48,17 +48,17 @@ export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week:
             whileInView={{ y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.35), ease: [0.23, 1, 0.32, 1] }}
-            className={`grid grid-cols-[3rem_1fr] gap-x-4 gap-y-2 rounded-2xl border p-4 md:grid-cols-[4.5rem_1fr_15rem] md:items-center ${i === 0 ? "border-[#7fd49a]/40 bg-[rgba(127,212,154,0.07)]" : "border-white/8 bg-black/20"}`}
+            className={`grid grid-cols-[2.25rem_1fr] gap-x-3 gap-y-1.5 rounded-2xl border p-3 sm:grid-cols-[3rem_1fr] sm:gap-x-4 sm:gap-y-2 sm:p-4 md:grid-cols-[4.5rem_1fr_15rem] md:items-center ${i === 0 ? "border-[#7fd49a]/40 bg-[rgba(127,212,154,0.07)]" : "border-white/8 bg-black/20"}`}
           >
             <div className="row-span-2 flex flex-col items-center md:row-span-1">
-              <span className={`font-display leading-none font-black tabular-nums ${i < 3 ? "text-5xl md:text-6xl" : "text-4xl md:text-5xl"}`}>{r.rank}</span>
+              <span className={`font-display leading-none font-black tabular-nums ${i < 3 ? "text-4xl sm:text-5xl md:text-6xl" : "text-3xl sm:text-4xl md:text-5xl"}`}>{r.rank}</span>
               <Move m={r.move} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-3">
-                <MgrPhoto id={r.id} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" />
+                <MgrPhoto id={r.id} alt="" width={40} height={40} className="size-8 shrink-0 rounded-full object-cover sm:size-10" />
                 <div className="min-w-0">
-                  <MgrLink id={r.id} className="block break-words text-lg font-semibold hover:underline">
+                  <MgrLink id={r.id} className="block break-words text-base font-semibold hover:underline sm:text-lg">
                     {r.nick}
                   </MgrLink>
                   <p className="break-words text-xs text-[var(--muted)]">
@@ -73,7 +73,7 @@ export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week:
                   {r.tier}
                 </span>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--paper)]/85">{r.blurb}</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-[var(--paper)]/85 sm:mt-2 sm:text-sm sm:leading-relaxed">{r.blurb}</p>
             </div>
             <div className="col-start-2 md:col-start-auto">
               <div className="flex items-baseline justify-between text-xs text-[var(--muted)]">
