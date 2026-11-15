@@ -256,17 +256,20 @@ for s in LEAGUE["seasons"]:
                 tot[pid][1] += 1
     lock_avg = {pid: v[0] / v[1] for pid, v in tot.items() if v[1]}
     # Trade grades: for the rest of the season (playoffs included), each incoming player earns his
-    # average lock-in for every week he's in that manager's starting lineup (bench weeks earn
-    # nothing), so one lucky or unlucky game doesn't decide a trade. [value, weeks held, lock-ins].
+    # average lock-in for every week he's on that manager's roster and plays at least one game,
+    # started or not (sitting him is the manager's call, not the trade's fault; injured weeks earn
+    # nothing). One lucky or unlucky game doesn't decide a trade. [value, weeks held, weeks counted].
+    def played(w, p):
+        return any(x != 0 for _, x in games.get(w, {}).get(p, []))
     for t in trades:
         gain = {}
         for who, pids in t["sides"].items():
             got = [p for p in pids if not p.startswith("pick:")]
             later = [w for w in allweeks if w > t["week"]]
-            started = [(w, p) for w in later for p in got if p in wstarts[who].get(w, {})]
-            pts = sum(lock_avg.get(p, 0) for _, p in started)
+            counted = [(w, p) for w in later for p in got if p in wplayers[who].get(w, set()) and played(w, p)]
+            pts = sum(lock_avg.get(p, 0) for _, p in counted)
             held = sum(1 for w in later for p in got if p in wplayers[who].get(w, set()))
-            gain[who] = [round(pts, 1), held, len(started)]
+            gain[who] = [round(pts, 1), held, len(counted)]
         t["gain"] = gain
     # Weekly recap inputs (regular season).
     weekly = {}

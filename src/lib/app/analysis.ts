@@ -49,7 +49,7 @@ export type Pickup = { who: Who; pid: string; season: string; years: string; wee
 /** One head-to-head game, per Sleeper's weekly matchup scores. */
 export type Game = { season: string; years: string; week: number; a: Who; b: Who; pa: number; pb: number; playoff: boolean };
 
-export const ANALYSIS_VERSION = 6;
+export const ANALYSIS_VERSION = 7;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */
@@ -173,9 +173,21 @@ export function analyse(
       for (const [p, [sum, n]] of tot) lockAvg.set(p, sum / n);
     }
 
+    // Who played at least one game each week (from the replay; started players count when an old
+    // replay lacks it).
+    const played = new Set<string>();
+    for (const w of weeks) {
+      if (w.best) {
+        for (const [p, [, n]] of Object.entries(w.best)) if (n > 0) played.add(`${w.week}|${p}`);
+      } else {
+        for (const t of w.teams) t.st.forEach((p, i) => (t.sp[i] ?? 0) !== 0 && played.add(`${w.week}|${p}`));
+      }
+    }
+
     // Trade grades: for the rest of the season (playoffs included), each incoming player earns his
-    // average lock-in for every week he's in that manager's starting lineup (bench weeks earn
-    // nothing), so one lucky or unlucky game doesn't decide a trade. Also how many weeks they stayed.
+    // average lock-in for every week he's on that manager's roster and plays at least one game,
+    // started or not (sitting him is the manager's call, not the trade's fault; injured weeks earn
+    // nothing). One lucky or unlucky game doesn't decide a trade. Also how many weeks they stayed.
     for (const w of current ? [...weeks, current] : weeks)
       for (const t of w.trades) {
         const later = weekNos.filter((x) => x > w.week);
@@ -185,11 +197,12 @@ export function analyse(
           let n = 0;
           for (const x of later)
             for (const p of got) {
-              if (starts.get(`${rid}|${x}`)?.has(p)) {
+              if (!rostered.get(`${rid}|${x}`)?.has(p)) continue;
+              held += 1;
+              if (played.has(`${x}|${p}`)) {
                 pts += lockAvg.get(p) ?? 0;
                 n += 1;
               }
-              if (rostered.get(`${rid}|${x}`)?.has(p)) held += 1;
             }
           return { who: W(rid), got, pts: Math.round(pts * 10) / 10, held, starts: n };
         });

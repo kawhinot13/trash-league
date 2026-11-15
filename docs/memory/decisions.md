@@ -4,14 +4,15 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
-## 2026-11-15: Trade court values = average lock-in x lock-ins after the trade
+## 2026-11-15: Trade court values = average lock-in x weeks rostered and played
 - Owner's call. Each incoming player earns his season-average start (points per week in ANY team's
-  starting lineup that season) for every week he's in the receiving manager's starting lineup after the
-  trade (playoffs included). Bench weeks earn nothing. Replaces "actual points scored as a starter", which
-  let one huge or empty game swing a trade. gain = [value, weeks held, lock-ins] in both pipelines
-  (`scripts/build-extras.py`, `analysis.ts`, ANALYSIS_VERSION 6). Even threshold stays 60.
-- Rejected for now: crediting weeks a player "would have" started (avg beats the weakest starter);
-  needs per-week game/injury data to avoid crediting injured weeks.
+  starting lineup that season) for every week after the trade (playoffs included) that he's on the
+  receiving roster AND played at least one game, started or not. Not starting him is the manager's
+  call, not the trade's; injured/away weeks earn nothing. Replaces "actual points scored as a starter"
+  (one game could swing a trade, and benching punished the trade). A same-day first version counted only
+  started weeks; the owner rejected it for that reason. gain = [value, weeks held, weeks counted] in both
+  pipelines (`scripts/build-extras.py` from weekly stats, `analysis.ts` from replay `best`;
+  ANALYSIS_VERSION 7). A player never started by anyone that season has no average and counts 0.
 
 ## 2026-11-15: Daily-game standings tied to accounts; recreational-use terms
 - Standings: each account links once to ONE Sleeper user for every league (`sleeper_links`, unique both

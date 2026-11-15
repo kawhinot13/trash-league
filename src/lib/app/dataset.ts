@@ -141,7 +141,7 @@ export function buildDataset(
       }
     }
 
-    // Trades, with each side's graded gain [average lock-in x lock-ins afterwards, weeks held, lock-ins].
+    // Trades, with each side's graded gain [average lock-in x weeks rostered and played afterwards, weeks held, weeks counted].
     const exTrades: RawSeason["trades"] = [];
     const lgTrades: Season["trades"] = [];
     for (const w of current ? [...all, current] : all)

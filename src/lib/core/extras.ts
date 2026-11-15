@@ -294,8 +294,9 @@ export function myGuys(d: Dataset): GuysRow[] {
 }
 
 /* ── Trade court ───────────────────────────────────────────── */
-/** pts: each incoming player's season-average start, once for every week he started for this manager
- * after the trade. starts: those weeks (null in data graded before 2026-11-15). held: weeks rostered. */
+/** pts: each incoming player's season-average start, once for every week after the trade he was on
+ * this manager's roster and played (started or not). starts: those weeks (null in older data).
+ * held: weeks rostered. */
 export type GradedSide = { who: string; got: string[]; pts: number; held: number; starts: number | null };
 export type GradedTrade = {
   id: string;

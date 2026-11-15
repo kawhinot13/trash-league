@@ -14,7 +14,6 @@ const WIN = "#7fd49a";
 
 function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; nick: (id: string) => string; i: number }) {
   const reduce = useReducedMotion();
-  const terms = lineupTerms(useBrand().lineup);
   const max = Math.max(1, ...t.sides.map((s) => s.pts));
   return (
     <motion.li
@@ -77,7 +76,7 @@ function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; 
               <p className="mt-1 text-[11px] text-[var(--muted)]">
                 {s.starts === null
                   ? `${s.held} player-weeks on the roster afterwards`
-                  : `${terms.starts(s.starts)} after the trade, ${s.held} player-weeks on the roster`}
+                  : `${s.starts} of ${s.held} player-weeks on the roster had games`}
               </p>
             </div>
           );
@@ -98,6 +97,7 @@ export function TradeCourt({
   players: Players;
   managers: Manager[];
 }) {
+  const terms = lineupTerms(useBrand().lineup);
   const [season, setSeason] = useState("all");
   const [who, setWho] = useState<string | null>(null);
   const [sort, setSort] = useState<"heist" | "recent">("heist");
@@ -184,11 +184,11 @@ export function TradeCourt({
 
       <Explain>
         <p>
-          Each side of a trade is judged by what it actually got. For the rest of that season (playoffs included),
-          every week an incoming player is in that manager&apos;s starting lineup, he earns his average score as a
-          starter that season. Weeks on the bench earn nothing, and one huge or empty game doesn&apos;t swing a trade.
-          Players who got flipped right away earn little, and value from a flip shows up in the next trade instead.
-          Built from Sleeper&apos;s weekly lineups (per Sleeper).
+          Each side of a trade is judged by what it got. For the rest of that season (playoffs included), every week
+          an incoming player is on that manager&apos;s roster and plays at least one game, he earns his average {terms.avg}{" "}
+          that season, whether or not he was started. Benching him is the manager&apos;s call, not the trade&apos;s;
+          weeks he&apos;s hurt or gone earn nothing, and one huge or empty game doesn&apos;t swing a trade. Value from
+          a flip shows up in the next trade instead. Averages come from Sleeper&apos;s weekly lineups (per Sleeper).
         </p>
         <p>Draft picks are listed but not scored. A trade within {60} points either way is called even.</p>
       </Explain>
