@@ -1,3 +1,4 @@
+import { lineupTerms } from "@/lib/core/lineup-terms";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
@@ -34,7 +35,7 @@ function Managers({ p }: { p: LeaguePage }) {
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Careers p={p} />
         </div>
-        <Pending p={p} what="Profiles, my guys, the Lock-In Index and the quiz" />
+        <Pending p={p} what={`Profiles, my guys, the ${lineupTerms(p.brand.lineup).index} and the quiz`} />
       </main>
     );
   const lock = lockIn(d);
@@ -65,8 +66,10 @@ function Managers({ p }: { p: LeaguePage }) {
       </section>
 
       <section aria-labelledby="lockin" className="py-16 md:py-24">
-        <SectionHead id="lockin" title="The Lock-In Index">
-          Every week replayed from the box scores: what each team scored against the best lineup it could have set.
+        <SectionHead id="lockin" title={`The ${lineupTerms(p.brand.lineup).index}`}>
+          {p.view.sport === "nfl"
+            ? "Every week replayed from Sleeper's player scores: what each team scored against the best lineup it could have set."
+            : "Every week replayed from the box scores: what each team scored against the best lineup it could have set."}
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <LockInIndex {...lock} managers={d.league.managers} />

@@ -70,14 +70,15 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
   for (const c of view.careers) names.set(c.ownerId, pack?.nicknames[c.name] ?? c.name);
   for (const s of view.seasons) for (const t of s.teams) if (!t.ownerId) names.set(`r${t.rosterId}`, t.team);
   const nameOf = (who: string | null | undefined) => (who ? (names.get(who) ?? "Open team") : "Open team");
+  // Lock-in vs daily is a basketball distinction (football is one game a week).
+  const scoring = view.sport === "nba" ? scoringOf(family.seasons.map((b) => b.league), analysis?.model) : null;
   return {
     status: "ok",
     page: {
       leagueId,
       view,
       format: formatOf(family.seasons[family.seasons.length - 1].league),
-      // Lock-in vs daily is a basketball distinction (football is one game a week).
-      scoring: view.sport === "nba" ? scoringOf(family.seasons.map((b) => b.league), analysis?.model) : null,
+      scoring,
       analysis: analysis && (analysis.version ?? 1) >= 1 ? { ...analysis, games: analysis.games ?? [] } : null,
       weekly: exactWeekly(snaps),
       nights: new Set(snaps.map((s) => s.day)).size,
@@ -87,7 +88,7 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
       pack,
       nameOf,
       dataset: dataset ? withTeams(withNicknames(dataset, pack?.nicknames), view) : null,
-      brand: brandFor(leagueId, view, dataset),
+      brand: brandFor(leagueId, view, dataset, view.sport === "nfl" ? "weekly" : scoring === "daily" ? "daily" : scoring === "lock-in" ? "lock-in" : null),
     },
   };
 }
@@ -106,11 +107,18 @@ function withNicknames(d: Dataset, nicks?: Record<string, string>): Dataset {
 }
 
 /** How the shared league components render for this league. */
-function brandFor(leagueId: string, view: ReturnType<typeof familyView>, d: Dataset | null): BrandConfig {
+function brandFor(
+  leagueId: string,
+  view: ReturnType<typeof familyView>,
+  d: Dataset | null,
+  lineup: BrandConfig["lineup"] | null,
+): BrandConfig {
   return {
     name: view.name,
     tag: "League",
     sport: view.sport,
+    lineup: lineup ?? undefined,
+    since: view.seasons[0]?.years.slice(0, 4),
     base: `/l/${leagueId}`,
     storage: `rl:${view.id}:`,
     scores: `/api/l/${leagueId}/scores`,

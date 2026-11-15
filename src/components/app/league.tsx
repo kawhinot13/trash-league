@@ -1,3 +1,4 @@
+import { lineupTerms } from "@/lib/core/lineup-terms";
 import Link from "next/link";
 import { Avatar } from "@/components/app/avatar";
 import type { LeaguePage } from "@/lib/app/league-page";
@@ -434,7 +435,7 @@ export function Pickups({ p }: { p: LeaguePage }) {
             </span>
           </span>
           <span className="shrink-0 text-right">
-            {fmt(x.pts)} <span className="text-[var(--muted)]">in {x.starts} starts</span>
+            {fmt(x.pts)} <span className="text-[var(--muted)]">in {lineupTerms(p.brand.lineup).starts(x.starts)}</span>
           </span>
         </li>
       ))}

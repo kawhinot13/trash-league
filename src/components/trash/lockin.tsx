@@ -6,7 +6,7 @@ import type { BenchCrime, LockRow } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Handle, MgrPhoto } from "@/components/trash/brand";
-import { LeagueName } from "@/components/trash/brand";
+import { LeagueName, useBrand } from "@/components/trash/brand";
 
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
 const n0 = (x: number) => Math.round(x).toLocaleString();
@@ -43,6 +43,7 @@ export function LockInIndex({
 }) {
   const [tab, setTab] = useState<Tab>("board");
   const reduce = useReducedMotion();
+  const brand = useBrand();
   const nick = (id: string) => managers.find((m) => m.id === id)?.nick ?? id;
   const regulars = rows.filter((r) => r.seasons.length > 1);
   const worst = regulars.slice(-3).map((r) => r.id);
@@ -57,8 +58,11 @@ export function LockInIndex({
             {n0(totalLeft)}
           </p>
           <p className="mt-3 max-w-[40ch] text-[var(--muted)]">
-            fantasy points the league has left on its benches since 2023:
-            great games that never got locked in.
+            {!brand.lineup
+              ? "fantasy points the league has left on its benches since 2023: great games that never got locked in."
+              : brand.lineup === "lock-in"
+                ? `fantasy points the league has left on its benches since ${brand.since ?? "it started"}: great games that never got locked in.`
+                : `fantasy points the league has left on its benches since ${brand.since ?? "it started"}.`}
           </p>
         </div>
         <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="League-wide efficiency by season">
@@ -301,6 +305,8 @@ export function LockInIndex({
       </AnimatePresence>
 
       <Explain>
+        {!brand.lineup ? (
+          <>
         <p>
           In <LeagueName /> each of the nine starting spots counts one game a week: the
           last game its player played while in the lineup. Lock in a 70-point
@@ -318,6 +324,31 @@ export function LockInIndex({
           Regular-season weeks only. Built from Sleeper&apos;s lineups and
           per-game box scores, which explain every slot score we checked.
         </p>
+          </>
+        ) : (
+          <>
+            <p>
+              {brand.lineup === "lock-in"
+                ? "In this league each starting spot counts one game a week: the last game its player played while in the lineup. Lock in a big night by benching the player for the rest of the week, or gamble that he'll do better."
+                : brand.lineup === "daily"
+                  ? "In this league lineups are set every game day, and every game a starter plays counts."
+                  : "Each week every starting spot counts its player's game that week."}
+            </p>
+            <p>
+              {brand.lineup === "lock-in"
+                ? "Efficiency is the points a manager actually scored divided by the best lineup that was possible in hindsight: every starting spot filled with the best single game from a player eligible for it, counting only games played while that player was on the roster."
+                : brand.lineup === "daily"
+                  ? "Efficiency is the points a manager actually scored divided by the best lineups that were possible in hindsight: the best legal lineup on every game day, from players on the roster that day."
+                  : "Efficiency is the points a manager actually scored divided by the best lineup that was possible in hindsight from that week's roster."}{" "}
+              Nobody can hit 100% without knowing the future; the point is who gets closest.
+            </p>
+            <p>
+              {brand.sport === "nfl"
+                ? "Regular-season weeks only. Built from Sleeper's weekly lineups and player scores."
+                : "Regular-season weeks only. Built from Sleeper's lineups and per-game box scores."}
+            </p>
+          </>
+        )}
       </Explain>
     </div>
   );

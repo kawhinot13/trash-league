@@ -63,6 +63,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   official points for into `pf_snapshots`, queue the incremental import. Each run is logged in `cron_runs`;
   `/l/status` shows whether last night ran and failures.
 - Numbers: season efficiency uses official totals; anything from weekly matchups (H2H, live, single weeks) says "per Sleeper".
+  Words follow the lineup type (`brand.lineup`, `lineupTerms` in `core/lineup-terms.ts`): a "start" is a week in
+  the starting lineup, so lock-in leagues say "lock-ins" (Lock-In Index), daily ones "weeks in the lineup" and
+  football "starts" (both "Lineup Index"). Never hard-code Trash's years or lineup size in shared copy.
   No live in-week scores for basketball (Sleeper's are wrong; owner's rule: only show scoring that's verified).
   Football live scores are shown: weekly matchup scores sum to the official totals (checked).
 - Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.

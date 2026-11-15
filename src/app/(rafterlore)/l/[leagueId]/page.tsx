@@ -22,6 +22,7 @@ import { lineup } from "@/lib/core/lineup";
 import { trashle } from "@/lib/core/trashle";
 import type { Dataset } from "@/lib/core/types";
 import { SPORT } from "@/lib/core/sport";
+import { lineupTerms } from "@/lib/core/lineup-terms";
 
 /** Tab title from Sleeper's public league name (cached; no database or rate limit involved). */
 export async function leagueName(id: string) {
@@ -226,7 +227,7 @@ function Home({ p }: { p: LeaguePage }) {
                 {
                   href: "/managers",
                   title: "Managers",
-                  line: "Profiles, my guys, the Lock-In Index and the personality quiz.",
+                  line: `Profiles, my guys, the ${lineupTerms(p.brand.lineup).index} and the personality quiz.`,
                   stat: lock ? `${Math.round(lock.rows.reduce((t, r) => t + (r.opt - r.act), 0)).toLocaleString()} points left on benches` : "",
                   tone: "#7fd49a",
                 },

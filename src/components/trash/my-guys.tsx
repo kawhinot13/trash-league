@@ -6,7 +6,7 @@ import type { Guy, GuysRow, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain } from "./intel";
 import { Face, pname } from "./player";
-import { MgrPhoto, useBrand } from "@/components/trash/brand";
+import { MgrPhoto, lineupTerms, useBrand } from "@/components/trash/brand";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
 const TRASH_YRS: Record<string, string> = { s1: "’23", s2: "’24", s3: "’25", s4: "’26" };
@@ -22,7 +22,9 @@ function List({
   metric: "weeks" | "pts";
   players: Players;
 }) {
-  const short = useBrand().short;
+  const brand = useBrand();
+  const short = brand.short;
+  const starts = lineupTerms(brand.lineup).starts;
   const reduce = useReducedMotion();
   const max = Math.max(...guys.map((g) => g[metric]));
   return (
@@ -48,7 +50,7 @@ function List({
                 />
               </div>
               <p className="mt-1 text-xs text-[var(--muted)]">
-                {g.starts} starts, seasons {g.seasons.map((s) => (short ?? TRASH_YRS)[s]).join(" ")}
+                {starts(g.starts)}, seasons {g.seasons.map((s) => (short ?? TRASH_YRS)[s]).join(" ")}
               </p>
             </div>
           </li>

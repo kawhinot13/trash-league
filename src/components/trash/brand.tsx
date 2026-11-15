@@ -4,8 +4,9 @@ import Image, { type ImageProps } from "next/image";
 import Link from "next/link";
 import { createContext, useContext, useMemo } from "react";
 import { initialsOf } from "@/lib/core/names";
+import { lineupTerms } from "@/lib/core/lineup-terms";
 
-export { initialsOf };
+export { initialsOf, lineupTerms };
 
 /**
  * Whose site the shared league components are rendering for. The defaults are the Trash site's own
@@ -37,6 +38,14 @@ export type BrandConfig = {
   names?: Record<string, string>;
   /** The league's sport. Basketball when unset (the Trash site). */
   sport?: "nba" | "nfl";
+  /**
+   * How lineups score: one locked-in game per spot a week ("lock-in", basketball), every game a
+   * starter plays ("daily", basketball), or one game a week ("weekly", football). Unset: the Trash
+   * site (lock-in, with its own original wording).
+   */
+  lineup?: "lock-in" | "daily" | "weekly";
+  /** First season's year, for "since 2023" copy. Trash's when unset. */
+  since?: string;
   /** Season code -> short year label ("’25"), for compact season lists. */
   short?: Record<string, string>;
 };
@@ -68,6 +77,7 @@ const make = (c: BrandConfig): Brand => ({
 });
 
 const Ctx = createContext<Brand>(make(TRASH_BRAND));
+
 export const useBrand = () => useContext(Ctx);
 
 export function BrandProvider({ config, children }: { config: BrandConfig; children: React.ReactNode }) {
