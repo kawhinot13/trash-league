@@ -387,7 +387,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
                             <Face pid={pid} players={players} size={36} />
                             <div className="min-w-0">
                               <p className="text-xs text-[var(--muted)]">{label as string}</p>
-                              <p className="truncate text-sm font-semibold">
+                              <p className="break-words text-sm font-semibold">
                                 {pname(players, pid)} <span className="text-[var(--muted)]">{s}</span>
                               </p>
                             </div>

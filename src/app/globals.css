@@ -440,3 +440,11 @@ body {
   to { transform: none; opacity: 1; }
 }
 
+
+/* Section-title reveal (RevealTitle): each line slides up inside a clipping mask one line tall.
+   With the display font's tight leading that clipped descenders (the g in "league"), so the mask
+   gets room below the line, and the negative margin keeps the layout exactly where it was. */
+.reveal-line-mask {
+  padding-bottom: 0.22em;
+  margin-bottom: -0.22em;
+}

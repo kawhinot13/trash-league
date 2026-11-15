@@ -156,7 +156,7 @@ function Chip({ c, i, fresh }: { c: Clue; i: number; fresh: boolean }) {
       >
         <span className="text-[10px] leading-none font-semibold opacity-70 md:hidden">{c.label}</span>
         <span className="mt-0.5 flex max-w-full items-center gap-1 text-sm leading-tight font-black">
-          <span className="truncate">{c.value}</span>
+          <span className="break-words">{c.value}</span>
           {c.arrow ? (
             <span className={c.arrow === "up" ? "lu-up" : "lu-down"} aria-label={c.arrow === "up" ? "higher" : "lower"}>
               {c.arrow === "up" ? "↑" : "↓"}
@@ -325,7 +325,7 @@ function Wall({
       {/* placard */}
       <div className="absolute inset-x-[14%] bottom-[5%] z-30 rounded-md border-2 border-[#10141a] bg-[var(--paper)] px-2 py-1.5 text-center text-[#10141a] shadow-lg">
         <p className="text-[10px] leading-none font-bold tracking-wide opacity-70">TRASH PD</p>
-        <p className="font-display mt-0.5 truncate text-lg leading-none font-black">
+        <p className="font-display mt-0.5 break-words text-lg leading-none font-black">
           {solved !== null && suspect ? suspect.name : "Unidentified"}
         </p>
       </div>
@@ -625,7 +625,7 @@ export function Lineup({
                   >
                     <div className="col-span-4 flex min-w-0 items-center gap-2 px-1 py-1 md:col-span-8">
                       <Face pid={pid} players={players} size={34} />
-                      <span className="truncate text-sm font-semibold">{g.name}</span>
+                      <span className="break-words text-sm font-semibold">{g.name}</span>
                     </div>
                     {cs.map((c, i) => (
                       <Chip key={c.label} c={c} i={i} fresh={isNew} />

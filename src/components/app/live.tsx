@@ -77,8 +77,8 @@ function Head({
   return (
     <div className={`flex min-w-0 flex-col gap-1 ${right ? "items-end text-right" : ""}`}>
       <Avatar src={t?.avatar ?? null} name={name} size={36} />
-      <p className="w-full truncate font-semibold">{t?.team ?? name}</p>
-      <p className="w-full truncate text-xs text-[var(--muted)]">{name}</p>
+      <p className="w-full break-words font-semibold">{t?.team ?? name}</p>
+      <p className="w-full break-words text-xs text-[var(--muted)]">{name}</p>
       {scores ? (
         <p className={`font-display mt-1 text-4xl leading-none font-black tabular-nums ${lead ? "" : "text-[var(--paper)]/55"}`}>{fmt(side.pts)}</p>
       ) : null}
@@ -91,7 +91,7 @@ function Starters({ side, scores }: { side: LiveSide; scores: boolean }) {
     <ol className="min-w-0 space-y-1">
       {side.starters.map((s) => (
         <li key={s.pid} className="flex justify-between gap-2">
-          <span className="min-w-0 truncate">{s.name}</span>
+          <span className="min-w-0 break-words">{s.name}</span>
           {scores ? <span className="shrink-0 text-[var(--muted)]">{fmt(s.pts)}</span> : null}
         </li>
       ))}

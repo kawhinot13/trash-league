@@ -36,7 +36,7 @@ function List({
             <Face pid={g.pid} players={players} size={40} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <p className="truncate text-sm font-semibold">{pname(players, g.pid)}</p>
+                <p className="break-words text-sm font-semibold">{pname(players, g.pid)}</p>
                 <p className="shrink-0 text-sm tabular-nums">
                   {metric === "weeks" ? `${g.weeks} wks` : `${n0(g.pts)} pts`}
                 </p>

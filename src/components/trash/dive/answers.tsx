@@ -34,7 +34,7 @@ export function AnswerBoard({
               className={`flex items-center gap-2.5 rounded-xl px-2 py-1.5 ${me ? "bg-white/12 ring-2 ring-[var(--paper)]" : "bg-black/20"}`}
             >
               <Face pid={pid} players={players} size={28} />
-              <span className="min-w-0 flex-1 truncate text-sm">
+              <span className="min-w-0 flex-1 break-words text-sm">
                 {pname(players, pid)}
                 {me ? <span className="ml-1.5 text-xs text-[var(--muted)]">your pick</span> : null}
               </span>

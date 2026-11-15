@@ -258,10 +258,13 @@ export function RevealTitle({
         SplitText.create(ref.current, {
           type: "lines",
           mask: "lines",
+          // Masks get "reveal-line-mask": globals.css gives them room below the line so letters
+          // that dip under it (g, j, p, q, y) aren't clipped by the tight line height.
+          linesClass: "reveal-line",
           autoSplit: true,
           onSplit: (self) =>
             gsap.from(self.lines, {
-              yPercent: 105,
+              yPercent: 135,
               duration: 0.9,
               ease: "expo.out",
               stagger: 0.08,

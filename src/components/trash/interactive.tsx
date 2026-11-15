@@ -240,7 +240,7 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
           className="relative flex h-44 items-end justify-center overflow-hidden"
           style={{ background: m.color }}
         >
-          <span className="font-display absolute -top-4 -left-1 text-[7rem] leading-none font-black text-black/15">
+          <span aria-hidden className="font-display absolute -top-4 -left-1 text-[7rem] leading-none font-black text-black/15">
             {place}
           </span>
           <MgrPhoto

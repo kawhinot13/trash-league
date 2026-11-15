@@ -111,10 +111,10 @@ function MoverList({
                 <div className="flex items-center gap-3">
                   <Head pid={m.pid} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
+                    <p className="break-words text-sm font-semibold">
                       {p?.name} <span className="font-normal text-[var(--muted)]">{p?.pos.join("/")}</span>
                     </p>
-                    <p className="truncate text-xs text-[var(--muted)]">{m.owner ? (mine ? "Your team" : nick(m.owner)) : "Free agent"}</p>
+                    <p className="break-words text-xs text-[var(--muted)]">{m.owner ? (mine ? "Your team" : nick(m.owner)) : "Free agent"}</p>
                   </div>
                   <span className="rounded-md px-1.5 py-0.5 text-xs font-black tabular-nums" style={{ background: color, color: "#10141a" }}>
                     {m.gap > 0 ? "+" : ""}
@@ -298,7 +298,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                           >
                             <Head pid={t.pid} />
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold">
+                              <span className="block break-words text-sm font-semibold">
                                 {P[t.pid]?.name} <span className="font-normal text-[var(--muted)]">{P[t.pid]?.pos.join("/")}</span>
                               </span>
                               <span className="block text-xs text-[var(--muted)]">
@@ -346,7 +346,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                       <li key={i} className="flex items-center gap-3 rounded-xl bg-black/20 px-3 py-2">
                         <span className="w-10 text-xs font-bold text-[var(--wood)]">{slot}</span>
                         {p ? <Head pid={p.pid} size={30} /> : null}
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{p ? p.name : "Empty"}</span>
+                        <span className="min-w-0 flex-1 break-words text-sm font-semibold">{p ? p.name : "Empty"}</span>
                         {p ? <Injury p={p} /> : null}
                         <span className="text-sm tabular-nums">{p ? n0(p.value) : ""}</span>
                       </li>
@@ -367,7 +367,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                     return (
                       <li key={pid} className="flex items-center gap-3 rounded-xl bg-black/20 px-3 py-2">
                         <Head pid={pid} size={30} />
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{p.name}</span>
+                        <span className="min-w-0 flex-1 break-words text-sm font-semibold">{p.name}</span>
                         <Injury p={p} />
                         <span className="text-sm tabular-nums">{n0(p.value)}</span>
                       </li>
@@ -424,7 +424,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                               className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-[background-color,transform] duration-150 active:scale-[0.99] ${on ? "bg-[var(--wood)]/25 ring-2 ring-[var(--wood)]" : "bg-black/20 hover:bg-black/35"}`}
                             >
                               <Head pid={pid} size={30} />
-                              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                              <span className="min-w-0 flex-1 break-words text-sm font-semibold">
                                 {p.name} <span className="font-normal text-[var(--muted)]">{p.pos.join("/")}</span>
                               </span>
                               <Injury p={p} />
@@ -526,7 +526,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                       return (
                         <li key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${fresh ? "bg-[rgba(127,212,154,0.15)] ring-1 ring-[rgba(127,212,154,0.5)]" : "bg-black/20"}`}>
                           <span className="w-9 text-[11px] font-bold text-[var(--wood)]">{slot}</span>
-                          <span className="truncate">{pid ? P[pid].name : "Empty"}</span>
+                          <span className="break-words">{pid ? P[pid].name : "Empty"}</span>
                         </li>
                       );
                     })}

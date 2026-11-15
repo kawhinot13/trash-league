@@ -134,8 +134,8 @@ function TeamCell({ t, name }: { t: Team; name: string }) {
     <div className="flex min-w-0 items-center gap-3">
       <Avatar src={t.avatar} name={name} />
       <div className="min-w-0">
-        <p className="truncate font-semibold">{t.team}</p>
-        {t.team !== name ? <p className="truncate text-xs text-[var(--muted)]">{name}</p> : null}
+        <p className="break-words font-semibold">{t.team}</p>
+        {t.team !== name ? <p className="break-words text-xs text-[var(--muted)]">{name}</p> : null}
       </div>
     </div>
   );
@@ -172,7 +172,7 @@ function PointsLog({ p, hasExact }: { p: LeaguePage; hasExact: boolean }) {
             <tbody>
               {s.teams.map((t) => (
                 <tr key={t.rosterId} className="border-b border-[var(--line)] last:border-0">
-                  <td className="max-w-[12rem] truncate py-2 pl-4">{t.team}</td>
+                  <td className="max-w-[12rem] break-words py-2 pl-4">{t.team}</td>
                   {weeks.map((w) => {
                     const v = p.weekly.get(t.rosterId)?.get(w);
                     return (
@@ -215,10 +215,10 @@ export function Careers({ p, limit }: { p: LeaguePage; limit?: number }) {
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar src={c.avatar} name={p.nameOf(c.ownerId)} />
                   <div className="min-w-0">
-                    <Link href={`/l/${p.leagueId}/managers/${c.ownerId}`} className="block truncate font-semibold underline-offset-4 hover:underline">
+                    <Link href={`/l/${p.leagueId}/managers/${c.ownerId}`} className="block break-words font-semibold underline-offset-4 hover:underline">
                       {p.nameOf(c.ownerId)}
                     </Link>
-                    <p className="truncate text-xs text-[var(--muted)]">{c.team}</p>
+                    <p className="break-words text-xs text-[var(--muted)]">{c.team}</p>
                   </div>
                 </div>
               </td>
@@ -266,7 +266,7 @@ export function Archive({ p }: { p: LeaguePage }) {
               <p className="text-[var(--muted)]">First picks</p>
               <ol className="mt-1 space-y-0.5">
                 {s.firstRound.slice(0, 4).map((pk) => (
-                  <li key={pk.no} className="truncate">
+                  <li key={pk.no} className="break-words">
                     <span className="text-[var(--muted)] tabular-nums">{pk.no}.</span> {pk.player}{" "}
                     <span className="text-[var(--muted)]">to {pk.team ? p.nameOf(pk.team.ownerId) : "?"}</span>
                   </li>
@@ -285,7 +285,7 @@ function Fact({ label, team, p, gold, extra }: { label: string; team: Team | nul
   return (
     <div className="min-w-0">
       <dt className="text-[var(--muted)]">{label}</dt>
-      <dd className={`truncate font-semibold ${gold && team ? "text-[var(--gold)]" : ""}`}>
+      <dd className={`break-words font-semibold ${gold && team ?"text-[var(--gold)]" : ""}`}>
         {team ? p.nameOf(team.ownerId) : "–"}
         {extra ? <span className="font-normal text-[var(--muted)]"> {extra}</span> : null}
       </dd>
@@ -319,7 +319,7 @@ export function TradeCourt({ p, only }: { p: LeaguePage; only?: string }) {
         {t.sides.map((sd) => (
           <div key={sd.who} className={`rounded-xl border p-4 ${t.winner === sd.who ? "border-[var(--wood)]/70" : "border-[var(--line)]"}`}>
             <p className="flex items-baseline justify-between gap-3">
-              <span className="truncate font-semibold">{p.nameOf(sd.who)} got</span>
+              <span className="break-words font-semibold">{p.nameOf(sd.who)} got</span>
               <span className="shrink-0 text-sm tabular-nums">{fmt(sd.pts)} pts</span>
             </p>
             <p className="mt-1 text-sm text-[var(--muted)]">{sd.got.map(name).join(", ") || "Nothing"}</p>
@@ -335,7 +335,7 @@ export function TradeCourt({ p, only }: { p: LeaguePage; only?: string }) {
         <ol className="mt-3 divide-y divide-[var(--line)] text-sm">
           {a.dealers.slice(0, 8).map((d) => (
             <li key={d.who} className="flex items-center justify-between gap-3 py-2 tabular-nums">
-              <span className="truncate">{p.nameOf(d.who)}</span>
+              <span className="break-words">{p.nameOf(d.who)}</span>
               <span className="shrink-0 text-[var(--muted)]">
                 {d.w}–{d.l}–{d.e}{" "}
                 <span className={d.net >= 0 ? "text-[var(--paper)]" : ""}>
@@ -382,7 +382,7 @@ export function Lineups({ p }: { p: LeaguePage }) {
           <tbody>
             {a.lineups.map((r) => (
               <tr key={r.who} className="border-b border-[var(--line)] last:border-0">
-                <td className="w-full max-w-0 truncate py-3 pr-2 pl-4 font-semibold md:pl-6">{p.nameOf(r.who)}</td>
+                <td className="w-full max-w-0 break-words py-3 pr-2 pl-4 font-semibold md:pl-6">{p.nameOf(r.who)}</td>
                 <td className="py-3 text-right">
                   <span className="inline-flex items-center gap-2">
                     <span aria-hidden className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-[var(--bin-3)] sm:block">
@@ -405,7 +405,7 @@ export function Lineups({ p }: { p: LeaguePage }) {
           {a.crimes.slice(0, 6).map((c, i) => (
             <li key={i} className="flex items-center justify-between gap-3 py-2 tabular-nums">
               <span className="min-w-0">
-                <span className="block truncate">{p.nameOf(c.who)}</span>
+                <span className="block break-words">{p.nameOf(c.who)}</span>
                 <span className="text-xs text-[var(--muted)]">
                   {c.years}, week {c.week}
                 </span>
@@ -429,7 +429,7 @@ export function Pickups({ p }: { p: LeaguePage }) {
       {a.pickups.slice(0, 8).map((x, i) => (
         <li key={`${x.pid}-${i}`} className="flex items-center justify-between gap-3 border-b border-[var(--line)] py-3 text-sm tabular-nums">
           <span className="min-w-0">
-            <span className="block truncate font-semibold">{a.players[x.pid]?.[0] ?? "Unknown player"}</span>
+            <span className="block break-words font-semibold">{a.players[x.pid]?.[0] ?? "Unknown player"}</span>
             <span className="text-xs text-[var(--muted)]">
               {p.nameOf(x.who)}, {seasonYears(x.season, p.view.sport)} week {x.week}
             </span>

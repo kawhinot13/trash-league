@@ -230,14 +230,14 @@ export function TimeMachine({
                   >
                     <Face pid={pid} players={players} size={38} />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">
+                      <p className="break-words text-sm font-semibold">
                         {pname(players, pid)}
                         <span className="ml-1.5 font-normal text-[var(--muted)]">
                           {players[pid]?.[1]?.[0] ?? ""}
                         </span>
                       </p>
                       <p
-                        className="truncate text-xs"
+                        className="break-words text-xs"
                         style={{ color: fresh ? NEW : "var(--muted)" }}
                       >
                         {a.how === "draft"
@@ -330,7 +330,7 @@ export function TimeMachine({
                         height={22}
                         className="size-[22px] rounded-full"
                       />
-                      <span className="truncate">{nick(m)}</span>
+                      <span className="break-words">{nick(m)}</span>
                       <span className="h-1.5 overflow-hidden rounded-full bg-white/8">
                         <span
                           className="block h-full rounded-full bg-[var(--paper)] transition-[width] duration-300"

@@ -88,7 +88,7 @@ export function RedraftBoard({
                   <p className="text-sm font-semibold" style={{ color: c.tone }}>
                     {c.label}
                   </p>
-                  <p className="font-display truncate text-3xl leading-none font-black">
+                  <p className="font-display break-words text-3xl leading-none font-black">
                     {pname(players, c.p.pid)}
                   </p>
                   <p className="mt-1 text-sm text-[var(--muted)]">{c.line}</p>
@@ -127,7 +127,7 @@ export function RedraftBoard({
                   <div className="flex min-w-0 items-center gap-3">
                     <Face pid={p.took.pid} players={players} size={44} />
                     <div className="min-w-0">
-                      <p className="truncate font-semibold">
+                      <p className="break-words font-semibold">
                         {pname(players, p.took.pid)}
                       </p>
                       <p className="flex items-center gap-2 text-xs text-[var(--muted)]">
@@ -138,7 +138,7 @@ export function RedraftBoard({
                           height={16}
                           className="size-4 rounded-full"
                         />
-                        <span className="truncate">{nick(p.by)}</span>
+                        <span className="break-words">{nick(p.by)}</span>
                         <span className="ml-1">now #{p.took.redo}</span>
                         <Shift from={p.slot} to={p.took.redo} />
                       </p>
@@ -155,10 +155,10 @@ export function RedraftBoard({
                       <>
                         <Face pid={p.should.pid} players={players} size={44} />
                         <div className="min-w-0">
-                          <p className="truncate font-semibold">
+                          <p className="break-words font-semibold">
                             {pname(players, p.should.pid)}
                           </p>
-                          <p className="truncate text-xs text-[var(--muted)]">
+                          <p className="break-words text-xs text-[var(--muted)]">
                             Actually went #{p.should.no} to {nick(p.should.by)}
                             , {n0(p.should.value)} lock-in pts
                           </p>

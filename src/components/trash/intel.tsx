@@ -141,7 +141,7 @@ export function OfficialTable({
               </span>
               <Av id={r.manager} s={40} />
               <span className="min-w-0">
-                <span className="flex items-center gap-2 truncate font-semibold">
+                <span className="flex items-center gap-2 break-words flex-wrap font-semibold">
                   <Handle id={r.manager} />{" "}
                   <Move m={r.move ?? 0} label="since last week" />
                   {r.streak ? (
@@ -152,7 +152,7 @@ export function OfficialTable({
                     </span>
                   ) : null}
                 </span>
-                <span className="block truncate text-xs text-[var(--muted)]">
+                <span className="block break-words text-xs text-[var(--muted)]">
                   {opp[r.manager] ? `This week: vs ${names?.[opp[r.manager]] ?? opp[r.manager]}` : r.team}
                 </span>
               </span>
@@ -383,7 +383,7 @@ export function WaiverWire({
                   />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-display truncate text-3xl leading-none font-black">
+                  <p className="font-display break-words text-3xl leading-none font-black">
                     {(p as Pickup).name}
                   </p>
                   <p className="mt-1 text-sm text-[var(--muted)]">
@@ -474,7 +474,7 @@ export function WaiverWire({
                         />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-semibold">{p.name}</p>
+                        <p className="break-words font-semibold">{p.name}</p>
                         <p className="flex flex-wrap gap-1 text-xs text-[var(--muted)]">
                           <span>
                             {p.pos.join("/")} {p.team}
@@ -675,7 +675,7 @@ export function Almanac({
                   >
                     <Av id={x.manager} s={32} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">
+                      <span className="block break-words text-sm font-semibold">
                         <Handle id={x.manager} />{" "}
                         <span className="font-normal text-[var(--muted)]">
                           {x.years}
@@ -712,7 +712,7 @@ export function Almanac({
                     >
                       <Av id={x.manager} s={32} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">
+                        <span className="block break-words text-sm font-semibold">
                           <Handle id={x.manager} />{" "}
                           <span className="font-normal text-[var(--muted)]">
                             {x.years}
@@ -838,7 +838,7 @@ export function Almanac({
                   />
                   <Av id={p.b} s={36} />
                   <span className="min-w-0 text-sm">
-                    <span className="block truncate font-semibold">
+                    <span className="block break-words font-semibold">
                       {p.a} + {p.b}
                     </span>
                   </span>
@@ -867,7 +867,7 @@ export function Almanac({
                       {i + 1}
                     </span>
                     <Av id={m.id} s={30} />
-                    <span className="w-40 truncate text-sm font-semibold">
+                    <span className="w-40 break-words text-sm font-semibold">
                       <Handle id={m.id} />
                     </span>
                     <span className="flex-1">
@@ -895,10 +895,10 @@ export function Almanac({
                       <span className="font-display w-6 text-lg text-[var(--muted)] tabular-nums">
                         {p.no}
                       </span>
-                      <span className="flex-1 truncate font-semibold">
+                      <span className="flex-1 break-words font-semibold">
                         {p.player}
                       </span>
-                      <span className="truncate text-[var(--muted)]">
+                      <span className="break-words text-[var(--muted)]">
                         <Handle id={p.by} />
                       </span>
                     </li>
@@ -1082,10 +1082,10 @@ function Oddities({ seasons }: { seasons: Season[] }) {
                 ) : null}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">
+                <span className="block break-words text-sm font-semibold">
                   {name}
                 </span>
-                <span className="block truncate text-xs text-[var(--muted)]">
+                <span className="block break-words text-xs text-[var(--muted)]">
                   to {[...new Set(x.owners)].join(", ")}
                 </span>
               </span>
@@ -1105,10 +1105,10 @@ function Oddities({ seasons }: { seasons: Season[] }) {
             <li key={p.years} className="flex items-center gap-3 text-sm">
               <Av id={p.by} s={30} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">
+                <span className="block break-words font-semibold">
                   {p.years}: {p.player}
                 </span>
-                <span className="block truncate text-xs text-[var(--muted)]">
+                <span className="block break-words text-xs text-[var(--muted)]">
                   <Handle id={p.by} />
                 </span>
               </span>
@@ -1132,7 +1132,7 @@ function Oddities({ seasons }: { seasons: Season[] }) {
               className="flex items-center gap-3 text-sm"
             >
               <Av id={r.manager} s={30} />
-              <span className="flex-1 truncate font-semibold">
+              <span className="flex-1 break-words font-semibold">
                 <Handle id={r.manager} />{" "}
                 <span className="font-normal text-[var(--muted)]">
                   {r.years}, #{r.seed}
@@ -1154,7 +1154,7 @@ function Oddities({ seasons }: { seasons: Season[] }) {
               className="flex items-center gap-3 text-sm"
             >
               <Av id={r.manager} s={30} />
-              <span className="flex-1 truncate font-semibold">
+              <span className="flex-1 break-words font-semibold">
                 <Handle id={r.manager} />{" "}
                 <span className="font-normal text-[var(--muted)]">
                   {r.years}, went {rec(r.w, r.l, r.t)}

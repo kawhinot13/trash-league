@@ -52,7 +52,7 @@ function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; 
                     ) : (
                       <Face pid={p} players={players} size={28} />
                     )}
-                    <span className="truncate">{pname(players, p)}</span>
+                    <span className="break-words">{pname(players, p)}</span>
                   </li>
                 ))}
               </ul>
@@ -123,7 +123,7 @@ export function TradeCourt({
             >
               <span className="font-display w-5 text-lg font-black text-[var(--muted)] tabular-nums">{i + 1}</span>
               <MgrPhoto id={r.id} alt="" width={30} height={30} className="size-[30px] rounded-full object-cover" />
-              <span className="min-w-0 flex-1 truncate font-semibold">{nick(r.id)}</span>
+              <span className="min-w-0 flex-1 break-words font-semibold">{nick(r.id)}</span>
               <span className="text-sm tabular-nums">
                 {r.w}–{r.l}
                 {r.e ? <span className="text-[var(--muted)]">–{r.e}</span> : null}

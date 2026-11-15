@@ -142,8 +142,8 @@ export function Leaderboard({
               <span className="font-display w-6 text-xl font-black text-[var(--muted)] tabular-nums">{i + 1}</span>
               <MgrPhoto id={r.id} alt="" width={30} height={30} className="size-[30px] rounded-full object-cover" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold">{nick(r.id)}</span>
-                <span className="block truncate text-xs text-[var(--muted)]">{r.sub}</span>
+                <span className="block break-words font-semibold">{nick(r.id)}</span>
+                <span className="block break-words text-xs text-[var(--muted)]">{r.sub}</span>
               </span>
               <span className="font-display text-2xl font-black tabular-nums">{r.main}</span>
             </motion.li>

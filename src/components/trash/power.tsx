@@ -58,10 +58,10 @@ export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week:
               <div className="flex items-center gap-3">
                 <MgrPhoto id={r.id} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" />
                 <div className="min-w-0">
-                  <MgrLink id={r.id} className="block truncate text-lg font-semibold hover:underline">
+                  <MgrLink id={r.id} className="block break-words text-lg font-semibold hover:underline">
                     {r.nick}
                   </MgrLink>
-                  <p className="truncate text-xs text-[var(--muted)]">
+                  <p className="break-words text-xs text-[var(--muted)]">
                     <span className="font-bold sm:hidden" style={{ color: TIER[r.tier] }}>
                       {r.tier}
                     </span>

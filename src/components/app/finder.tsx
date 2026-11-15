@@ -98,7 +98,7 @@ export function Finder() {
                 className="flex min-h-20 items-center gap-4 rounded-2xl border border-[var(--line)] bg-[var(--bin-2)] p-4 pr-14 transition-colors hover:border-[var(--wood)]"
               >
                 <Avatar src={null} name={l.name} size={44} />
-                <span className="font-display min-w-0 truncate text-2xl font-black">{l.name}</span>
+                <span className="font-display min-w-0 break-words text-2xl font-black">{l.name}</span>
               </Link>
               <button
                 type="button"
@@ -200,8 +200,8 @@ function LeagueRow({ l }: { l: FoundLeague }) {
     <div className="flex min-w-0 items-center gap-4">
       <Avatar src={l.avatar} name={l.name} size={40} />
       <div className="min-w-0">
-        <p className="truncate font-semibold">{l.name}</p>
-        <p className="truncate text-sm text-[var(--muted)]">
+        <p className="break-words font-semibold">{l.name}</p>
+        <p className="break-words text-sm text-[var(--muted)]">
           {l.years}, {l.teams} teams. {l.format.label}.{l.linked ? " Earlier seasons linked." : ""}
         </p>
       </div>

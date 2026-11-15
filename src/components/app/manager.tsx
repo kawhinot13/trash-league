@@ -99,7 +99,7 @@ export function ManagerProfile({ p, ownerId }: { p: LeaguePage; ownerId: string 
                 <tr key={s.leagueId} className="border-b border-[var(--line)] last:border-0">
                   <td className="w-full max-w-0 py-3 pr-2 pl-4 md:pl-6">
                     <p className="font-semibold">{s.years}</p>
-                    <p className="truncate text-xs text-[var(--muted)]">{t.team}</p>
+                    <p className="break-words text-xs text-[var(--muted)]">{t.team}</p>
                   </td>
                   <td className="py-3 pr-3 text-right font-semibold whitespace-nowrap">{recordStr(t)}</td>
                   <td className="hidden py-3 text-right sm:table-cell">{t.seed}</td>
@@ -125,7 +125,7 @@ export function ManagerProfile({ p, ownerId }: { p: LeaguePage; ownerId: string 
                       href={`/l/${p.leagueId}/rivals`}
                       className="flex items-center justify-between gap-3 py-3 text-sm tabular-nums hover:text-[var(--paper)]"
                     >
-                      <span className="min-w-0 truncate font-semibold">vs {p.nameOf(r.opp)}</span>
+                      <span className="min-w-0 break-words font-semibold">vs {p.nameOf(r.opp)}</span>
                       <span className="shrink-0 text-right">
                         <span className="font-semibold">{recordStr(r)}</span>
                         {r.po ? <span className="text-[var(--muted)]"> incl. {r.po} playoff</span> : null}
@@ -162,7 +162,7 @@ export function ManagerProfile({ p, ownerId }: { p: LeaguePage; ownerId: string 
                   {pickups.map((x, i) => (
                     <li key={`${x.pid}-${i}`} className="flex items-center justify-between gap-3 border-b border-[var(--line)] py-3 text-sm tabular-nums">
                       <span className="min-w-0">
-                        <span className="block truncate font-semibold">{a.players[x.pid]?.[0] ?? "Unknown player"}</span>
+                        <span className="block break-words font-semibold">{a.players[x.pid]?.[0] ?? "Unknown player"}</span>
                         <span className="text-xs text-[var(--muted)]">
                           Picked up {x.years}, week {x.week}
                         </span>
@@ -189,7 +189,7 @@ function Stat({ label, value, sub, gold }: { label: string; value: string; sub?:
     <div className="min-w-0">
       <dt className="text-sm text-[var(--muted)]">{label}</dt>
       <dd className={`font-display mt-1 text-4xl leading-none font-black tabular-nums ${gold ? "text-[var(--gold)]" : ""}`}>{value}</dd>
-      {sub ? <dd className="mt-1 truncate text-sm text-[var(--muted)]">{sub}</dd> : null}
+      {sub ? <dd className="mt-1 break-words text-sm text-[var(--muted)]">{sub}</dd> : null}
     </div>
   );
 }

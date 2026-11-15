@@ -107,10 +107,10 @@ export function Standings({
                   </span>
                   <Avatar id={r.manager} size={40} ring={m?.color} />
                   <span className="min-w-0">
-                    <span className="block truncate font-semibold">
+                    <span className="block break-words font-semibold">
                       <Handle id={r.manager} />
                     </span>
-                    <span className="block truncate text-xs text-[var(--muted)]">
+                    <span className="block break-words text-xs text-[var(--muted)]">
                       {r.team}
                     </span>
                   </span>

@@ -142,7 +142,7 @@ export function LockInIndex({
                         <div className="col-span-2 min-w-0 sm:col-span-1">
                           <div className="flex items-center gap-3">
                             <Av id={r.id} s={32} />
-                            <p className="truncate font-semibold">
+                            <p className="break-words font-semibold">
                               {nick(r.id)}{" "}
                               <span className="font-normal text-[var(--muted)]">
                                 <Handle id={r.id} />
@@ -278,7 +278,7 @@ export function LockInIndex({
                   <div className="flex items-center gap-3">
                     <Av id={c.id} s={40} />
                     <div className="min-w-0">
-                      <p className="truncate font-semibold">{nick(c.id)}</p>
+                      <p className="break-words font-semibold">{nick(c.id)}</p>
                       <p className="text-xs text-[var(--muted)]">
                         {c.years}, week {c.week}
                       </p>

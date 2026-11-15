@@ -300,7 +300,7 @@ export function Stage({
           <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle_at_50%_30%,#2a5a45,#0d241a)]">
             {shown?.pid ? <Face pid={shown.pid} players={players} size={72} /> : <span className="font-display text-4xl font-black text-[var(--ticket)]">?</span>}
           </div>
-          <p className="truncate px-1.5 py-1 text-center text-[10px] leading-tight font-bold sm:text-[11px]">
+          <p className="break-words px-1.5 py-1 text-center text-[10px] leading-tight font-bold sm:text-[11px]">
             {shown?.pid ? pname(players, shown.pid) : "Nobody"}
           </p>
         </div>

@@ -105,7 +105,7 @@ export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id
                 <li key={g.pid} className="flex items-center gap-3">
                   <Face pid={g.pid} players={players} size={44} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">{pname(players, g.pid)}</span>
+                    <span className="block break-words font-semibold">{pname(players, g.pid)}</span>
                     <span className="text-sm text-[var(--muted)]">
                       {n0(g.pts)} points over {g.weeks} weeks
                     </span>
@@ -130,7 +130,7 @@ export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id
                         <span className="block text-xs font-semibold" style={{ color: c as string }}>
                           {label as string}
                         </span>
-                        <span className="block truncate font-semibold">{pname(players, x.pid)}</span>
+                        <span className="block break-words font-semibold">{pname(players, x.pid)}</span>
                         <span className="text-sm text-[var(--muted)]">
                           Taken #{x.no} in {seasonYears[x.code]}, re-drafted #{x.redo}
                         </span>
