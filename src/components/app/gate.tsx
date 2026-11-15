@@ -4,6 +4,7 @@ import { cache } from "react";
 import { AppNav } from "@/components/app/chrome";
 import { Freshen } from "@/components/app/freshen";
 import { Importer } from "@/components/app/importer";
+import { RLoader } from "@/components/app/mark";
 import { loadLeague, type LeaguePage } from "@/lib/app/league-page";
 import { isSleeperId } from "@/lib/app/validate";
 import { BrandProvider } from "@/components/trash/brand";
@@ -96,13 +97,8 @@ export function LeagueLoading() {
   return (
     <>
       <AppNav />
-      <main className="mx-auto max-w-6xl px-5 pt-36 md:px-10" aria-busy>
-        <div className="flex gap-3 overflow-hidden">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="banner h-52 w-32 shrink-0 animate-pulse bg-[var(--bin-2)] md:h-60 md:w-36" />
-          ))}
-        </div>
-        <p className="mt-10 text-[var(--muted)]">Loading the league…</p>
+      <main className="mx-auto flex min-h-[70dvh] max-w-6xl items-center justify-center px-5 pt-24 md:px-10" aria-busy>
+        <RLoader label="Loading the league" />
       </main>
     </>
   );

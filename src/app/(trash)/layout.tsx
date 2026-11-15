@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "Trash — a fantasy basketball league",
   description:
     "Four seasons, three champions, ninety-three trades. The official home of the Trash fantasy basketball league.",
+  icons: { icon: { url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" } },
 };
 
 export default function TrashLayout({ children }: { children: React.ReactNode }) {

@@ -31,6 +31,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   features, rate limits, validation, redaction). League pages under `src/app/(rafterlore)/l/[leagueId]/`: home
   (games), live, managers (+ profiles), rivals, history, front-office, remove. `gate.tsx` loads a league, handles not
   found / limited / removed / error and wraps pages in the league's brand.
+- Logo: the ribbon R (owner's design), one traced path in `components/app/mark-path.ts` (`RMark`, `RLoader` in
+  `mark.tsx`; green #013825). Assets in `public/brand/` (adaptive tab SVG, PNG tiles, .ico, webmanifest);
+  rafterlore.com's `/favicon.ico` is rewritten to the R. Trash keeps its own favicon (`public/favicon.ico`).
 - Look: identical to the Trash site (same palette, GlassNav, Hero with the league name centered, PageIntro, footer),
   minus holiday decor (`holiday={false}`, `.rafterlore .xmas-drift::after` hidden).
 - Speed: league pages are pre-built and served from the cache (ISR): no `connection()`, headers, cookies or

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AccountButton } from "@/components/app/account";
+import { RMark } from "@/components/app/mark";
 import { GlassNav } from "@/components/trash/polish";
 import { PRODUCT } from "@/lib/app/brand";
 
@@ -19,12 +20,23 @@ export function AppNav(props: { league?: { name: string; id: string; live: boole
 
 function Nav({ league }: { league?: { name: string; id: string; live: boolean } }) {
   if (!league)
-    return <GlassNav logo={PRODUCT} home="/l" links={[]} cta={{ href: "/l", label: "Find a league" }} holiday={false} extra={<AccountButton />} />;
+    return (
+      <GlassNav
+        logo={PRODUCT}
+        home="/l"
+        links={[]}
+        cta={{ href: "/l", label: "Find a league" }}
+        holiday={false}
+        extra={<AccountButton />}
+        mark={<RMark className="h-8 w-auto text-[var(--paper)]" />}
+      />
+    );
   const home = `/l/${league.id}`;
   return (
     <GlassNav
       logo={league.name}
       product={{ name: PRODUCT, href: "/l" }}
+      mark={<RMark className="h-9 w-auto text-[var(--paper)]" />}
       home={home}
       links={[
         [home, "Home"],
@@ -46,7 +58,10 @@ export function AppFooter() {
     <footer className="relative overflow-hidden border-t border-[var(--line)] px-5 pt-12 text-sm text-[var(--muted)] md:px-10">
       <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-6">
         <div>
-          <p className="font-display text-4xl font-black text-[var(--paper)]">{PRODUCT}</p>
+          <p className="font-display flex items-center gap-3 text-4xl font-black text-[var(--paper)]">
+            <RMark className="h-10 w-auto" />
+            {PRODUCT}
+          </p>
           <ul className="mt-4 flex gap-5 font-semibold text-[var(--paper)]">
             <li>
               <Link href="/l" className="underline-offset-4 hover:underline">

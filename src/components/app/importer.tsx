@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { RLoader } from "@/components/app/mark";
 
 /**
  * A league Rafterlore hasn't stored yet. The page itself stays cacheable, so the first import is
@@ -44,15 +45,11 @@ export function Importer({ leagueId }: { leagueId: string }) {
           </Link>
         </>
       ) : (
-        <>
-          <div className="flex gap-3 overflow-hidden">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="banner h-52 w-32 shrink-0 animate-pulse bg-[var(--bin-2)] md:h-60 md:w-36" />
-            ))}
-          </div>
-          <h1 className="font-display mt-10 text-4xl font-black md:text-5xl">Fetching this league from Sleeper</h1>
-          <p className="mt-3 text-[var(--muted)]">First visit: finding every season. This takes a few seconds.</p>
-        </>
+        <div className="flex min-h-[50dvh] flex-col items-center justify-center text-center">
+          <RLoader label="First visit" className="size-24" />
+          <h1 className="font-display mt-8 text-4xl font-black md:text-5xl">Fetching this league from Sleeper</h1>
+          <p className="mt-3 text-[var(--muted)]">Finding every season. This takes a few seconds.</p>
+        </div>
       )}
     </main>
   );

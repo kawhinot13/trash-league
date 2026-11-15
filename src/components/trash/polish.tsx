@@ -36,9 +36,12 @@ export function GlassNav({
   holiday = HOLIDAY,
   product,
   extra,
+  mark,
 }: {
   /** Wordmark at the left (the league's name). */
   logo?: string;
+  /** A logo mark before the wordmark (Rafterlore's R; Trash has none). */
+  mark?: React.ReactNode;
   /** Extra controls before the bright button (Rafterlore's account menu; Trash has none). */
   extra?: React.ReactNode;
   /** A small product mark above the wordmark, linking to `product.href` (Rafterlore; Trash has none). */
@@ -60,6 +63,26 @@ export function GlassNav({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const isOn = (href: string) => (href === home ? path === home : path.startsWith(href));
+  const wordmark = product ? (
+    <span className="flex min-w-0 flex-col">
+      <Link
+        href={product.href}
+        className="text-[10px] leading-3 font-bold tracking-[0.22em] text-[var(--wood)] uppercase hover:text-[var(--paper)]"
+      >
+        {product.name}
+      </Link>
+      <Link href={home} className="font-display max-w-[52vw] truncate text-2xl leading-7 font-black tracking-tight md:max-w-[16rem]">
+        {logo}
+      </Link>
+    </span>
+  ) : (
+    <Link
+      href={home}
+      className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[52vw] truncate md:max-w-[16rem]"}`}
+    >
+      {logo}
+    </Link>
+  );
   return (
     <>
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-3 md:pt-4">
@@ -72,25 +95,15 @@ export function GlassNav({
           }`}
         >
           {holiday && scrolled ? <StringLights /> : null}
-          {product ? (
-            <span className="flex min-w-0 flex-col">
-              <Link
-                href={product.href}
-                className="text-[10px] leading-3 font-bold tracking-[0.22em] text-[var(--wood)] uppercase hover:text-[var(--paper)]"
-              >
-                {product.name}
+          {mark ? (
+            <span className="flex min-w-0 items-center gap-2.5">
+              <Link href={product?.href ?? home} aria-label="Rafterlore home" className="shrink-0">
+                {mark}
               </Link>
-              <Link href={home} className="font-display max-w-[52vw] truncate text-2xl leading-7 font-black tracking-tight md:max-w-[16rem]">
-                {logo}
-              </Link>
+              {wordmark}
             </span>
           ) : (
-            <Link
-              href={home}
-              className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[52vw] truncate md:max-w-[16rem]"}`}
-            >
-              {logo}
-            </Link>
+            wordmark
           )}
           <ul className="hidden items-center gap-0.5 text-sm whitespace-nowrap md:flex">
             {links.map(([href, label]) => {

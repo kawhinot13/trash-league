@@ -5,6 +5,16 @@ import { PRODUCT, TAGLINE } from "@/lib/app/brand";
 export const metadata: Metadata = {
   title: { default: `${PRODUCT}: fantasy league history`, template: `%s · ${PRODUCT}` },
   description: TAGLINE,
+  // The ribbon R: green on light browser tabs, white on dark ones (SVG), a PNG fallback, and the
+  // green tile for home screens.
+  icons: {
+    icon: [
+      { url: "/brand/rafterlore-icon.svg", type: "image/svg+xml" },
+      { url: "/brand/rafterlore-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: { url: "/brand/rafterlore-apple.png", sizes: "180x180" },
+  },
+  manifest: "/brand/rafterlore.webmanifest",
 };
 export const viewport: Viewport = { themeColor: "#0b2419" };
 

@@ -1,0 +1,14 @@
+{
+  "name": "Rafterlore",
+  "short_name": "Rafterlore",
+  "description": "Your fantasy league's whole history, hung in the rafters.",
+  "start_url": "/l",
+  "display": "standalone",
+  "background_color": "#0f2a20",
+  "theme_color": "#0b2419",
+  "icons": [
+    { "src": "/brand/rafterlore-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/brand/rafterlore-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/brand/rafterlore-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

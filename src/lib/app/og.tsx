@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { cacheLife } from "next/cache";
 import { PRODUCT } from "@/lib/app/brand";
+import { MARK_PATH, MARK_VIEWBOX } from "@/components/app/mark-path";
 import { hasDb } from "@/lib/app/db";
 import { datasetOf, familyIdOf } from "@/lib/app/store";
 import { sleeper, type SLeague } from "@/lib/app/sleeper";
@@ -8,8 +9,9 @@ import { isSleeperId } from "@/lib/app/validate";
 import type { Dataset } from "@/lib/core/types";
 
 /**
- * Rafterlore's link-preview cards: arena navy, a row of hanging banners (gold for each title
- * won), one big line. Data is read-only: a preview never imports a league or touches rate limits.
+ * Rafterlore's link-preview cards: the site's dumpster green, a row of hanging banners (gold for each
+ * title won), one big line and the ribbon R. Data is read-only: a preview never imports a league or
+ * touches rate limits.
  */
 export const ogSize = { width: 1200, height: 630 };
 
@@ -17,12 +19,12 @@ export function ogCard(title: string, line: string, banners: { label: string; go
   const big = title.length > 22 ? 84 : title.length > 14 ? 104 : 128;
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(180deg,#1d2b48 0%,#111a2c 55%)", color: "#f3efe6", padding: "0 72px 56px", fontFamily: "sans-serif" }}>
-        <div style={{ display: "flex", height: 170, gap: 18, alignItems: "flex-start", borderTop: "4px solid #3a4a6b" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(180deg,#163a2c 0%,#0f2a20 55%)", color: "#f6f3ea", padding: "0 72px 56px", fontFamily: "sans-serif" }}>
+        <div style={{ display: "flex", height: 170, gap: 18, alignItems: "flex-start", borderTop: "4px solid #1f4a39" }}>
           {banners.slice(-8).map((b, i) => (
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 96 }}>
-              <div style={{ width: 3, height: 14, background: "#3a4a6b" }} />
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", width: 96, height: 132, paddingTop: 16, fontSize: 22, fontWeight: 800, color: b.gold ? "#111a2c" : "#98a4b9", background: b.gold ? "#e9c46a" : "#18233a", clipPath: "polygon(0 0,100% 0,100% 100%,50% 86%,0 100%)" }}>
+              <div style={{ width: 3, height: 14, background: "#1f4a39" }} />
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", width: 96, height: 132, paddingTop: 16, fontSize: 22, fontWeight: 800, color: b.gold ? "#0f2a20" : "#a4b8ab", background: b.gold ? "#e9c46a" : "#163a2c", clipPath: "polygon(0 0,100% 0,100% 100%,50% 86%,0 100%)" }}>
                 {b.label}
               </div>
             </div>
@@ -30,12 +32,14 @@ export function ogCard(title: string, line: string, banners: { label: string; go
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: big, fontWeight: 900, lineHeight: 0.92, letterSpacing: -3 }}>{title}</div>
-          <div style={{ fontSize: 34, color: "#98a4b9", marginTop: 24, maxWidth: 1000 }}>{line}</div>
+          <div style={{ fontSize: 34, color: "#a4b8ab", marginTop: 24, maxWidth: 1000 }}>{line}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 18, height: 18, borderRadius: 999, background: "#c98a4b" }} />
+          <svg width="40" height="46" viewBox={MARK_VIEWBOX}>
+            <path d={MARK_PATH} fill="#f6f3ea" />
+          </svg>
           <div style={{ fontSize: 30, fontWeight: 800 }}>{PRODUCT}</div>
-          <div style={{ fontSize: 24, color: "#98a4b9" }}>fantasy league history</div>
+          <div style={{ fontSize: 24, color: "#a4b8ab" }}>fantasy league history</div>
         </div>
       </div>
     ),

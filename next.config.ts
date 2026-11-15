@@ -9,7 +9,15 @@ const RAFTERLORE_HOST = [{ type: "host" as const, value: "(?:www\\.)?rafterlore\
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    return { beforeFiles: [{ source: "/", has: RAFTERLORE_HOST, destination: "/l" }], afterFiles: [], fallback: [] };
+    return {
+      beforeFiles: [
+        { source: "/", has: RAFTERLORE_HOST, destination: "/l" },
+        // Browsers and search engines that ask rafterlore.com for /favicon.ico get the R, not Trash's icon.
+        { source: "/favicon.ico", has: RAFTERLORE_HOST, destination: "/brand/rafterlore.ico" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
   async redirects() {
     return [
