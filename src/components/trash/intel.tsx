@@ -1,12 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Pickup } from "@/lib/live";
 import type { Manager, Season, Standing } from "@/lib/league";
 import { Handle, MgrLink, MgrPhoto } from "@/components/trash/brand";
-import { useBrand } from "@/components/trash/brand";
+import { LivePlayerPhoto, useBrand } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
 const n1 = (x: number) =>
@@ -362,9 +361,10 @@ export function WaiverWire({
               <p className="text-sm text-[var(--gold)]">{label as string}</p>
               <div className="mt-3 flex items-center gap-4">
                 <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--bin-3)]">
-                  <Image
-                    src={`https://sleepercdn.com/content/nba/players/${(p as Pickup).id}.jpg`}
-                    alt=""
+                  <LivePlayerPhoto
+                    pid={(p as Pickup).id}
+                    name={(p as Pickup).name}
+                    pos={(p as Pickup).pos[0]}
                     fill
                     sizes="96px"
                     className="object-contain object-bottom"
@@ -440,9 +440,10 @@ export function WaiverWire({
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-3">
                       <div className="relative h-9 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--bin-3)]">
-                        <Image
-                          src={`https://sleepercdn.com/content/nba/players/${p.id}.jpg`}
-                          alt=""
+                        <LivePlayerPhoto
+                          pid={p.id}
+                          name={p.name}
+                          pos={p.pos[0]}
                           fill
                           sizes="48px"
                           className="object-contain object-bottom"
@@ -1030,9 +1031,9 @@ function Oddities({ seasons }: { seasons: Season[] }) {
             <li key={name} className="flex items-center gap-3">
               <span className="relative h-9 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--bin-3)]">
                 {x.pid ? (
-                  <Image
-                    src={`https://sleepercdn.com/content/nba/players/${x.pid}.jpg`}
-                    alt=""
+                  <LivePlayerPhoto
+                    pid={x.pid}
+                    name={name}
                     fill
                     sizes="48px"
                     className="object-contain object-bottom"

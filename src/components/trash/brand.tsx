@@ -3,6 +3,9 @@
 import Image, { type ImageProps } from "next/image";
 import Link from "next/link";
 import { createContext, useContext, useMemo } from "react";
+import { initialsOf } from "@/lib/core/names";
+
+export { initialsOf };
 
 /**
  * Whose site the shared league components are rendering for. The defaults are the Trash site's own
@@ -24,8 +27,10 @@ export type BrandConfig = {
   scores: string;
   /** Manager photos: Trash's local files, or a map of manager id to photo URL (null: monogram). */
   avatars: "local" | Record<string, string | null>;
-  /** Player headshots: Trash's local files, or Sleeper's CDN. */
-  headshots: "local" | "sleeper";
+  /** Player headshots: Trash's local files, Sleeper's CDN, or designed badges (no photos). */
+  headshots: "local" | "sleeper" | "badge";
+  /** For badges: pid -> [initials, position]. Players missing here get a badge from the name the caller passes. */
+  badges?: Record<string, [string, string]>;
   /** Names of the three daily games. */
   games: { dive: string; wordle: string; lineup: string };
   /** Manager id -> Sleeper display name (handles, monograms). Trash's ids are its handles. */
@@ -85,9 +90,83 @@ export function MgrPhoto({ id, alt = "", ...rest }: Omit<ImageProps, "src" | "al
   );
 }
 
-/** A player's headshot from the brand's source. */
-export function PlayerPhoto({ pid, alt = "", ...rest }: Omit<ImageProps, "src" | "alt"> & { pid: string; alt?: string }) {
-  return <Image src={useBrand().headshot(pid)} alt={alt} {...rest} />;
+/** A player's headshot from the brand's source (a designed badge when the brand uses no photos). */
+export function PlayerPhoto({
+  pid,
+  alt = "",
+  name,
+  pos,
+  fallback,
+  ...rest
+}: Omit<ImageProps, "src" | "alt"> & {
+  pid: string;
+  alt?: string;
+  name?: string;
+  pos?: string;
+  /** Shown instead of a photo when the player has none (photo brands only). */
+  fallback?: React.ReactNode;
+}) {
+  const brand = useBrand();
+  if (brand.headshots === "badge")
+    return <PlayerBadge pid={pid} name={name} pos={pos} size={Number(rest.width) || undefined} fill={!!rest.fill} className={rest.className} />;
+  if (fallback !== undefined) return <>{fallback}</>;
+  return <Image src={brand.headshot(pid)} alt={alt} {...rest} />;
+}
+
+/**
+ * A player from live Sleeper data (waiver wire, pickups, front office). Trash shows Sleeper's photo,
+ * unoptimized, exactly as before; badge brands show the badge.
+ */
+export function LivePlayerPhoto({ pid, name, pos, ...rest }: Omit<ImageProps, "src" | "alt"> & { pid: string; name?: string; pos?: string }) {
+  if (useBrand().headshots === "badge")
+    return <PlayerBadge pid={pid} name={name} pos={pos} size={Number(rest.width) || undefined} fill={!!rest.fill} className={String(rest.className ?? "")} />;
+  return <Image src={`https://sleepercdn.com/content/nba/players/${pid}.jpg`} alt="" {...rest} />;
+}
+
+/**
+ * A player's badge instead of a photo: initials on a dark tile with a wood "collar" stripe and the
+ * position underneath. Fixed size (`size`, a disc) or filling its box (`fill`, a card).
+ */
+export function PlayerBadge({
+  pid,
+  name,
+  pos,
+  size,
+  fill,
+  className = "",
+}: {
+  pid: string;
+  name?: string;
+  pos?: string;
+  size?: number;
+  fill?: boolean;
+  className?: string;
+}) {
+  const known = useBrand().badges?.[pid];
+  const ini = known?.[0] ?? (name ? initialsOf(name) : "");
+  const where = known?.[1] ?? pos ?? "";
+  const s = size ?? 40;
+  const showPos = !!where && (fill || s >= 44);
+  return (
+    <span
+      aria-hidden
+      className={`font-display ${fill ? "absolute inset-0" : "relative"} inline-flex shrink-0 flex-col items-center justify-center overflow-hidden bg-[linear-gradient(160deg,var(--bin-3),var(--bin-2))] leading-none font-black text-[var(--paper)]/90 ${className}`}
+      style={fill ? undefined : { width: s, height: s }}
+    >
+      <span className="absolute inset-x-0 top-0 h-[12%] max-h-1.5 min-h-0.5 bg-[var(--wood)]/80" />
+      <span style={{ fontSize: fill ? undefined : s * (showPos ? 0.34 : 0.4) }} className={fill ? "text-2xl" : ""}>
+        {ini || "·"}
+      </span>
+      {showPos ? (
+        <span
+          className="mt-[0.2em] font-sans font-bold tracking-[0.08em] text-[var(--wood)]"
+          style={{ fontSize: fill ? 10 : Math.max(8, s * 0.17) }}
+        >
+          {where}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 /** Link to a manager's profile on whichever site this is. */

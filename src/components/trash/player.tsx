@@ -12,31 +12,35 @@ export function Face({
   size?: number;
 }) {
   const p = players[pid];
-  if (p?.[3])
-    return (
-      <PlayerPhoto
-        pid={pid}
-        alt=""
-        width={size}
-        height={size}
-        className="shrink-0 rounded-full bg-[var(--bin-3)] object-cover object-top"
-        style={{ width: size, height: size }}
-      />
-    );
   const name = p?.[0] ?? "?";
   const ini = name
     .split(" ")
     .map((w) => w[0])
     .slice(0, 2)
     .join("");
+  // Brands without photos get a badge for everyone; otherwise a monogram stands in for a missing photo.
   return (
-    <span
-      aria-hidden
-      className="font-display inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--bin-3)] font-bold text-[var(--muted)]"
-      style={{ width: size, height: size, fontSize: size * 0.38 }}
-    >
-      {ini}
-    </span>
+    <PlayerPhoto
+      pid={pid}
+      alt=""
+      width={size}
+      height={size}
+      name={p?.[0]}
+      pos={p?.[1]?.[0]}
+      className="shrink-0 rounded-full bg-[var(--bin-3)] object-cover object-top"
+      style={{ width: size, height: size }}
+      fallback={
+        p?.[3] ? undefined : (
+          <span
+            aria-hidden
+            className="font-display inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--bin-3)] font-bold text-[var(--muted)]"
+            style={{ width: size, height: size, fontSize: size * 0.38 }}
+          >
+            {ini}
+          </span>
+        )
+      }
+    />
   );
 }
 

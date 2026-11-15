@@ -7,6 +7,7 @@ import { clientIp } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
 import { analysisOf, datasetOf, getFamily, snapshots, storedLeague, type Snapshot, type StoredLeague } from "@/lib/app/store";
 import type { BrandConfig } from "@/components/trash/brand";
+import { initialsOf } from "@/lib/core/names";
 import type { Dataset } from "@/lib/core/types";
 import { packIdFor } from "@/packs/ids";
 import { loadPack } from "@/packs";
@@ -111,7 +112,11 @@ function brandFor(leagueId: string, view: ReturnType<typeof familyView>, d: Data
     storage: `rl:${view.id}:`,
     scores: `/api/l/${leagueId}/scores`,
     avatars: Object.fromEntries(view.careers.map((c) => [c.ownerId, c.avatar])),
-    headshots: "sleeper",
+    // No player photos on Rafterlore (licensing): designed badges from initials and position.
+    headshots: "badge",
+    badges: Object.fromEntries(
+      Object.entries(d?.extras.players ?? {}).map(([pid, p]) => [pid, [initialsOf(p[0]), p[1]?.[0] ?? ""] as [string, string]]),
+    ),
     games: { dive: "Deep Cut", wordle: "Rosterdle", lineup: "The Lineup" },
     names: Object.fromEntries(view.careers.map((c) => [c.ownerId, c.name])),
     short: Object.fromEntries(

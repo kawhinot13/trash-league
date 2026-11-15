@@ -8,10 +8,11 @@ import { METRICS, diagnose, evaluateTrade, market, profile, type Metric, type Mo
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Handle, MgrPhoto } from "@/components/trash/brand";
-import { useBrand } from "@/components/trash/brand";
+import { PlayerBadge, useBrand } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
 const LocalPhotos = createContext<Set<string>>(new Set());
+const Who = createContext<FrontOffice["players"]>({});
 const n0 = (x: number) => Math.round(x).toLocaleString();
 const GOOD = "#7fd49a";
 const BAD = "#ff8a7a";
@@ -20,6 +21,9 @@ const BAD = "#ff8a7a";
 function Head({ pid, size = 36 }: { pid: string; size?: number }) {
   const [ok, setOk] = useState(true);
   const local = useContext(LocalPhotos).has(pid);
+  const who = useContext(Who)[pid];
+  if (useBrand().headshots === "badge")
+    return <PlayerBadge pid={pid} name={who?.name} pos={who?.pos?.[0]} size={size} className="rounded-full" />;
   return ok ? (
     <Image
       src={local ? `/players/${pid}.jpg` : `https://sleepercdn.com/content/nba/players/${pid}.jpg`}
@@ -194,6 +198,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
 
   return (
     <LocalPhotos.Provider value={localSet}>
+      <Who.Provider value={data.players}>
     <div data-no-rico className="xmas-drift rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"]]} />
@@ -510,6 +515,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
         </p>
       </Explain>
     </div>
+      </Who.Provider>
     </LocalPhotos.Provider>
   );
 }
