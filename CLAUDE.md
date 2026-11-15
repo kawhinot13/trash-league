@@ -12,7 +12,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - `src/data/extras.json` is rebuilt by `python3 scripts/build-extras.py <cache-dir> src/data/extras.json` (Sleeper lineups, box scores, transactions, live player bios). A daily scheduled task reruns it and pushes to `main`.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
-## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`)
+## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)
+- rafterlore.com serves the same deployment: `next.config.ts` rewrites its `/` to `/l` and redirects Trash pages
+  there (host-matched, so the Trash site is unaffected).
 - Product name: Rafterlore (`src/lib/app/brand.ts`). Any Sleeper NBA or NFL head-to-head points league. Sport is
   per league (`src/lib/core/sport.ts`, `FamilyView.sport`, `brand.sport`, `LiveSource.sport`); basketball is the
   default everywhere so Trash is untouched. Football replays weeks from matchup `players_points` (no box scores).
