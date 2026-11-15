@@ -10,6 +10,9 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   other people's leagues. Rejected: a claim per league (anyone could pick any manager anywhere); proving
   identity with a team-name code like removal (too much friction for a game; can add later if abused).
   Signed-out players can still play; the board nudges them to sign in. Trash keeps its honor system.
+  Same day, owner asked to close the squatting gap: linking now needs the team-name code (intent "link" in
+  `removal_challenges`, bound to the asking account). Codes are purpose-bound (`verifyChallenge(id, intents)`)
+  so a link code can never remove a league. A proven link replaces any earlier one for that manager.
 - Recreational use: terms section + footer line + an acknowledgement before a league's first import.
   Stored as wording version + time on `families` (no person data) and in the browser so returning
   visitors aren't asked again. No "projections" or "roster recommendations" claims: Rafterlore has none.

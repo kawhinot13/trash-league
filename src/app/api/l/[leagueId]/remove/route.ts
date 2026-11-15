@@ -54,7 +54,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/re
     if (body.step === "verify") {
       if (typeof body.challengeId !== "string" || !/^[a-f0-9]{32}$/.test(body.challengeId))
         return Response.json({ error: "Start again: that code isn't valid." }, { status: 400 });
-      const v = await verifyChallenge(body.challengeId);
+      const v = await verifyChallenge(body.challengeId, ["remove", "restore"]);
       if (!v.ok) {
         const msg = {
           not_yet: "Rafterlore can't see the code in your team name yet. Save it in Sleeper, wait a few seconds, then check again.",

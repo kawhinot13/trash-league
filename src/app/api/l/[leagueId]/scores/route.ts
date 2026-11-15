@@ -3,6 +3,7 @@ import { authConfigured, getAccount, sameOrigin, sessionFrom } from "@/lib/app/a
 import { db, hasDb } from "@/lib/app/db";
 import { clientIp, take } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
+import { createChallenge, verifyChallenge } from "@/lib/app/removal";
 import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
 
@@ -23,7 +24,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
  * only play as that user, only in leagues where they're a manager. Never returns the account id.
  */
 async function viewerOf(req: Request, fid: string) {
-  const none = { configured: authConfigured(), signedIn: false, linked: false, member: false, manager: null as string | null, taken: [] as string[] };
+  const none = { configured: authConfigured(), signedIn: false, linked: false, member: false, manager: null as string | null };
   if (!authConfigured()) return { ...none, accountId: null as string | null };
   const s = sessionFrom(req);
   const account = s ? await getAccount(s).catch(() => null) : null;
@@ -32,11 +33,8 @@ async function viewerOf(req: Request, fid: string) {
   const season = await newestSeason(fid);
   const users = [...(season?.users ?? [])];
   const [link] = await sql<{ sleeper_user: string }[]>`select sleeper_user from sleeper_links where account_id = ${account.id}`;
-  const taken = users.length
-    ? (await sql<{ sleeper_user: string }[]>`select sleeper_user from sleeper_links where sleeper_user in ${sql(users)}`).map((t) => t.sleeper_user)
-    : [];
   const member = !!link && users.includes(link.sleeper_user);
-  return { configured: true, signedIn: true, linked: !!link, member, manager: member ? link.sleeper_user : null, taken, accountId: account.id };
+  return { configured: true, signedIn: true, linked: !!link, member, manager: member ? link.sleeper_user : null, accountId: account.id };
 }
 
 export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/scores">) {
@@ -85,46 +83,81 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
   }
 }
 
+/**
+ * POST, three kinds (all signed in when sign-in is on):
+ *  - { claim: true, manager } -> { code, challenge, expiresAt }: a one-time code to put in that
+ *    manager's team name in this league on Sleeper (proof you're them; see removal.ts).
+ *  - { verify: challenge } -> { linked: true } once the code is in the team name. Proof wins: it
+ *    replaces any earlier link to that manager and this account's earlier link.
+ *  - { game, day, manager, score, label }: a result, only as your linked manager.
+ */
 export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/scores">) {
   const { leagueId } = await ctx.params;
   if (!hasDb() || !isSleeperId(leagueId)) return Response.json({ enabled: false });
   // Posting rides on the session cookie, so only this site's own pages may post.
   if (authConfigured() && !sameOrigin(req)) return Response.json({ error: "bad request" }, { status: 403 });
-  const b = (await req.json().catch(() => null)) as { game?: string; day?: string; manager?: string; score?: number; label?: string; claim?: boolean } | null;
-  // { claim: true, manager }: pick who you are in this league before playing (signed in only).
-  const claimOnly = b?.claim === true;
-  if (!b || (claimOnly && typeof b.manager !== "string") || (!claimOnly && (!GAMES.has(b.game ?? "") || !DAY.test(b.day ?? "") || typeof b.score !== "number" || b.score < 0 || b.score > 1000)))
-    return Response.json({ error: "bad request" }, { status: 400 });
+  const b = (await req.json().catch(() => null)) as {
+    game?: string;
+    day?: string;
+    manager?: string;
+    score?: number;
+    label?: string;
+    claim?: boolean;
+    verify?: string;
+  } | null;
+  if (!b) return Response.json({ error: "bad request" }, { status: 400 });
   const ok = await take("lookup", await clientIp()).catch(() => ({ ok: true as const }));
-  if (!ok.ok) return Response.json({ error: "slow down" }, { status: 429 });
+  if (!ok.ok) return Response.json({ error: "Slow down a little and try again." }, { status: 429 });
   try {
     const fid = await familyIdOf(leagueId);
     const season = fid ? await newestSeason(fid) : null;
-    if (!fid || !season || !season.users.has(String(b.manager))) return Response.json({ error: "bad request" }, { status: 400 });
+    if (!fid || !season) return Response.json({ error: "bad request" }, { status: 400 });
     const sql = await db();
+
+    if (b.claim === true || typeof b.verify === "string") {
+      if (!authConfigured()) return Response.json({ error: "bad request" }, { status: 400 });
+      const v = await viewerOf(req, fid);
+      if (!v.accountId) return Response.json({ error: "Sign in first." }, { status: 401 });
+      if (b.claim === true) {
+        if (!season.users.has(String(b.manager))) return Response.json({ error: "bad request" }, { status: 400 });
+        const c = await createChallenge({ familyId: fid, leagueId: season.leagueId, userId: b.manager!, intent: "link", accountId: v.accountId });
+        return Response.json({ code: c.code, challenge: c.id, expiresAt: c.expiresAt.toISOString() });
+      }
+      if (!/^[a-f0-9]{32}$/.test(b.verify!)) return Response.json({ error: "Start again: that code isn't valid." }, { status: 400 });
+      const r = await verifyChallenge(b.verify!, ["link"]);
+      if (!r.ok) {
+        const msg = {
+          not_yet: "Rafterlore can't see the code in your team name yet. Save it in Sleeper, wait a few seconds, then check again.",
+          expired: "That code expired. Pick yourself again for a new one.",
+          too_many: "Too many checks for this code. Pick yourself again for a new one.",
+          not_found: "Pick yourself again: that code isn't valid.",
+        }[r.reason];
+        return Response.json({ error: msg, retry: r.reason === "not_yet" }, { status: r.reason === "not_yet" ? 409 : 410 });
+      }
+      if (r.challenge.familyId !== fid || r.challenge.accountId !== v.accountId)
+        return Response.json({ error: "Pick yourself again: that code isn't valid." }, { status: 400 });
+      await sql.begin(async (tx) => {
+        await tx`delete from sleeper_links where account_id = ${v.accountId} or sleeper_user = ${r.challenge.userId}`;
+        await tx`insert into sleeper_links (sleeper_user, account_id) values (${r.challenge.userId}, ${v.accountId})`;
+      });
+      return Response.json({ linked: true });
+    }
+
+    if (!GAMES.has(b.game ?? "") || !DAY.test(b.day ?? "") || typeof b.score !== "number" || b.score < 0 || b.score > 1000)
+      return Response.json({ error: "bad request" }, { status: 400 });
+    if (!season.users.has(String(b.manager))) return Response.json({ error: "bad request" }, { status: 400 });
     if (authConfigured()) {
-      // Standings are for signed-in accounts, each as its one linked Sleeper user, in leagues they're in.
+      // Standings are for signed-in accounts, each as its one proven Sleeper user, in leagues they're in.
       const v = await viewerOf(req, fid);
       if (!v.accountId) return Response.json({ error: "Sign in to post to the standings." }, { status: 401 });
-      if (v.linked && !v.member) return Response.json({ error: "You're not a manager in this league." }, { status: 403 });
-      if (v.linked && v.manager !== b.manager) return Response.json({ error: "Your account plays as someone else." }, { status: 409 });
-      if (!v.linked) {
-        const linked = await sql`
-          insert into sleeper_links (sleeper_user, account_id) values (${b.manager!}, ${v.accountId})
-          on conflict do nothing returning 1`;
-        if (!linked.length) {
-          // Either that manager is taken, or this account was just linked in another tab.
-          const [mine] = await sql<{ sleeper_user: string }[]>`select sleeper_user from sleeper_links where account_id = ${v.accountId}`;
-          if (!mine) return Response.json({ error: "Another account already plays as that manager." }, { status: 409 });
-          if (mine.sleeper_user !== b.manager) return Response.json({ error: "Your account plays as someone else." }, { status: 409 });
-        }
-      }
+      if (!v.linked) return Response.json({ error: "Prove which manager you are first." }, { status: 403 });
+      if (!v.member) return Response.json({ error: "You're not a manager in this league." }, { status: 403 });
+      if (v.manager !== b.manager) return Response.json({ error: "Your account plays as someone else." }, { status: 409 });
     }
-    if (claimOnly) return authConfigured() ? Response.json({ enabled: true, claimed: true }) : Response.json({ error: "bad request" }, { status: 400 });
     // First result of the day stands: no replays to improve a score.
     const saved = await sql`
       insert into game_scores (family_id, game, day, manager, score, label)
-      values (${fid}, ${b.game!}, ${b.day!}, ${b.manager!}, ${Math.round(b.score!)}, ${String(b.label ?? "").slice(0, 40)})
+      values (${fid}, ${b.game!}, ${b.day!}, ${b.manager!}, ${Math.round(b.score)}, ${String(b.label ?? "").slice(0, 40)})
       on conflict do nothing returning 1`;
     return Response.json({ enabled: true, saved: saved.length > 0 });
   } catch (e) {

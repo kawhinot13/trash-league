@@ -51,8 +51,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   them sign-in is hidden. Sessions are HMAC-signed cookies with a per-account version (sign-out ends every session).
   Read only in API routes and the browser (`useMe`), never in page renders, so pages stay pre-built.
 - Daily-game standings (Rafterlore): with sign-in on, only signed-in accounts post (`/api/l/[id]/scores`). Each account
-  links once to one Sleeper user (`sleeper_links`, unique both ways) and can only post in leagues where that user is a
-  manager; others watch. Today / This week / All time (scores kept ~a year). Signed-out players see a sign-in nudge
+  links to one Sleeper user (`sleeper_links`, unique both ways) only after proving it with the removal-style team-name
+  code (`removal.ts` intent "link"; codes only work for their own purpose; proof replaces an earlier link), and can
+  only post in leagues where that user is a manager; others watch. Today / This week / All time (scores kept ~a year). Signed-out players see a sign-in nudge
   before (`StandingsNudge`) and after playing. Trash keeps its honor-system board (no `viewer` in its API).
 - Recreational use: Rafterlore is a history/analytics/entertainment site with no link to betting. First import of a
   league requires the acknowledgement (`use-ack.ts`; import API returns 428 without it); stored as version + time on

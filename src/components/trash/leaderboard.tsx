@@ -27,9 +27,11 @@ type Board = {
   /** Rafterlore: every day on record (a year). */
   all?: Record<string, { points: number; played: number; wins: number }>;
   /** Rafterlore: who's looking. Absent on the Trash site (honor system). */
-  viewer?: { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; taken: string[] };
+  viewer?: { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null };
 };
 type Tab = "today" | "week" | "all";
+/** A one-time code waiting to show up in the manager's Sleeper team name (kept across app switches). */
+type Pending = { challenge: string; code: string; manager: string; expiresAt: string };
 const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup" };
 
 export type Person = { id: string; nick: string };
@@ -55,6 +57,23 @@ export function Leaderboard({
   const [board, setBoard] = useState<Board | null>(null);
   const [tab, setTab] = useState<Tab>("today");
   const [claimErr, setClaimErr] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const pendingKey = brand.key("link-code");
+  const [pending, setPendingState] = useState<Pending | null>(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(pendingKey) ?? "null") as Pending | null;
+      return p && Date.parse(p.expiresAt) > Date.now() ? p : null;
+    } catch {
+      return null;
+    }
+  });
+  const setPending = (p: Pending | null) => {
+    setPendingState(p);
+    try {
+      if (p) localStorage.setItem(pendingKey, JSON.stringify(p));
+      else localStorage.removeItem(pendingKey);
+    } catch {}
+  };
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
@@ -105,15 +124,21 @@ export function Leaderboard({
   }, [game, day, me, rs, rl, brand, ready]);
 
   if (!board?.enabled) return null;
+  const post = (body: object) =>
+    fetch(brand.scores, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(async (r) => ({
+        ok: r.ok,
+        j: ((await r.json().catch(() => null)) ?? {}) as { error?: string; retry?: boolean; code?: string; challenge?: string; expiresAt?: string; linked?: boolean },
+      }))
+      .catch(() => ({ ok: false, j: { error: "Couldn't reach Rafterlore. Try again.", retry: true } as { error?: string; retry?: boolean; code?: string; challenge?: string; expiresAt?: string; linked?: boolean } }));
   const pick = (id: string) => {
     if (viewer) {
-      // Link this account to that Sleeper user, for every league.
+      // Ask for a one-time code to prove this account is that manager.
       setClaimErr(null);
-      fetch(brand.scores, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ claim: true, manager: id }) })
-        .then(async (r) => {
-          if (!r.ok) setClaimErr(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? "That didn't work. Try again.");
-        })
-        .finally(() => setReload((n) => n + 1));
+      post({ claim: true, manager: id }).then(({ ok, j }) => {
+        if (ok && j.code && j.challenge && j.expiresAt) setPending({ challenge: j.challenge, code: j.code, manager: id, expiresAt: j.expiresAt });
+        else setClaimErr(j.error ?? "That didn't work. Try again.");
+      });
       return;
     }
     try {
@@ -121,8 +146,24 @@ export function Leaderboard({
     } catch {}
     setMe(id);
   };
+  const check = () => {
+    if (!pending) return;
+    setChecking(true);
+    setClaimErr(null);
+    post({ verify: pending.challenge })
+      .then(({ ok, j }) => {
+        if (ok && j.linked) {
+          setPending(null);
+          setReload((n) => n + 1);
+        } else {
+          setClaimErr(j.error ?? "That didn't work. Try again.");
+          if (!j.retry) setPending(null);
+        }
+      })
+      .finally(() => setChecking(false));
+  };
   const tabs: Tab[] = board.all ? ["today", "week", "all"] : ["today", "week"];
-  const choices = viewer ? ACTIVE.filter((id) => !viewer.taken.includes(id)) : ACTIVE;
+  const choices = ACTIVE;
   // Only rendered after the board loads in the browser, so window is there.
   const signIn = () => `/api/auth/google?next=${encodeURIComponent(`${window.location.pathname}#${SECTION[game]}`)}`;
   const rows =
@@ -181,11 +222,46 @@ export function Leaderboard({
           You&apos;re not a manager in this league, so you can follow the standings but not post to them.
         </p>
       ) : null}
-      {!me && (!viewer || (viewer.signedIn && !viewer.linked)) ? (
+      {viewer?.signedIn && !viewer.linked && pending ? (
+        <div className="mt-3 rounded-xl border border-[var(--paper)]/25 bg-white/6 p-4 text-sm">
+          <p className="font-semibold">Prove you&apos;re {nick(pending.manager)}</p>
+          <p className="mt-1 text-[var(--muted)]">
+            In the Sleeper app, add this code anywhere in your team name in this league, save, then check. Only you (or your
+            commissioner) can change your team name. Change it back once you&apos;re linked.
+          </p>
+          <p className="font-display mt-3 text-3xl font-black tracking-wider break-words select-all">{pending.code}</p>
+          {claimErr ? (
+            <p role="alert" className="mt-2 text-[var(--paper)]">
+              {claimErr}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={check}
+              disabled={checking}
+              className="inline-flex h-10 cursor-pointer items-center rounded-full bg-[var(--paper)] px-5 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97] disabled:opacity-60"
+            >
+              {checking ? "Checking…" : "Check"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPending(null);
+                setClaimErr(null);
+              }}
+              className="inline-flex h-10 cursor-pointer items-center rounded-full border border-white/15 px-5 font-semibold transition-colors hover:bg-white/8"
+            >
+              Pick someone else
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {!me && (!viewer || (viewer.signedIn && !viewer.linked && !pending)) ? (
         <div className="mt-3">
           <p className="text-sm text-[var(--muted)]">
             {viewer
-              ? "Which manager are you? Pick yourself once: your account plays as them in every league they're in."
+              ? "Which manager are you? Pick yourself, then prove it with a code in your Sleeper team name. Your account plays as them in every league they're in."
               : "Who are you? Pick once and your results post to the board."}
           </p>
           {claimErr ? (

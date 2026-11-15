@@ -4,7 +4,8 @@ import { db } from "@/lib/app/db";
 import { sleeper, type SUser } from "@/lib/app/sleeper";
 
 /**
- * Proof that someone really manages a team before they can remove (or restore) a league.
+ * Proof that someone really manages a team before they can remove (or restore) a league, or link
+ * their Rafterlore account to that manager for the daily-game standings.
  *
  * Sleeper has no sign-in for outside apps, and usernames are public, so a username alone proves
  * nothing. Instead Rafterlore issues a one-time code and the manager puts it in their own team name
@@ -12,7 +13,7 @@ import { sleeper, type SUser } from "@/lib/app/sleeper";
  * change in the Sleeper app. Rafterlore then reads the league fresh from Sleeper and checks.
  * Codes expire after 30 minutes and allow a handful of checks.
  */
-export type Intent = "remove" | "restore";
+export type Intent = "remove" | "restore" | "link";
 export type Challenge = {
   id: string;
   familyId: string;
@@ -21,6 +22,8 @@ export type Challenge = {
   intent: Intent;
   code: string;
   expiresAt: Date;
+  /** For "link": the account that asked (never shown to anyone). */
+  accountId?: string | null;
 };
 
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I/L
@@ -40,11 +43,11 @@ export async function createChallenge(c: Omit<Challenge, "id" | "code" | "expire
   const id = randomBytes(16).toString("hex");
   const code = newCode();
   const expiresAt = new Date(Date.now() + TTL_MIN * 60_000);
-  // One open code per manager and league: a new request replaces the old one.
-  await sql`delete from removal_challenges where family_id = ${c.familyId} and user_id = ${c.userId}`;
+  // One open code per manager, league and purpose: a new request replaces the old one.
+  await sql`delete from removal_challenges where family_id = ${c.familyId} and user_id = ${c.userId} and intent = ${c.intent}`;
   await sql`
-    insert into removal_challenges (id, family_id, league_id, user_id, intent, code, expires_at)
-    values (${id}, ${c.familyId}, ${c.leagueId}, ${c.userId}, ${c.intent}, ${code}, ${expiresAt})`;
+    insert into removal_challenges (id, family_id, league_id, user_id, intent, code, expires_at, account_id)
+    values (${id}, ${c.familyId}, ${c.leagueId}, ${c.userId}, ${c.intent}, ${code}, ${expiresAt}, ${c.accountId ?? null})`;
   return { ...c, id, code, expiresAt };
 }
 
@@ -54,11 +57,13 @@ export async function createChallenge(c: Omit<Challenge, "id" | "code" | "expire
  */
 export async function verifyChallenge(
   id: string,
+  /** Only codes made for one of these purposes count (a link code can never remove a league). */
+  intents: Intent[],
 ): Promise<{ ok: true; challenge: Challenge } | { ok: false; reason: "expired" | "not_found" | "too_many" | "not_yet" }> {
   const sql = await db();
   const [row] = await sql<
-    { id: string; family_id: string; league_id: string; user_id: string; intent: Intent; code: string; expires_at: Date; checks: number }[]
-  >`update removal_challenges set checks = checks + 1 where id = ${id} and not used returning *`;
+    { id: string; family_id: string; league_id: string; user_id: string; intent: Intent; code: string; expires_at: Date; checks: number; account_id: string | null }[]
+  >`update removal_challenges set checks = checks + 1 where id = ${id} and not used and intent in ${sql(intents)} returning *`;
   if (!row) return { ok: false, reason: "not_found" };
   if (row.expires_at < new Date()) return { ok: false, reason: "expired" };
   if (row.checks > MAX_CHECKS) return { ok: false, reason: "too_many" };
@@ -76,6 +81,7 @@ export async function verifyChallenge(
       intent: row.intent,
       code: row.code,
       expiresAt: row.expires_at,
+      accountId: row.account_id,
     },
   };
 }

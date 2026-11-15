@@ -203,6 +203,8 @@ alter table accounts add column if not exists session_v int not null default 1;
 alter table accounts add column if not exists is_admin boolean not null default false;
 -- The recreational-use acknowledgement given when the league was first imported (version + time; nobody's details).
 alter table families add column if not exists use_ack text;
+-- Standings links are proven with the same team-name code; the code remembers which account asked.
+alter table removal_challenges add column if not exists account_id text;
 alter table families add column if not exists use_ack_at timestamptz;
 `;
 
