@@ -212,6 +212,9 @@ export function buildDataset(
       champion: v.champion ? (v.champion.ownerId ?? `r${v.champion.rosterId}`) : null,
       runnerUp: v.runnerUp ? (v.runnerUp.ownerId ?? `r${v.runnerUp.rosterId}`) : null,
       bracket,
+      median: (lg.settings?.league_average_match ?? 0) === 1,
+      regWeeks: lg.settings?.playoff_week_start ? lg.settings.playoff_week_start - Math.max(1, lg.settings.start_week || 1) : undefined,
+      playoffTeams: lg.settings?.playoff_teams || undefined,
       draft: draft.slice(0, lg.total_rosters || 12).map((d) => ({ no: d.no, pid: d.pid, player: dir[d.pid]?.[0] ?? d.pid, by: d.by })),
       trades: lgTrades,
     });

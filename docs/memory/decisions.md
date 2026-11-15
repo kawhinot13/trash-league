@@ -4,6 +4,18 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Trapezoid of Excellence (owner's spec)
+- Kept the open-ended trapezoid (floor + sloped left edge, open top/right) over curved shapes: each edge is a
+  one-sentence rule, it's monotonic, and a handful of champions can't justify a curve. Thresholds: <3 champions
+  provisional (105 index, 50%), 3-7 lowest champion, 8+ 20th percentile; floors 100 / 45%; slope 0.005.
+- PF uses Sleeper's official regular-season totals (weekly matchup sums don't match them for any team, playoff or
+  not, so they aren't playoff-inflated). Playoff "vs regular season" compares per-Sleeper playoff weeks with
+  per-Sleeper regular weeks (official vs weekly differ by ~5%, which would bias everyone negative).
+- Same-spot managers share one label; markers aren't jittered (positions must be exact). Download is drawn on a
+  canvas with initials (Sleeper avatars would taint the canvas).
+- Trash's season settings (median, regWeeks) aren't in league.json; scheduled weeks fall back to the last
+  completed season. Rafterlore reads them from league settings (ANALYSIS_VERSION 8).
+
 ## 2026-11-15: Trade court values = average lock-in x weeks rostered and played
 - Owner's call. Each incoming player earns his season-average start (points per week in ANY team's
   starting lineup that season) for every week after the trade (playoffs included) that he's on the

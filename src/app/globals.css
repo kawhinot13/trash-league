@@ -159,6 +159,8 @@
   --muted: #a4b8ab;
   --line: rgba(246, 243, 234, 0.14);
   --gold: #e9c46a;     /* champions only */
+  --zone: #2f8f5b;     /* Trapezoid of Excellence fill */
+  --zone-edge: #5fd08f; /* its boundary, and markers inside it */
   --wood: #c98a4b;     /* the court */
   --wood-2: #b5793f;
   --ticket: #d6342c;   /* scandals only */

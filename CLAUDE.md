@@ -87,6 +87,11 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   football "starts" (both "Lineup Index"). Never hard-code Trash's years or lineup size in shared copy.
   No live in-week scores for basketball (Sleeper's are wrong; owner's rule: only show scoring that's verified).
   Football live scores are shown: weekly matchup scores sum to the official totals (checked).
+- Trapezoid of Excellence + Playoff report (History page, both sites): pure math in `core/trapezoid.ts`, UI in
+  `components/trash/trapezoid.tsx` / `playoff-report.tsx`. Win % = W/(W+L+T); PF = official regular-season PF /
+  weeks (median leagues: games/2); Scoring Index = avg / league avg x 100 (all-time weighted by weeks). Window from the
+  league's own champions, only seasons BEFORE the one charted (no leakage); config in `TRAP_CONFIG`. Playoff scores are
+  per Sleeper (weekly) and compared only with per-Sleeper regular weeks. Never move the window to fit champions.
 - Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.
   Never put league-specific features in the generic components.
 - Local testing: Postgres binaries in `/usr/lib/postgresql/16/bin`; run `DATABASE_URL=... NODE_USE_ENV_PROXY=1 next dev`.

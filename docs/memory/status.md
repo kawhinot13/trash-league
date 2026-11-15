@@ -29,7 +29,11 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 - Daily-game standings on Rafterlore (signed-in, one Sleeper user per account, All time tab) and the
   recreational-use terms, footer line and import acknowledgement (2026-11-15).
 
+- Trapezoid of Excellence (all-time, current, each past season; backtest) and a separate Playoff report on both
+  History pages (2026-11-15).
+
 ## Open tasks and ideas
+- Trapezoid: category leagues would need a separate category-dominance model (not built; points leagues only).
 - Before a major public or commercial launch: written authorization from Sleeper (see decisions.md).
 - Category (non-points) leagues: detection is a heuristic; not supported yet.
 - Yahoo (football + basketball, points and categories): parked by the owner. Needs a Yahoo developer app,

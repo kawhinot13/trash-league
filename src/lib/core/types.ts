@@ -32,6 +32,11 @@ export type Season = {
   bracket: { round: number; a: string; b: string; winner: string | null }[];
   draft: Pick[];
   trades: Trade[];
+  /** League also plays the weekly median (records count two games a week). Unset: no. */
+  median?: boolean;
+  /** Regular-season weeks scheduled, and playoff spots, from the league's settings when known. */
+  regWeeks?: number;
+  playoffTeams?: number;
 };
 export type Manager = {
   id: string;

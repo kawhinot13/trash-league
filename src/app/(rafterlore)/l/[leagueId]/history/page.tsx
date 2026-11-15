@@ -8,6 +8,9 @@ import { RedraftBoard } from "@/components/trash/redraft";
 import { SectionHead } from "@/components/trash/section-head";
 import { TimeMachine } from "@/components/trash/time-machine";
 import { TradeCourt } from "@/components/trash/trade-court";
+import { PlayoffReport } from "@/components/trash/playoff-report";
+import { Trapezoid } from "@/components/trash/trapezoid";
+import { backtest, playoffReport, trapezoidViews } from "@/lib/core/trapezoid";
 import type { LeaguePage } from "@/lib/app/league-page";
 import { machine, redrafts, tradeCourt } from "@/lib/core/extras";
 
@@ -70,6 +73,25 @@ function History({ p }: { p: LeaguePage }) {
           <TradeCrimes d={d} />
         </section>
       ) : null}
+
+      <section aria-labelledby="trapezoid" className="py-24 md:py-32">
+        <SectionHead id="trapezoid" title="Trapezoid of Excellence">
+          Who scores and wins like a champion? Every manager plotted by regular-season win rate and scoring, against the window
+          this league&apos;s own champions set.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <Trapezoid views={trapezoidViews(d)} bt={backtest(d)} people={d.league.managers} />
+        </div>
+      </section>
+
+      <section aria-labelledby="playoff-report" className="py-24 md:py-32">
+        <SectionHead id="playoff-report" title="Playoff report">
+          The postseason, kept separate: who gets in, who wins when it counts and who scores up or down in the playoffs.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <PlayoffReport rows={playoffReport(d)} people={d.league.managers} years={Object.fromEntries(d.league.seasons.map((s) => [s.code, s.years]))} />
+        </div>
+      </section>
 
       <section aria-labelledby="almanac" className="py-24 md:py-32">
         <SectionHead id="almanac" title="The almanac">Every season, sorted by the questions the league actually argues about.</SectionHead>

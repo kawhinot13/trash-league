@@ -7,7 +7,10 @@ import { RedraftBoard } from "@/components/trash/redraft";
 import { Banners, Crimes, SectionHead } from "@/components/trash/sections";
 import { TimeMachine } from "@/components/trash/time-machine";
 import { TradeCourt } from "@/components/trash/trade-court";
-import { machine, players, redrafts, tradeCourt } from "@/lib/extras";
+import { PlayoffReport } from "@/components/trash/playoff-report";
+import { Trapezoid } from "@/components/trash/trapezoid";
+import { backtest, playoffReport, trapezoidViews } from "@/lib/core/trapezoid";
+import { TRASH, machine, players, redrafts, tradeCourt } from "@/lib/extras";
 import { league } from "@/lib/league";
 import { mickeyCase, ringRun } from "@/lib/rings";
 import { STORY } from "@/lib/story";
@@ -33,6 +36,25 @@ export default function HistoryPage() {
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <TradeCourt {...tradeCourt()} players={players} managers={league.managers} />
+        </div>
+      </section>
+
+      <section aria-labelledby="trapezoid" className="py-24 md:py-32">
+        <SectionHead id="trapezoid" title="Trapezoid of Excellence">
+          Who scores and wins like a champion? Every manager plotted by regular-season win rate and scoring, against the window
+          this league&apos;s own champions set.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <Trapezoid views={trapezoidViews(TRASH)} bt={backtest(TRASH)} people={league.managers} />
+        </div>
+      </section>
+
+      <section aria-labelledby="playoff-report" className="py-24 md:py-32">
+        <SectionHead id="playoff-report" title="Playoff report">
+          The postseason, kept separate: who gets in, who wins when it counts and who scores up or down in the playoffs.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <PlayoffReport rows={playoffReport(TRASH)} people={league.managers} years={Object.fromEntries(TRASH.league.seasons.map((s) => [s.code, s.years]))} />
         </div>
       </section>
 
