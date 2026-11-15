@@ -195,7 +195,6 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
     return () => window.removeEventListener("keydown", on);
   }, [press, boardRef]);
 
-  const misses = guesses.filter((g) => g !== target?.word).length;
   const share = async () => {
     if (!target) return;
     const grid = guesses
@@ -290,21 +289,6 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
             Guess today&apos;s mystery player by last name. Green is the right letter in the right spot, brown is in
             the name but somewhere else. Every guess has to be a player from {brand.name} history.
           </div>
-          <div className="space-y-2">
-            {[
-              { at: 3, label: "Scouting report", text: target ? `${target.pos || "?"}, ${target.team || "free agent"}` : "" },
-              { at: 5, label: "Ride or die", text: target ? `${target.owner} rostered him for ${target.weeks} weeks` : "" },
-            ].map((h) => {
-              const open = misses >= h.at || over;
-              return (
-                <div key={h.label} className="flex items-center gap-3 rounded-xl border border-white/10 px-4 py-3">
-                  <span className="text-xs font-bold text-[var(--wood)]">{h.label}</span>
-                  <span className={`text-sm ${open ? "" : "text-[var(--muted)]"}`}>{open ? h.text : `Unlocks after ${h.at} misses`}</span>
-                </div>
-              );
-            })}
-          </div>
-
           <AnimatePresence>
             {over && settled && target ? (
               <motion.div
