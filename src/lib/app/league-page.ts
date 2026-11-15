@@ -28,7 +28,10 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
   try {
     stored = await storedLeague(leagueId);
   } catch (e) {
+    // Fail the render rather than treat the league as unknown: a background rebuild that fails
+    // keeps serving the last good page; a first visit shows the error screen.
     logError(`cached league ${leagueId}`, e);
+    throw new Error("League data unavailable");
   }
   let family;
   if (stored) {

@@ -57,7 +57,7 @@ export function ManagerProfileView({ d, id, label, base = "" }: { d: Dataset; id
         <div className="mx-auto mt-10 flex max-w-6xl flex-wrap items-end gap-8">
           <MgrPhoto id={m.id} alt="" width={180} height={180} priority className="rounded-full ring-8 ring-[var(--paper)]/90" />
           <div>
-            <h1 className="font-display text-[clamp(4rem,12vw,9rem)] leading-[0.8] font-black">{m.nick}</h1>
+            <h1 className="font-display pb-[0.16em] text-[clamp(4rem,12vw,9rem)] leading-[0.8] font-black">{m.nick}</h1>
             <p className="mt-3 text-lg text-[var(--paper)]/85">
               <Handle id={m.id} />, managing “{m.team}”
             </p>

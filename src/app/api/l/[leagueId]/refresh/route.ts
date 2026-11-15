@@ -28,9 +28,11 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/l/[leagueId]/r
       // In season, catch up trades, lineups and records every half hour (only unfinished weeks are re-read).
       const inSeason = fam.seasons.some((b) => b.league.status === "in_season");
       const behind = inSeason && !!s.analysis && Date.now() - Date.parse(s.analysis.computedAt) > CATCH_UP_MS;
-      if ((old || behind) && !open)
+      // Queue a catch-up when needed; either way, work any job left waiting (a queued job whose worker
+      // stopped would otherwise sit until the nightly run). Claims are leased, so this never doubles up.
+      if ((old || behind) || open)
         after(async () => {
-          await enqueueImport(fam.id);
+          if (!open) await enqueueImport(fam.id);
           const r = await runJobs(50_000);
           if (r.more) await kick();
         });

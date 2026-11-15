@@ -29,9 +29,8 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 - Optional public contact address: set `RAFTERLORE_CONTACT_EMAIL` in Vercel to show it on /privacy and /terms.
 
 ## Known issues
-- Streaming pages answer 200 even when they render the not-found screen (Next.js streaming);
-  fine for people, imperfect for crawlers.
-- The site-wide 404 page no longer has the Trash nav and footer (Trash chrome moved into its group layout).
+- Streaming pages answer 200 even when they render a not-found or notice screen (Next.js streaming);
+  those screens carry `robots: noindex`, so crawlers skip them. Unknown URLs get a real 404 (`app/not-found.tsx`).
 - The environment setup script was tested by hand but only runs in a fresh session.
 
 ## How to verify changes

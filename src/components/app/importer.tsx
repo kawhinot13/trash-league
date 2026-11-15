@@ -33,6 +33,8 @@ export function Importer({ leagueId }: { leagueId: string }) {
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-36 pb-24 md:px-10" aria-busy={!state}>
+      {/* Not a league page yet (and maybe never): keep it out of search results. */}
+      <meta name="robots" content="noindex" />
       {state ? (
         <>
           <h1 className="font-display text-5xl font-black md:text-7xl">{state.title}</h1>

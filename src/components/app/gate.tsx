@@ -78,6 +78,7 @@ export async function LeagueGate({
 export function Notice({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <>
+      <meta name="robots" content="noindex" />
       <AppNav />
       <main className="mx-auto max-w-6xl px-5 pt-36 pb-24 md:px-10">
         <h1 className="font-display text-5xl font-black md:text-7xl">{title}</h1>
