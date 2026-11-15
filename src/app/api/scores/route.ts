@@ -10,7 +10,8 @@ import { league } from "@/lib/league";
  */
 const URL_ = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
 const TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
-const GAMES = new Set(["dive", "trashle", "lineup"]);
+// "dive2": the dive leaderboard since the no-repeat schedule and the 2026-11-15 reset.
+const GAMES = new Set(["dive", "dive2", "trashle", "lineup"]);
 const MANAGERS = new Set(league.managers.map((m) => m.id));
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 

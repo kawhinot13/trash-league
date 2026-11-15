@@ -10,7 +10,8 @@ import { isSleeperId } from "@/lib/app/validate";
  * Like Trash's, it's an honor system for friends: you pick who you are, and the first result
  * posted each day stands. Only managers in the league's current season can be picked.
  */
-const GAMES = new Set(["dive", "trashle", "lineup"]);
+// "dive2": the dive leaderboard since the no-repeat schedule and the 2026-11-15 reset.
+const GAMES = new Set(["dive", "dive2", "trashle", "lineup"]);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/scores">) {

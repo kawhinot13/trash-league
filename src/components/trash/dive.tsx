@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import type { Players } from "@/lib/extras";
-import type { Prompt } from "@/lib/dive";
+import { dailyPrompts, type Prompt } from "@/lib/core/dive";
 import { Face, pname } from "./player";
 import { AnswerBoard } from "./dive/answers";
 import { sfx } from "./dive/sfx";
@@ -20,10 +20,6 @@ type Saved = { picks: Pick[] };
 
 const todayET = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
-const rng = (seed: number) => () => {
-  seed = (seed * 1664525 + 1013904223) % 4294967296;
-  return seed / 4294967296;
-};
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
 const store = {
@@ -41,16 +37,6 @@ const store = {
     } catch {}
   },
 };
-
-/** Today's five prompts, one per kind, identical for everyone on the same day. */
-function todays(pool: Prompt[], day: string) {
-  const r = rng(Number(day.replaceAll("-", "")));
-  const kinds = [...new Set(pool.map((q) => q.kind))].sort().sort(() => r() - 0.5);
-  return kinds.slice(0, ROUNDS).map((k) => {
-    const of = pool.filter((q) => q.kind === k);
-    return of[Math.floor(r() * of.length)];
-  });
-}
 
 const rankOf = (total: number) =>
   total >= 400
@@ -185,13 +171,13 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     setDay(d);
     setMuted(sfx.isMuted());
     setStreak(store.get<{ last: string; n: number }>(brand.key("dive:streak"))?.n ?? 0);
-    const saved = store.get<Saved>(`dive2:${d}`);
+    const saved = store.get<Saved>(brand.key(`dive3:${d}`));
     if (saved?.picks?.length === ROUNDS) {
       setPicks(saved.picks);
       setPhase("done");
     }
   }, [brand]);
-  const qs = useMemo(() => (day ? todays(pool, day) : []), [pool, day]);
+  const qs = useMemo(() => (day ? dailyPrompts(pool, day) : []), [pool, day]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : null;
   const q = qs[i];
   const current = picks[i] ?? null;
@@ -231,7 +217,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     setPhase("done");
     sfx.fanfare();
     if (!day) return;
-    store.set(`dive2:${day}`, { picks } satisfies Saved);
+    store.set(brand.key(`dive3:${day}`), { picks } satisfies Saved);
     const st = store.get<{ last: string; n: number }>(brand.key("dive:streak"));
     const y = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
     const n = st?.last === y ? st.n + 1 : st?.last === day ? st.n : 1;
@@ -505,7 +491,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
               </div>
 
               <Leaderboard
-                game="dive"
+                game="dive2"
                 day={day}
                 people={people}
                 result={picks.length === ROUNDS ? { score: sum, label: picks.map((p) => (p.score === null ? "×" : p.score)).join(" · ") } : null}

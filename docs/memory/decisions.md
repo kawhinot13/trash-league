@@ -4,6 +4,16 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Dumpster Dive no-repeat schedule (and today's reset)
+- Prompts repeated too often: 7 kinds, 5 picked a day independently, and "First round"/"Journeymen" had one
+  prompt each, so the same question showed up ~70% of days. Now `dailyPrompts` (core/dive.ts) plans days in
+  order: no prompt within ~2 weeks, yesterday's kinds wait, no manager twice a day; a kind is used twice
+  before an old prompt returns. New prompt kinds (v2): champions' rosters, trades for/away per manager,
+  each season's draft, late rounds (pool 67 -> 94 for Trash).
+- Owner asked to reset 2026-11-15 for everyone: the schedule starts that day (avoiding launch day's and the
+  replaced set's prompts), saves moved to `dive3:` (per-league key) and the leaderboard to game `dive2`.
+  Launch day keeps the original pick (`legacy`). Clearing production Redis directly was not an option.
+
 ## 2026-11-15: Current-week trades and in-season catch-up
 - Rafterlore showed 91 trades vs Trash's 93: grading replays only finished weeks (lineups aren't final), so
   trades made this week were missing. Grading now also reads the current week's transactions, for trades only

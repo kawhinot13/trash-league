@@ -30,7 +30,7 @@ export function Leaderboard({
 }: {
   /** Current managers, for the "who are you" picker and names. */
   people: Person[];
-  game: "dive" | "trashle" | "lineup";
+  game: "dive" | "dive2" | "trashle" | "lineup";
   day: string | null;
   /** The finished result to post, once the game is over. score: higher is better. */
   result: { score: number; label: string } | null;
