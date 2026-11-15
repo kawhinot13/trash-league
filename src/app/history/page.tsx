@@ -25,16 +25,6 @@ export default function HistoryPage() {
 
       <Banners />
 
-      <section aria-labelledby="ring" className="py-24 md:py-32">
-        <SectionHead id="ring" title="The Mickey Mouse ring inquiry">
-          The whole group chat calls Oscar&apos;s title a Mickey Mouse ring. We pulled the tape on every playoff
-          game and let the numbers rule.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <MickeyRing run={oscar} exhibits={verdict.exhibits} mickey={verdict.mickey} players={players} />
-        </div>
-      </section>
-
       <section aria-labelledby="court" className="py-24 md:py-32">
         <SectionHead id="court" title="Trade court">
           Every trade in league history, judged by what each side actually got out of it. Who won, who got fleeced,
@@ -99,6 +89,16 @@ export default function HistoryPage() {
             playsInline
             preload="none"
           />
+        </div>
+      </section>
+
+      <section aria-labelledby="ring" className="py-24 md:py-32">
+        <SectionHead id="ring" title="The Mickey Mouse ring inquiry">
+          The whole group chat calls Oscar&apos;s title a Mickey Mouse ring. We pulled the tape on every playoff
+          game and let the numbers rule.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <MickeyRing run={oscar} exhibits={verdict.exhibits} mickey={verdict.mickey} players={players} />
         </div>
       </section>
 
