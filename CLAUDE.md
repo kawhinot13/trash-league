@@ -29,8 +29,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Legal: free and non-commercial (Sleeper's API terms). No payments, ads or paywalls; no Sleeper logo; footer says
   "works with Sleeper leagues, not affiliated with or endorsed by Sleeper". Store only public league data
   (`sanitizeBundle` in `family.ts` strips everything else). Optional `RAFTERLORE_CONTACT_EMAIL` shows on /privacy and /terms.
-- Removal: any league manager (proved by Sleeper username) can remove a league at `/l/[id]/remove`. Hidden at once,
-  deleted after 7 days by the nightly job, ids kept so it isn't re-imported; restorable until then.
+- Removal: a manager of the newest season proves it with a one-time code in their own Sleeper team name
+  (`removal.ts`; a username alone proves nothing), then can remove at `/l/[id]/remove`. Hidden at once, deleted
+  after 7 days by the nightly job, ids kept so it isn't re-imported; restorable the same way until then.
 - Background jobs: `jobs` table, started after an import, by the page's progress poll, `/api/jobs/tick` and the
   nightly cron. Grading output is versioned (`ANALYSIS_VERSION`); older results regrade on the next visit.
 - Nightly cron (`vercel.json`, 10:17 UTC, needs `CRON_SECRET`): housekeeping and purges, refresh every league, save
