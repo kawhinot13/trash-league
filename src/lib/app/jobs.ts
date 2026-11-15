@@ -2,7 +2,8 @@ import "server-only";
 import { db, hasDb } from "@/lib/app/db";
 import type { SeasonBundle } from "@/lib/app/family";
 import { analyse, seasonWeeks } from "@/lib/app/analysis";
-import { replayWeek, type WeekData } from "@/lib/app/replay";
+import { buildDataset } from "@/lib/app/dataset";
+import { REPLAY_VERSION, replayWeek, type WeekData } from "@/lib/app/replay";
 import { consensusMatchups, nbaState, sleeper, type STransaction } from "@/lib/app/sleeper";
 import { playerDirectory, weekStats, type PlayerDir } from "@/lib/app/sleeper-cache";
 import { safeMessage } from "@/lib/app/safe";
@@ -103,7 +104,7 @@ async function plan(familyId: string): Promise<[string, number, boolean][]> {
     (
       await sql<{ league_id: string; week: number }[]>`
         select w.league_id, w.week from league_weeks w join leagues l using (league_id)
-        where l.family_id = ${familyId} and w.final`
+        where l.family_id = ${familyId} and w.final and coalesce((w.data->>'v')::int, 1) >= ${REPLAY_VERSION}`
     ).map((r) => `${r.league_id}|${r.week}`),
   );
   const items: [string, number, boolean][] = [];
@@ -157,25 +158,27 @@ async function grade(familyId: string) {
   const rows = await sql<{ league_id: string; data: WeekData }[]>`
     select w.league_id, w.data from league_weeks w join leagues l using (league_id)
     where l.family_id = ${familyId} order by w.week`;
-  const a = analyse(
-    bs.map((b) => ({
-      bundle: b,
-      weeks: rows.filter((r) => r.league_id === b.league.league_id).map((r) => r.data),
-      regEnd: seasonWeeks(b.league, state.league_season || state.season, state.week).regEnd,
-    })),
-    await exactWeeks(bs),
-  );
+  const inputs = bs.map((b) => ({
+    bundle: b,
+    weeks: rows.filter((r) => r.league_id === b.league.league_id).map((r) => r.data),
+    regEnd: seasonWeeks(b.league, state.league_season || state.season, state.week).regEnd,
+  }));
+  const exact = await exactWeeks(bs);
+  const a = analyse(inputs, exact);
+  const dir = await playerDirectory().catch(() => ({}) as PlayerDir);
   // Names for traded players who never logged a game in a replayed week.
-  const missing = [...new Set(a.trades.flatMap((t) => t.sides.flatMap((s) => s.got)))].filter(
-    (p) => !p.startsWith("pick:") && !a.players[p],
-  );
-  if (missing.length) {
-    const dir = await playerDirectory().catch(() => ({}) as PlayerDir);
-    for (const p of missing) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];
-  }
-  await sql`
-    insert into analyses (family_id, kind, data) values (${familyId}, 'v1', ${sql.json(a as never)})
-    on conflict (family_id, kind) do update set data = excluded.data, computed_at = now()`;
+  for (const p of new Set(a.trades.flatMap((t) => t.sides.flatMap((s) => s.got))))
+    if (!p.startsWith("pick:") && !a.players[p]) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];
+  // The full dataset (Trash's league.json + extras.json shapes) that the league's pages are built from.
+  const ds = buildDataset(bs[bs.length - 1]?.league.name ?? "League", inputs, a, exact, dir);
+  await sql.begin(async (tx) => {
+    await tx`
+      insert into analyses (family_id, kind, data) values (${familyId}, 'v1', ${tx.json(a as never)})
+      on conflict (family_id, kind) do update set data = excluded.data, computed_at = now()`;
+    await tx`
+      insert into analyses (family_id, kind, data) values (${familyId}, 'dataset', ${tx.json(ds as never)})
+      on conflict (family_id, kind) do update set data = excluded.data, computed_at = now()`;
+  });
 }
 
 /** Work one job until `deadline`. Returns true when the job has more to do. */

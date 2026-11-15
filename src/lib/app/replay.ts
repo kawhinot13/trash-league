@@ -83,7 +83,14 @@ export type WeekData = {
   adds: [number, string][];
   /** pid -> [name, positions] for anyone who played. */
   names: Record<string, [string, string[]]>;
+  /** pid -> [best single game, games played] this week, for everyone who played (replay v2+). */
+  best?: Record<string, [number, number]>;
+  /** Replay format version; older rows are replayed again. */
+  v?: number;
 };
+
+/** Bump when WeekData gains fields, so stored weeks get replayed (box scores come from cache). */
+export const REPLAY_VERSION = 2;
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
@@ -163,5 +170,7 @@ export function replayWeek(
       pl: m.players ?? [],
     };
   });
-  return { week, teams, trades, adds, names };
+  const best: Record<string, [number, number]> = {};
+  for (const [pid, gl] of games) best[pid] = [Math.max(...gl.map((g) => g.pts)), gl.filter((g) => g.pts !== 0).length];
+  return { week, teams, trades, adds, names, best, v: REPLAY_VERSION };
 }

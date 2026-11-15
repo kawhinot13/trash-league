@@ -2,68 +2,11 @@ import { cacheLife } from "next/cache";
 import data from "@/data/league.json";
 import official from "@/data/official.json";
 
-export type Standing = {
-  manager: string;
-  team: string;
-  w: number;
-  l: number;
-  t: number;
-  pf: number;
-  seed: number;
-  streak?: string;
-  move?: number;
-};
-export type Pick = { no: number; pid: string; player: string; by: string };
-export type TradeSide = { pid: string | null; name: string };
-export type Trade = {
-  season: string;
-  week: number;
-  sides: Record<string, TradeSide[]>;
-};
-export type Season = {
-  code: "s1" | "s2" | "s3" | "s4";
-  years: string;
-  name: string;
-  status: string;
-  leagueId: string;
-  standings: Standing[];
-  champion: string | null;
-  runnerUp: string | null;
-  bracket: { round: number; a: string; b: string; winner: string | null }[];
-  draft: Pick[];
-  trades: Trade[];
-};
-export type Manager = {
-  id: string;
-  nick: string;
-  color: string;
-  team: string;
-  w: number;
-  l: number;
-  t: number;
-  pf: number;
-  pct: number;
-  titles: string[];
-  playoffs: number;
-  trades: number;
-  seasons: {
-    code: string;
-    seed: number;
-    w: number;
-    l: number;
-    t: number;
-    pf: number;
-    team: string;
-    finish: string;
-  }[];
-};
+export type { Standing, Pick, TradeSide, Trade, Season, Manager } from "@/lib/core/types";
+import type { LeagueData, Manager, Season, Standing } from "@/lib/core/types";
+import * as coreLeague from "@/lib/core/league";
 
-export const league = data as unknown as {
-  seasons: Season[];
-  managers: Manager[];
-  h2h: Record<string, Record<string, number>>;
-  totals: { seasons: number; managers: number; trades: number };
-};
+export const league = data as unknown as LeagueData;
 
 export const seasonLabel: Record<string, string> = {
   s1: "Season 1",
@@ -78,21 +21,10 @@ export const record = (x: { w: number; l: number; t: number }) =>
   `${x.w}–${x.l}${x.t ? `–${x.t}` : ""}`;
 
 /** Head to head (per Sleeper weekly data): [wins, losses] of a against b. */
-export const h2h = (a: string, b: string): [number, number] => [
-  league.h2h[a]?.[b] ?? 0,
-  league.h2h[b]?.[a] ?? 0,
-];
+export const h2h = (a: string, b: string): [number, number] => coreLeague.h2h(league, a, b);
 
 /** The most lopsided head-to-head records, owner first. */
-export const ownership = (min = 6) => {
-  const out: { owner: string; owned: string; w: number; l: number }[] = [];
-  for (const a of Object.keys(league.h2h))
-    for (const b of Object.keys(league.h2h[a])) {
-      const [w, l] = h2h(a, b);
-      if (w + l >= min && w > l) out.push({ owner: a, owned: b, w, l });
-    }
-  return out.sort((x, y) => y.w - y.l - (x.w - x.l) || y.w - x.w);
-};
+export const ownership = (min = 6) => coreLeague.ownership(league, min);
 
 const current = league.seasons.find((s) => s.code === "s4")!;
 

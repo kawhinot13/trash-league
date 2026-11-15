@@ -6,6 +6,7 @@ import { take } from "@/lib/app/ratelimit";
 import { isSleeperId } from "@/lib/app/validate";
 import { official } from "@/lib/app/sleeper";
 import type { Analysis } from "@/lib/app/analysis";
+import type { Dataset } from "@/lib/core/types";
 import { packIdFor } from "@/packs/ids";
 
 const STALE_MS = 10 * 60_000;
@@ -227,6 +228,14 @@ export async function analysisOf(familyId: string): Promise<Analysis | null> {
   if (!hasDb()) return null;
   const sql = await db();
   const [row] = await sql<{ data: Analysis }[]>`select data from analyses where family_id = ${familyId} and kind = 'v1'`;
+  return row?.data ?? null;
+}
+
+/** The league's dataset (Trash-shaped league + extras), built by the import's grading step. */
+export async function datasetOf(familyId: string): Promise<Dataset | null> {
+  if (!hasDb()) return null;
+  const sql = await db();
+  const [row] = await sql<{ data: Dataset }[]>`select data from analyses where family_id = ${familyId} and kind = 'dataset'`;
   return row?.data ?? null;
 }
 

@@ -1,0 +1,100 @@
+/**
+ * Shapes of a league's dataset: the Trash site's league.json + extras.json, which the Rafterlore
+ * importer also produces for any Sleeper league. Pure types: importing this pulls in no data.
+ */
+export type Standing = {
+  manager: string;
+  team: string;
+  w: number;
+  l: number;
+  t: number;
+  pf: number;
+  seed: number;
+  streak?: string;
+  move?: number;
+};
+export type Pick = { no: number; pid: string; player: string; by: string };
+export type TradeSide = { pid: string | null; name: string };
+export type Trade = {
+  season: string;
+  week: number;
+  sides: Record<string, TradeSide[]>;
+};
+export type Season = {
+  code: string;
+  years: string;
+  name: string;
+  status: string;
+  leagueId: string;
+  standings: Standing[];
+  champion: string | null;
+  runnerUp: string | null;
+  bracket: { round: number; a: string; b: string; winner: string | null }[];
+  draft: Pick[];
+  trades: Trade[];
+};
+export type Manager = {
+  id: string;
+  nick: string;
+  color: string;
+  team: string;
+  w: number;
+  l: number;
+  t: number;
+  pf: number;
+  pct: number;
+  titles: string[];
+  playoffs: number;
+  trades: number;
+  seasons: {
+    code: string;
+    seed: number;
+    w: number;
+    l: number;
+    t: number;
+    pf: number;
+    team: string;
+    finish: string;
+  }[];
+};
+
+export type LeagueData = {
+  seasons: Season[];
+  managers: Manager[];
+  h2h: Record<string, Record<string, number>>;
+  totals: { seasons: number; managers: number; trades: number };
+  partners?: { a: string; b: string; n: number }[];
+};
+
+/** Built by scripts/build-extras.py from Sleeper. See that file for the scoring model. */
+export type RawSeason = {
+  code: string;
+  season: string;
+  weeks: number;
+  status: string;
+  draft: {
+    no: number;
+    round: number;
+    pid: string;
+    by: string;
+    value: number;
+    gp: number;
+  }[];
+  rosters: Record<string, Record<string, string[]>>;
+  trades: { week: number; sides: Record<string, string[]>; gain?: Record<string, [number, number]> }[];
+  adds: Record<string, number>;
+  /** [week, actual, optimal] */
+  lineups: Record<string, [number, number, number][]>;
+  /** week -> games [a, b, aPts, bPts], top starters [who, pid, pts], waiver adds [who, pid, pts that week] */
+  weekly?: Record<string, { games: [string, string, number, number][]; top: [string, string, number][]; adds: [string, string, number][] }>;
+  /** manager -> pid -> [weeks rostered, starts, points as a starter], playoffs included */
+  guys: Record<string, Record<string, [number, number, number]>>;
+  /** Winners-bracket playoff games: each team's actual and best lineup and its starters. */
+  playoffs: { week: number; who: string; mid: number; act: number; opt: number; starters: [string, number][] }[];
+};
+/** pid -> [name, positions, team, has headshot, height in inches (0 if unknown), birth date YYYY-MM-DD or ""] */
+export type Players = Record<string, [string, string[], string, number, number, string]>;
+export type ExtrasData = { asOf: string; seasons: RawSeason[]; players: Players };
+
+/** Everything the shared features need about one league. `name` is how copy refers to it ("Trash"). */
+export type Dataset = { name: string; league: LeagueData; extras: ExtrasData };

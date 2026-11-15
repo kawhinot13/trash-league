@@ -48,7 +48,7 @@ export type Pickup = { who: Who; pid: string; season: string; years: string; wee
 /** One head-to-head game, per Sleeper's weekly matchup scores. */
 export type Game = { season: string; years: string; week: number; a: Who; b: Who; pa: number; pb: number; playoff: boolean };
 
-export const ANALYSIS_VERSION = 2;
+export const ANALYSIS_VERSION = 3;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */

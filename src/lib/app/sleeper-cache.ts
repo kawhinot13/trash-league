@@ -9,7 +9,8 @@ import { sleeper, type SStatRow, type Stats } from "@/lib/app/sleeper";
  *    shared by every league in that NBA season (an unfinished week is kept for an hour).
  * Kept in Postgres (shared by every instance) and in memory.
  */
-export type PlayerDir = Record<string, [string, string[], string]>;
+/** pid -> [name, positions, team, height in inches (0 unknown), birth date YYYY-MM-DD or ""] */
+export type PlayerDir = Record<string, [string, string[], string, number, string]>;
 type StatRow = [pid: string, date: string, stats: Stats, pos: string[], name: string];
 
 const DAY = 24 * 3600_000;
@@ -43,15 +44,29 @@ function remember(key: string, data: unknown, at: number) {
   while (mem.size > 6) mem.delete(mem.keys().next().value!);
 }
 
-type RawPlayer = { full_name?: string; first_name?: string; last_name?: string; fantasy_positions?: string[]; team?: string | null };
+type RawPlayer = {
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  fantasy_positions?: string[];
+  team?: string | null;
+  height?: string | number | null;
+  birth_date?: string | null;
+};
 
-/** Every NBA player Sleeper knows: pid -> [name, positions, team]. Refreshed at most daily. */
+/** Every NBA player Sleeper knows (trimmed). Refreshed at most daily. */
 export function playerDirectory(): Promise<PlayerDir> {
-  return cached("players/nba", DAY, async () => {
+  return cached("players/nba/v2", DAY, async () => {
     const all = (await sleeper<Record<string, RawPlayer> | null>("/v1/players/nba")) ?? {};
     const out: PlayerDir = {};
     for (const [pid, p] of Object.entries(all))
-      out[pid] = [p.full_name || `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || pid, p.fantasy_positions ?? [], p.team ?? ""];
+      out[pid] = [
+        p.full_name || `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || pid,
+        p.fantasy_positions ?? [],
+        p.team ?? "",
+        /^\d+$/.test(String(p.height ?? "")) ? Number(p.height) : 0,
+        p.birth_date ?? "",
+      ];
     return out;
   });
 }
