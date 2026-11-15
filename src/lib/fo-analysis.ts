@@ -352,3 +352,76 @@ export function market(P: Record<string, FOPlayer>, teams: FOTeam[], sport: Spor
   const top = (xs: (Mover & { score: number })[]) => xs.sort((a, b) => b.score - a.score).slice(0, 12).map((m) => ({ pid: m.pid, owner: m.owner, gap: m.gap, reasons: m.reasons }));
   return { sell: top(sell), buy: top(buy) };
 }
+
+/**
+ * Plain-English pros and cons of a trade for you: which lineup spots get better or worse, who gets
+ * the best player, total value in and out, injuries, and roster spots. Built from evaluateTrade's
+ * before/after lineups, so every note matches the numbers shown.
+ */
+export function tradeNotes(
+  trade: ReturnType<typeof evaluateTrade>,
+  give: string[],
+  get: string[],
+  P: Record<string, FOPlayer>,
+  slots: string[],
+  sport: Sport = "nba",
+) {
+  const k = SCALE[sport];
+  const n0 = (x: number) => Math.round(x);
+  const name = (id: string | null) => (id ? (P[id]?.name ?? "someone") : "nobody");
+  const good: { text: string; w: number }[] = [];
+  const bad: { text: string; w: number }[] = [];
+
+  // Who joins and leaves your starting lineup (players sliding between spots aren't news).
+  const before = new Set(trade.meBefore.starters.filter(Boolean) as string[]);
+  const after = new Set(trade.meAfter.starters.filter(Boolean) as string[]);
+  const joins = [...after].filter((id) => !before.has(id));
+  const leaves = [...before].filter((id) => !after.has(id));
+  for (const id of joins.filter((x) => get.includes(x)))
+    good.push({ text: `${name(id)} joins your starting lineup (${n0(healthy(P[id]))} a week).`, w: healthy(P[id]) });
+  for (const id of leaves.filter((x) => give.includes(x)))
+    bad.push({ text: `${name(id)} leaves your starting lineup (${n0(healthy(P[id]))} a week).`, w: healthy(P[id]) });
+  const fill = joins.filter((x) => !get.includes(x));
+  if (fill.length)
+    bad.push({
+      text: `${fill.map(name).join(" and ")} ${fill.length === 1 ? "has" : "have"} to start from your bench to fill the gap (${fill
+        .map((id) => n0(healthy(P[id])))
+        .join(" and ")} a week).`,
+      w: 3 * k,
+    });
+  const benched = leaves.filter((x) => !give.includes(x));
+  if (benched.length)
+    good.push({ text: `${benched.map(name).join(" and ")} ${benched.length === 1 ? "moves" : "move"} to your bench as depth.`, w: 2 * k });
+  if (slots.length > after.size && after.size < before.size) bad.push({ text: "You'd be left with an empty lineup spot.", w: 20 * k });
+
+  // The best player in the deal.
+  const all = [...give, ...get].filter((id) => P[id]);
+  const star = [...all].sort((a, b) => P[b].value - P[a].value)[0];
+  if (star && all.length > 1) {
+    const why = sport === "nfl" ? "Difference-makers are the hardest thing to find." : "One star beats two good players when every spot counts one game.";
+    if (get.includes(star)) good.push({ text: `You get the best player in the deal, ${name(star)} (${n0(P[star].value)} a week). ${why}`, w: 30 * k });
+    else bad.push({ text: `You give up the best player in the deal, ${name(star)} (${n0(P[star].value)} a week).`, w: 30 * k });
+  }
+
+  // Total value, beyond the starters.
+  const gap = trade.valueIn - trade.valueOut;
+  if (gap <= -15 * k)
+    bad.push({ text: `You send more total value than you get (${n0(trade.valueOut)} vs ${n0(trade.valueIn)} a week), so your depth gets thinner.`, w: -gap / 2 });
+  else if (gap >= 15 * k) good.push({ text: `You get more total value back (${n0(trade.valueIn)} vs ${n0(trade.valueOut)} a week).`, w: gap / 2 });
+
+  // Injuries on either side.
+  const hurt = (id: string) => P[id] && (P[id].onIR || ["Out", "Doubtful"].includes(P[id].injury ?? ""));
+  const tag = (id: string) => (P[id].onIR ? "on IR" : (P[id].injury ?? "").toLowerCase());
+  for (const id of get.filter(hurt)) bad.push({ text: `${name(id)} is ${tag(id)}: he helps less until he's back.`, w: 10 * k });
+  for (const id of give.filter(hurt)) good.push({ text: `You move ${name(id)} while he's ${tag(id)}.`, w: 8 * k });
+
+  // Roster spots.
+  if (give.length > get.length) {
+    const n = give.length - get.length;
+    good.push({ text: `Frees ${n === 1 ? "a roster spot" : `${n} roster spots`} for a waiver pickup.`, w: 5 * k });
+  }
+  if (trade.meDrops.length) bad.push({ text: `You'd have to drop ${trade.meDrops.map(name).join(", ")} to make room.`, w: 5 * k });
+
+  const top = (xs: { text: string; w: number }[]) => xs.sort((a, b) => b.w - a.w).slice(0, 4).map((x) => x.text);
+  return { good: top(good), bad: top(bad) };
+}

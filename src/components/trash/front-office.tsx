@@ -4,7 +4,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { FrontOffice } from "@/lib/front-office";
-import { diagnose, evaluateTrade, market, metricsFor, profile, type Metric, type Mover } from "@/lib/fo-analysis";
+import { diagnose, evaluateTrade, market, metricsFor, profile, tradeNotes, type Metric, type Mover } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Handle, MgrPhoto } from "@/components/trash/brand";
@@ -483,6 +483,36 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                       </div>
                     ))}
                   </div>
+                  {(() => {
+                    const notes = tradeNotes(trade, give, get, P, data.slots, sport);
+                    if (!notes.good.length && !notes.bad.length) return null;
+                    return (
+                      <div className="mt-5 grid gap-3 md:grid-cols-2">
+                        {[
+                          { title: "Good for you", items: notes.good, color: GOOD, mark: "+" },
+                          { title: "Bad for you", items: notes.bad, color: BAD, mark: "−" },
+                        ].map((col) =>
+                          col.items.length ? (
+                            <div key={col.title} className="rounded-2xl bg-black/25 p-4">
+                              <p className="text-sm font-semibold" style={{ color: col.color }}>
+                                {col.title}
+                              </p>
+                              <ul className="mt-2 space-y-1.5 text-sm leading-snug">
+                                {col.items.map((t) => (
+                                  <li key={t} className="flex gap-2">
+                                    <span aria-hidden className="font-bold" style={{ color: col.color }}>
+                                      {col.mark}
+                                    </span>
+                                    <span>{t}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null,
+                        )}
+                      </div>
+                    );
+                  })()}
                   <p className="mt-4 text-sm text-[var(--muted)]">
                     Raw value: you send {n0(trade.valueOut)} a week, you get {n0(trade.valueIn)}.{" "}
                     {trade.meDrops.length ? `You'd have to drop ${trade.meDrops.map((id) => P[id].name).join(", ")}. ` : ""}
