@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { QuizManager, Trait } from "@/lib/extras";
 import { Explain } from "./intel";
+import { MgrPhoto } from "@/components/trash/brand";
 
 type Answer = { text: string; v: Partial<Record<Trait, number>> };
 const QUESTIONS: { q: string; a: Answer[] }[] = [
@@ -176,8 +176,8 @@ export function ManagerQuiz({ managers }: { managers: QuizManager[] }) {
                 className="absolute -inset-6 rounded-full opacity-50 blur-2xl"
                 style={{ background: res.top.color }}
               />
-              <Image
-                src={`/avatars/${res.top.id}.jpg`}
+              <MgrPhoto
+                id={res.top.id}
                 alt=""
                 width={200}
                 height={200}

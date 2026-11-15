@@ -3,7 +3,7 @@ import data from "@/data/league.json";
 import official from "@/data/official.json";
 
 export type { Standing, Pick, TradeSide, Trade, Season, Manager } from "@/lib/core/types";
-import type { LeagueData, Manager, Season, Standing } from "@/lib/core/types";
+import type { LeagueData, Standing } from "@/lib/core/types";
 import * as coreLeague from "@/lib/core/league";
 
 export const league = data as unknown as LeagueData;

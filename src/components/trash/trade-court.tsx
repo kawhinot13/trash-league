@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { GradedTrade, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Face, pname } from "./player";
+import { MgrPhoto } from "@/components/trash/brand";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
 const WIN = "#7fd49a";
@@ -39,7 +39,7 @@ function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; 
           return (
             <div key={s.who} className={`rounded-xl p-3 ${won ? "bg-[rgba(127,212,154,0.1)] ring-1 ring-[rgba(127,212,154,0.4)]" : "bg-black/20"}`}>
               <div className="flex items-center gap-2">
-                <Image src={`/avatars/${s.who}.jpg`} alt="" width={26} height={26} className="size-[26px] rounded-full object-cover" />
+                <MgrPhoto id={s.who} alt="" width={26} height={26} className="size-[26px] rounded-full object-cover" />
                 <p className="text-sm font-semibold">
                   {nick(s.who)} <span className="font-normal text-[var(--muted)]">got</span>
                 </p>
@@ -122,7 +122,7 @@ export function TradeCourt({
               className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors duration-150 ${who === r.id ? "bg-white/12 ring-1 ring-[var(--paper)]/50" : "bg-black/20 hover:bg-black/30"}`}
             >
               <span className="font-display w-5 text-lg font-black text-[var(--muted)] tabular-nums">{i + 1}</span>
-              <Image src={`/avatars/${r.id}.jpg`} alt="" width={30} height={30} className="size-[30px] rounded-full object-cover" />
+              <MgrPhoto id={r.id} alt="" width={30} height={30} className="size-[30px] rounded-full object-cover" />
               <span className="min-w-0 flex-1 truncate font-semibold">{nick(r.id)}</span>
               <span className="text-sm tabular-nums">
                 {r.w}–{r.l}

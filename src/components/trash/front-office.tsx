@@ -7,6 +7,9 @@ import type { FrontOffice } from "@/lib/front-office";
 import { METRICS, diagnose, evaluateTrade, market, profile, type Metric, type Mover } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
+import { MgrPhoto } from "@/components/trash/brand";
+import { useBrand } from "@/components/trash/brand";
+import { LeagueName } from "@/components/trash/brand";
 
 const LocalPhotos = createContext<Set<string>>(new Set());
 const n0 = (x: number) => Math.round(x).toLocaleString();
@@ -47,7 +50,7 @@ function Picker({ ids, value, onChange, nick, label }: { ids: string[]; value: s
             title={nick(id)}
             className={`relative size-11 cursor-pointer rounded-full transition-[transform,opacity] duration-200 ${on ? "scale-110" : "opacity-50 hover:opacity-100"}`}
           >
-            <Image src={`/avatars/${id}.jpg`} alt="" width={44} height={44} className="size-11 rounded-full object-cover" />
+            <MgrPhoto id={id} alt="" width={44} height={44} className="size-11 rounded-full object-cover" />
             {on ? <span className="absolute -inset-1 rounded-full ring-2 ring-[var(--paper)]" /> : null}
           </button>
         );
@@ -136,6 +139,7 @@ function MoverList({
 }
 
 export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice; managers: Manager[]; local: string[] }) {
+  const brand = useBrand();
   const localSet = useMemo(() => new Set(local), [local]);
   const [tab, setTab] = useState<"team" | "trade" | "market">("team");
   const [me, setMe] = useState(data.teams[0].id);
@@ -149,7 +153,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("fo:me");
+      const saved = localStorage.getItem(brand.key("fo:me"));
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (saved && ids.includes(saved)) setMe(saved);
     } catch {}
@@ -160,7 +164,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
     setGive([]);
     if (id === them) setThem(ids.find((x) => x !== id)!);
     try {
-      localStorage.setItem("fo:me", id);
+      localStorage.setItem(brand.key("fo:me"), id);
     } catch {}
   };
 
@@ -495,7 +499,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
 
       <Explain>
         <p>
-          In Trash every lineup slot counts one game a week, so a player&apos;s value is his typical best game each
+          In <LeagueName /> every lineup slot counts one game a week, so a player&apos;s value is his typical best game each
           week: this season&apos;s weekly best, blended with last season (points per game × 1.3) until there are
           enough games. Injured players count for less until they&apos;re back.
         </p>

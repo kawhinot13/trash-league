@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Pickup } from "@/lib/live";
 import type { Manager, Season, Standing } from "@/lib/league";
+import { MgrPhoto, MgrLink } from "@/components/trash/brand";
+import { useBrand } from "@/components/trash/brand";
+import { LeagueName } from "@/components/trash/brand";
 
 const n1 = (x: number) =>
   x.toLocaleString(undefined, {
@@ -14,8 +16,8 @@ const n1 = (x: number) =>
   });
 const rec = (w: number, l: number, t = 0) => `${w}–${l}${t ? `–${t}` : ""}`;
 const Av = ({ id, s = 36 }: { id: string; s?: number }) => (
-  <Image
-    src={`/avatars/${id}.jpg`}
+  <MgrPhoto
+    id={id}
     alt=""
     width={s}
     height={s}
@@ -130,8 +132,8 @@ export function OfficialTable({
             key={r.manager}
             className="border-b border-[var(--line)] last:border-0"
           >
-            <Link
-              href={`/managers/${r.manager}`}
+            <MgrLink
+              id={r.manager}
               className="grid grid-cols-[2rem_auto_1fr_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 md:grid-cols-[2.5rem_auto_1fr_10rem_7rem] md:gap-5 md:px-6"
             >
               <span className="font-display text-2xl font-bold text-[var(--muted)] tabular-nums">
@@ -170,7 +172,7 @@ export function OfficialTable({
                   {r.pf.toLocaleString()} pts
                 </span>
               </span>
-            </Link>
+            </MgrLink>
           </li>
         ))}
       </ol>
@@ -394,7 +396,7 @@ export function WaiverWire({
           ]}
         />
         <p className="text-sm text-[var(--muted)]">
-          Unrostered in Trash, scored with this league&apos;s settings. Week{" "}
+          Unrostered in <LeagueName />, scored with this league&apos;s settings. Week{" "}
           {week}.
         </p>
       </div>
@@ -511,7 +513,7 @@ export function WaiverWire({
         </p>
         <p>
           <strong>Rest of week:</strong> the projection for his best single game
-          still to play this week. Trash only counts one locked-in game per
+          still to play this week. <LeagueName /> only counts one locked-in game per
           player a week, so two average games aren&apos;t worth more than one
           big one. The bracket shows how many games he has left to pick from.
         </p>
@@ -954,6 +956,7 @@ const OddCard = ({
 );
 
 function Oddities({ seasons }: { seasons: Season[] }) {
+  const brand = useBrand();
   const done = seasons.filter((s) => s.status === "complete");
   // Players who changed hands the most
   const moved = new Map<
@@ -1019,7 +1022,7 @@ function Oddities({ seasons }: { seasons: Season[] }) {
     <div className="grid gap-5 md:grid-cols-2">
       <OddCard
         title="Most-traded players"
-        sub="Times a player changed hands in a Trash trade."
+        sub={`Times a player changed hands in a ${brand.name} trade.`}
       >
         <ol className="space-y-2.5">
           {mostMoved.map(([name, x]) => (

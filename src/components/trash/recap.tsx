@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { Players, RecapWeek } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Segmented } from "./intel";
 import { Face, pname } from "./player";
+import { MgrPhoto } from "@/components/trash/brand";
 
 const n1 = (x: number) => (Math.round(x * 10) / 10).toLocaleString();
 
@@ -38,7 +38,7 @@ function Card({
 }
 
 const Av = ({ id }: { id: string }) => (
-  <Image src={`/avatars/${id}.jpg`} alt="" width={36} height={36} className="size-9 shrink-0 rounded-full object-cover" />
+  <MgrPhoto id={id} alt="" width={36} height={36} className="size-9 shrink-0 rounded-full object-cover" />
 );
 
 export function WeeklyRecap({

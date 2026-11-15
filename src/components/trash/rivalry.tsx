@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Manager, Season } from "@/lib/league";
 import { Explain } from "./intel";
+import { MgrPhoto } from "@/components/trash/brand";
 
 const yrs: Record<string, string> = {
   s1: "2023–24",
@@ -45,8 +45,8 @@ function Picker({
               title={m.id}
               className={`relative size-12 cursor-pointer rounded-full transition-[transform,opacity] duration-200 disabled:cursor-not-allowed disabled:opacity-25 ${on ? "scale-110" : "opacity-60 hover:scale-105 hover:opacity-100"}`}
             >
-              <Image
-                src={`/avatars/${m.id}.jpg`}
+              <MgrPhoto
+                id={m.id}
                 alt=""
                 width={48}
                 height={48}
@@ -172,8 +172,8 @@ export function RivalryMachine({
         >
           <div className="mt-10 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
             <div className="flex flex-col items-end text-right">
-              <Image
-                src={`/avatars/${a}.jpg`}
+              <MgrPhoto
+                id={a}
                 alt=""
                 width={88}
                 height={88}
@@ -189,8 +189,8 @@ export function RivalryMachine({
               vs
             </p>
             <div className="flex flex-col items-start">
-              <Image
-                src={`/avatars/${b}.jpg`}
+              <MgrPhoto
+                id={b}
                 alt=""
                 width={88}
                 height={88}

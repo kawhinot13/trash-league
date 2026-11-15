@@ -8,6 +8,7 @@ import type { TrashleWord } from "@/lib/trashle";
 import { Face, pname } from "./player";
 import { sfx } from "./dive/sfx";
 import { Leaderboard, type Person } from "./leaderboard";
+import { useBrand } from "@/components/trash/brand";
 
 const TRIES = 6;
 const LAUNCH = Date.UTC(2026, 10, 14);
@@ -74,6 +75,7 @@ function Tile({ ch, mark, i, flip, pop }: { ch: string; mark?: Mark; i: number; 
 }
 
 export function Trashle({ answers, valid, players, people }: { answers: TrashleWord[]; valid: string[]; players: Players; people: Person[] }) {
+  const brand = useBrand();
   const reduce = useReducedMotion();
   const [day, setDay] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<string[]>([]);
@@ -90,11 +92,11 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
     const d = todayET();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDay(d);
-    const saved = store.get<string[]>(`trashle:${d}`) ?? [];
+    const saved = store.get<string[]>(brand.key(`trashle:${d}`)) ?? [];
     setGuesses(saved);
     setRevealed(saved.length);
-    setStreak(store.get<{ last: string; n: number }>("trashle:streak")?.n ?? 0);
-  }, []);
+    setStreak(store.get<{ last: string; n: number }>(brand.key("trashle:streak"))?.n ?? 0);
+  }, [brand]);
 
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : 1;
   const target = useMemo(() => {
@@ -129,7 +131,7 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
   const submit = useCallback(() => {
     if (!target || over || !settled) return;
     const row = boardRef.current?.querySelector(`[data-row="${guesses.length}"]`);
-    const bad = cur.length !== L ? `Needs ${L} letters` : !validSet.has(cur) ? "Not a Trash player" : null;
+    const bad = cur.length !== L ? `Needs ${L} letters` : !validSet.has(cur) ? `Not a ${brand.name} player` : null;
     if (bad) {
       flash(bad);
       sfx.buzz();
@@ -139,7 +141,7 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
     const next = [...guesses, cur];
     setGuesses(next);
     setCur("");
-    if (day) store.set(`trashle:${day}`, next);
+    if (day) store.set(brand.key(`trashle:${day}`), next);
     const flipMs = reduce ? 50 : L * 220 + 520;
     for (let i = 0; i < L; i++) setTimeout(() => sfx.tick(), reduce ? 0 : i * 220 + 250);
     setTimeout(() => {
@@ -157,14 +159,14 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
           });
       } else if (next.length >= TRIES) sfx.slam();
       if (day && (cur === target.word || next.length >= TRIES)) {
-        const st = store.get<{ last: string; n: number }>("trashle:streak");
+        const st = store.get<{ last: string; n: number }>(brand.key("trashle:streak"));
         const y = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
         const n = cur === target.word ? (st?.last === y ? st.n + 1 : st?.last === day ? st.n : 1) : 0;
-        store.set("trashle:streak", { last: day, n });
+        store.set(brand.key("trashle:streak"), { last: day, n });
         setStreak(n);
       }
     }, flipMs);
-  }, [target, over, settled, cur, L, validSet, guesses, day, reduce, animate, boardRef]);
+  }, [target, over, settled, cur, L, validSet, guesses, day, reduce, animate, boardRef, brand]);
 
   const press = useCallback(
     (k: string) => {
@@ -200,7 +202,7 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
       .map((g) => score(g, target.word).map((s) => (s === "hit" ? "🟩" : s === "near" ? "🟫" : "⬛")).join(""))
       .join("\n");
     try {
-      await navigator.clipboard.writeText(`Trashle #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${grid}\n${location.origin}/#trashle`);
+      await navigator.clipboard.writeText(`${brand.games.wordle} #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${grid}\n${location.origin}${brand.base || "/"}#trashle`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
@@ -211,7 +213,7 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
       <canvas ref={fx} className="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">
-          <span className="font-display text-3xl leading-none font-black md:text-4xl">Trashle</span>
+          <span className="font-display text-3xl leading-none font-black md:text-4xl">{brand.games.wordle}</span>
           <span className="text-sm text-[var(--muted)]">No. {edition}</span>
         </div>
         <p className="text-sm text-[var(--muted)]">
@@ -286,7 +288,7 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl bg-black/25 p-4 text-sm leading-relaxed text-[var(--paper)]/85">
             Guess today&apos;s mystery player by last name. Green is the right letter in the right spot, brown is in
-            the name but somewhere else. Every guess has to be a player from Trash history.
+            the name but somewhere else. Every guess has to be a player from {brand.name} history.
           </div>
           <div className="space-y-2">
             {[

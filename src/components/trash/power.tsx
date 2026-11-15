@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import type { PowerRow } from "@/lib/power";
 import { Explain } from "./intel";
+import { MgrPhoto, MgrLink } from "@/components/trash/brand";
 
 const PARTS: { key: keyof PowerRow["parts"]; label: string; w: number; color: string }[] = [
   { key: "record", label: "Record", w: 30, color: "#f6f3ea" },
@@ -57,11 +56,11 @@ export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week:
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-3">
-                <Image src={`/avatars/${r.id}.jpg`} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" />
+                <MgrPhoto id={r.id} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" />
                 <div className="min-w-0">
-                  <Link href={`/managers/${r.id}`} className="block truncate text-lg font-semibold hover:underline">
+                  <MgrLink id={r.id} className="block truncate text-lg font-semibold hover:underline">
                     {r.nick}
-                  </Link>
+                  </MgrLink>
                   <p className="truncate text-xs text-[var(--muted)]">
                     <span className="font-bold sm:hidden" style={{ color: TIER[r.tier] }}>
                       {r.tier}

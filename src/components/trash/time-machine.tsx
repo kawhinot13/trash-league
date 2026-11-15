@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import type { MachineSeason, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain } from "./intel";
 import { Face, pname } from "./player";
+import { MgrPhoto } from "@/components/trash/brand";
 
 type Stop = { si: number; week: number };
 type Arrival =
@@ -181,8 +181,8 @@ export function TimeMachine({
               aria-label={nick(m)}
               className={`relative size-11 cursor-pointer rounded-full transition-[transform,opacity] duration-200 ${on ? "scale-110" : "opacity-55 hover:opacity-100"}`}
             >
-              <Image
-                src={`/avatars/${m}.jpg`}
+              <MgrPhoto
+                id={m}
                 alt=""
                 width={44}
                 height={44}
@@ -320,8 +320,8 @@ export function TimeMachine({
                       onClick={() => setWho(m)}
                       className={`grid w-full cursor-pointer grid-cols-[1.5rem_6.5rem_1fr_2rem] items-center gap-2 rounded-lg px-1 py-0.5 text-left text-sm ${m === active ? "bg-white/8" : "hover:bg-white/5"}`}
                     >
-                      <Image
-                        src={`/avatars/${m}.jpg`}
+                      <MgrPhoto
+                        id={m}
                         alt=""
                         width={22}
                         height={22}

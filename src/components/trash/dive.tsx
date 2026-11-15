@@ -10,6 +10,7 @@ import { AnswerBoard } from "./dive/answers";
 import { sfx } from "./dive/sfx";
 import { Stage, tierOf, type StageApi } from "./dive/stage";
 import { Leaderboard, type Person } from "./leaderboard";
+import { useBrand } from "@/components/trash/brand";
 
 const ROUNDS = 5;
 const LAUNCH = Date.UTC(2026, 10, 14);
@@ -161,6 +162,7 @@ function AnswerBox({ players, onPick }: { players: Players; onPick: (pid: string
 }
 
 export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; players: Players; people: Person[] }) {
+  const brand = useBrand();
   const reduce = useReducedMotion();
   const [day, setDay] = useState<string | null>(null);
   const [phase, setPhase] = useState<"intro" | "play" | "done">("intro");
@@ -182,13 +184,13 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDay(d);
     setMuted(sfx.isMuted());
-    setStreak(store.get<{ last: string; n: number }>("dive:streak")?.n ?? 0);
+    setStreak(store.get<{ last: string; n: number }>(brand.key("dive:streak"))?.n ?? 0);
     const saved = store.get<Saved>(`dive2:${d}`);
     if (saved?.picks?.length === ROUNDS) {
       setPicks(saved.picks);
       setPhase("done");
     }
-  }, []);
+  }, [brand]);
   const qs = useMemo(() => (day ? todays(pool, day) : []), [pool, day]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : null;
   const q = qs[i];
@@ -230,15 +232,15 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     sfx.fanfare();
     if (!day) return;
     store.set(`dive2:${day}`, { picks } satisfies Saved);
-    const st = store.get<{ last: string; n: number }>("dive:streak");
+    const st = store.get<{ last: string; n: number }>(brand.key("dive:streak"));
     const y = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
     const n = st?.last === y ? st.n + 1 : st?.last === day ? st.n : 1;
-    store.set("dive:streak", { last: day, n });
+    store.set(brand.key("dive:streak"), { last: day, n });
     setStreak(n);
   };
   const share = async () => {
     const sq = picks.map((p) => (p.score === null ? "⬛" : p.score >= 90 ? "🟫" : p.score >= 60 ? "🟩" : p.score >= 25 ? "🟨" : "🟥"));
-    const text = `Dumpster Dive #${edition} ${sq.join("")} ${sum}/${ROUNDS * 100}\n${location.origin}/#dive`;
+    const text = `${brand.games.dive} #${edition} ${sq.join("")} ${sum}/${ROUNDS * 100}\n${location.origin}${brand.base || "/"}#dive`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -251,7 +253,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
       {/* HUD */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">
-          <span className="font-display text-3xl leading-none font-black md:text-4xl">Dumpster Dive</span>
+          <span className="font-display text-3xl leading-none font-black md:text-4xl">{brand.games.dive}</span>
           <span className="text-sm text-[var(--muted)]">{edition ? `No. ${edition}` : ""}</span>
         </div>
         <div className="flex items-center gap-3">

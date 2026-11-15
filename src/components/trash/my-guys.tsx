@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { Guy, GuysRow, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain } from "./intel";
 import { Face, pname } from "./player";
+import { MgrPhoto } from "@/components/trash/brand";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
 const yrs: Record<string, string> = { s1: "’23", s2: "’24", s3: "’25", s4: "’26" };
@@ -87,7 +87,7 @@ export function MyGuys({
               aria-label={managers.find((x) => x.id === r.id)?.nick ?? r.id}
               className={`relative size-11 cursor-pointer rounded-full transition-[transform,opacity] duration-200 ${on ? "scale-110" : "opacity-55 hover:opacity-100"}`}
             >
-              <Image src={`/avatars/${r.id}.jpg`} alt="" width={44} height={44} className="size-11 rounded-full object-cover" />
+              <MgrPhoto id={r.id} alt="" width={44} height={44} className="size-11 rounded-full object-cover" />
               {on ? (
                 <motion.span layoutId="guys-ring" className="absolute -inset-1 rounded-full ring-2 ring-[var(--paper)]" />
               ) : null}

@@ -1,17 +1,18 @@
 "use client";
 
-import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
+import { MgrPhoto } from "@/components/trash/brand";
+import { useBrand } from "@/components/trash/brand";
 
 /**
  * Shared daily-game leaderboard. Who you are is picked once and remembered (no accounts: it's a
  * friends league). The first result you post each day is the one that counts.
  */
 const KEY = "trash:me";
-export const whoAmI = () => {
+export const whoAmI = (prefix = "") => {
   try {
-    return localStorage.getItem(KEY) ?? localStorage.getItem("fo:me");
+    return localStorage.getItem(prefix + KEY) ?? localStorage.getItem(prefix + "fo:me");
   } catch {
     return null;
   }
@@ -35,6 +36,7 @@ export function Leaderboard({
   result: { score: number; label: string } | null;
 }) {
   const reduce = useReducedMotion();
+  const brand = useBrand();
   const ACTIVE = people.map((p) => p.id);
   const nick = (id: string) => people.find((p) => p.id === id)?.nick ?? id;
   const [me, setMe] = useState<string | null>(null);
@@ -43,8 +45,8 @@ export function Leaderboard({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMe(whoAmI());
-  }, []);
+    setMe(whoAmI(brand.storage));
+  }, [brand.storage]);
 
   // Post the result once we know who you are, then load the board. Keyed on the result's values,
   // not the object, so a re-render never posts or fetches again.
@@ -54,17 +56,17 @@ export function Leaderboard({
     if (!day) return;
     let off = false;
     const load = () =>
-      fetch(`/api/scores?game=${game}&day=${day}`)
+      fetch(`${brand.scores}?game=${game}&day=${day}`)
         .then((r) => r.json())
         .then((b: Board) => !off && setBoard(b))
         .catch(() => !off && setBoard({ enabled: false }));
-    const postedKey = `posted:${game}:${day}`;
+    const postedKey = brand.key(`posted:${game}:${day}`);
     let posted = false;
     try {
       posted = localStorage.getItem(postedKey) === me;
     } catch {}
     if (rs !== undefined && me && !posted)
-      fetch("/api/scores", {
+      fetch(brand.scores, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ game, day, manager: me, score: rs, label: rl ?? "" }),
@@ -79,12 +81,12 @@ export function Leaderboard({
     return () => {
       off = true;
     };
-  }, [game, day, me, rs, rl]);
+  }, [game, day, me, rs, rl, brand]);
 
   if (!board?.enabled) return null;
   const pick = (id: string) => {
     try {
-      localStorage.setItem(KEY, id);
+      localStorage.setItem(brand.key(KEY), id);
     } catch {}
     setMe(id);
   };
@@ -121,7 +123,7 @@ export function Leaderboard({
           <div className="mt-2 flex flex-wrap gap-2">
             {ACTIVE.map((id) => (
               <button key={id} type="button" onClick={() => pick(id)} aria-label={nick(id)} title={nick(id)} className="size-10 cursor-pointer rounded-full opacity-70 transition-[opacity,transform] duration-150 hover:opacity-100 active:scale-95">
-                <Image src={`/avatars/${id}.jpg`} alt="" width={40} height={40} className="size-10 rounded-full object-cover" />
+                <MgrPhoto id={id} alt="" width={40} height={40} className="size-10 rounded-full object-cover" />
               </button>
             ))}
           </div>
@@ -138,7 +140,7 @@ export function Leaderboard({
               className={`flex items-center gap-3 rounded-xl px-3 py-2 ${r.id === me ? "bg-white/12 ring-1 ring-[var(--paper)]/50" : "bg-black/20"}`}
             >
               <span className="font-display w-6 text-xl font-black text-[var(--muted)] tabular-nums">{i + 1}</span>
-              <Image src={`/avatars/${r.id}.jpg`} alt="" width={30} height={30} className="size-[30px] rounded-full object-cover" />
+              <MgrPhoto id={r.id} alt="" width={30} height={30} className="size-[30px] rounded-full object-cover" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold">{nick(r.id)}</span>
                 <span className="block truncate text-xs text-[var(--muted)]">{r.sub}</span>

@@ -8,6 +8,7 @@ import type { Suspect } from "@/lib/lineup";
 import { sfx } from "./dive/sfx";
 import { Face } from "./player";
 import { Leaderboard, type Person } from "./leaderboard";
+import { useBrand } from "@/components/trash/brand";
 
 const TRIES = 8;
 const LAUNCH = Date.UTC(2026, 10, 14);
@@ -37,7 +38,7 @@ const store = {
 type Clue = { label: string; value: string; mark: Mark; arrow?: "up" | "down" };
 
 /** Compare a guess to the suspect. Arrows point toward the answer. */
-function clues(g: Suspect, t: Suspect, nick: (id: string) => string): Clue[] {
+function clues(g: Suspect, t: Suspect, nick: (id: string) => string, league = "Trash"): Clue[] {
   const num = (a: number, b: number, near: number) =>
     ({ mark: a === b ? "hit" : Math.abs(a - b) <= near ? "close" : "miss", arrow: a === b ? undefined : b > a ? "up" : "down" }) as const;
   const posHit = g.pos.length === t.pos.length && g.pos.every((p) => t.pos.includes(p));
@@ -47,23 +48,23 @@ function clues(g: Suspect, t: Suspect, nick: (id: string) => string): Clue[] {
     { label: "Pos", value: g.pos.join("/") || "?", mark: posHit ? "hit" : posNear ? "close" : "miss" },
     { label: "Height", value: ft(g.height), ...num(g.height, t.height, 2) },
     { label: "Age", value: g.age ? String(g.age) : "?", ...num(g.age, t.age, 2) },
-    { label: "Trash weeks", value: String(g.weeks), ...num(g.weeks, t.weeks, 15) },
-    { label: "Trash teams", value: String(g.owners.length), ...num(g.owners.length, t.owners.length, 1) },
+    { label: `${league} weeks`, value: String(g.weeks), ...num(g.weeks, t.weeks, 15) },
+    { label: `${league} teams`, value: String(g.owners.length), ...num(g.owners.length, t.owners.length, 1) },
     { label: "Top owner", value: nick(g.owner), mark: g.owner === t.owner ? "hit" : t.owners.includes(g.owner) ? "close" : "miss" },
     { label: "First season", value: YR[g.first], ...num(g.first, t.first, 1) },
   ];
 }
 
 /** What every column means, shown in the header popovers and the key. */
-const COLS: { label: string; info: string }[] = [
+const colsFor = (league: string): { label: string; info: string }[] => [
   { label: "Team", info: "His NBA team right now. Brown means same conference." },
   { label: "Pos", info: "Fantasy positions on Sleeper. Brown means at least one position in common." },
   { label: "Height", info: "Brown means within 2 inches. The arrow points toward the suspect's height." },
   { label: "Age", info: "Age today. Brown means within 2 years." },
-  { label: "Trash weeks", info: "Total weeks he's spent on any Trash roster, all seasons. Brown means within 15." },
-  { label: "Trash teams", info: "How many different Trash managers have rostered him. Brown means off by one." },
+  { label: `${league} weeks`, info: `Total weeks he's spent on any ${league} roster, all seasons. Brown means within 15.` },
+  { label: `${league} teams`, info: `How many different ${league} managers have rostered him. Brown means off by one.` },
   { label: "Top owner", info: "The manager who rostered him the longest. Brown means the suspect was on that manager's roster at some point." },
-  { label: "First season", info: "The first Trash season he was on a roster ('23 is 2023–24). Brown means one season off." },
+  { label: "First season", info: `The first ${league} season he was on a roster ('23 is 2023–24). Brown means one season off.` },
 ];
 const GRID = "md:grid-cols-8";
 
@@ -94,6 +95,7 @@ function ColHead({ label, info }: { label: string; info: string }) {
 
 /** The color key, plus every category explained. Works on phones, where there are no headers. */
 function Key() {
+  const brand = useBrand();
   return (
     <details className="group mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm">
       <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold select-none">
@@ -121,7 +123,7 @@ function Key() {
         suspect is taller, older, has more weeks, and so on.
       </p>
       <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-        {COLS.map((c) => (
+        {colsFor(brand.name).map((c) => (
           <div key={c.label}>
             <dt className="font-semibold">{c.label}</dt>
             <dd className="text-[var(--muted)]">{c.info}</dd>
@@ -372,6 +374,7 @@ export function Lineup({
   players: Players;
   people: Person[];
 }) {
+  const brand = useBrand();
   const [day, setDay] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<string[]>([]);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -390,8 +393,8 @@ export function Lineup({
     const d = todayET();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDay(d);
-    setGuesses(store.get<string[]>(`lineup:${d}`) ?? []);
-  }, []);
+    setGuesses(store.get<string[]>(brand.key(`lineup:${d}`)) ?? []);
+  }, [brand]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : 1;
   const target = day ? byId.get(answers[(edition * 53 + 29) % answers.length]) ?? null : null;
   const won = !!target && guesses.includes(target.pid);
@@ -419,7 +422,7 @@ export function Lineup({
     setFresh(pid);
     setQ("");
     setHi(0);
-    if (day) store.set(`lineup:${day}`, next);
+    if (day) store.set(brand.key(`lineup:${day}`), next);
     const g = byId.get(pid);
     if (g && pid !== target.pid) setWalk({ pid, height: g.height, n: next.length });
     const reveal = reduce ? 0 : 8 * 160 + 400;
@@ -446,9 +449,9 @@ export function Lineup({
   const share = async () => {
     if (!target) return;
     const sq = { hit: "🟩", close: "🟫", miss: "⬛" };
-    const rows = guesses.map((g) => clues(byId.get(g)!, target, nick).map((c) => sq[c.mark]).join("")).join("\n");
+    const rows = guesses.map((g) => clues(byId.get(g)!, target, nick, brand.name).map((c) => sq[c.mark]).join("")).join("\n");
     try {
-      await navigator.clipboard.writeText(`The Lineup #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${rows}\n${location.origin}/#lineup`);
+      await navigator.clipboard.writeText(`${brand.games.lineup} #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${rows}\n${location.origin}${brand.base || "/"}#lineup`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
@@ -541,7 +544,7 @@ export function Lineup({
               />
               {nope ? (
                 <p role="status" className="mt-2 text-sm font-semibold text-[var(--ticket)]">
-                  No Trash player by that name. Pick one from the list.
+                  No {brand.name} player by that name. Pick one from the list.
                 </p>
               ) : null}
               {hits.length ? (
@@ -575,7 +578,7 @@ export function Lineup({
                 <p className="text-sm text-[var(--muted)]">{won ? `Cracked in ${guesses.length}` : "The suspect was"}</p>
                 <p className="font-display text-3xl leading-none font-black">{target.name}</p>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  {nick(target.owner)}&apos;s guy, {target.weeks} weeks on Trash rosters
+                  {nick(target.owner)}&apos;s guy, {target.weeks} weeks on {brand.name} rosters
                 </p>
               </div>
               <button
@@ -602,7 +605,7 @@ export function Lineup({
           {/* statements */}
           <div className="mt-5">
             <div className={`hidden gap-1.5 px-1.5 pb-2 text-[11px] font-semibold text-[var(--muted)] md:grid ${GRID}`}>
-              {COLS.map((c) => (
+              {colsFor(brand.name).map((c) => (
                 <ColHead key={c.label} {...c} />
               ))}
             </div>
@@ -610,7 +613,7 @@ export function Lineup({
               {[...guesses].reverse().map((pid) => {
                 const g = byId.get(pid);
                 if (!g || !target) return null;
-                const cs = clues(g, target, nick);
+                const cs = clues(g, target, nick, brand.name);
                 const isNew = pid === fresh;
                 return (
                   <motion.li

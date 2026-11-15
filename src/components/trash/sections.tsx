@@ -1,8 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import { RevealTitle, Spotlight } from "./polish";
 import {
-  avatar,
   headshot,
   league,
   manager,
@@ -10,6 +8,7 @@ import {
   type Standing,
   type Trade,
 } from "@/lib/league";
+import { MgrLink, MgrPhoto } from "@/components/trash/brand";
 
 const Avatar = ({
   id,
@@ -20,8 +19,8 @@ const Avatar = ({
   size?: number;
   ring?: string;
 }) => (
-  <Image
-    src={avatar(id)}
+  <MgrPhoto
+    id={id}
     alt=""
     width={size}
     height={size}
@@ -172,8 +171,8 @@ export function Standings({
                 key={r.manager}
                 className="border-b border-[var(--line)] last:border-0"
               >
-                <Link
-                  href={`/managers/${r.manager}`}
+                <MgrLink
+                  id={r.manager}
                   className="grid grid-cols-[2.2rem_auto_1fr_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 md:grid-cols-[3rem_auto_1fr_8rem_6rem] md:gap-5 md:px-6"
                 >
                   <span className="font-display text-2xl font-bold text-[var(--muted)] tabular-nums">
@@ -206,7 +205,7 @@ export function Standings({
                       {r.pf.toLocaleString()} pts
                     </span>
                   </span>
-                </Link>
+                </MgrLink>
               </li>
             );
           })}

@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import {
   motion,
   useMotionValue,
@@ -11,6 +10,7 @@ import {
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { Manager } from "@/lib/league";
+import { MgrPhoto, MgrLink } from "@/components/trash/brand";
 
 /** Reduced-motion preference, read after hydration so server and client HTML always match. */
 function useCalm() {
@@ -161,16 +161,16 @@ export function OwnsGrid({
         className="rounded-3xl bg-[var(--bin-2)] p-6 md:sticky md:top-24 md:self-start"
       >
         <div className="flex items-center gap-3">
-          <Image
-            src={`/avatars/${sel.a}.jpg`}
+          <MgrPhoto
+            id={sel.a}
             alt=""
             width={64}
             height={64}
             className="rounded-full"
             style={{ boxShadow: `0 0 0 3px ${colors[sel.a]}` }}
           />
-          <Image
-            src={`/avatars/${sel.b}.jpg`}
+          <MgrPhoto
+            id={sel.b}
             alt=""
             width={48}
             height={48}
@@ -228,8 +228,8 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
       }}
       className="list-none"
     >
-      <Link
-        href={`/managers/${m.id}`}
+      <MgrLink
+        id={m.id}
         className="relative block overflow-hidden rounded-[22px] border-[6px] p-0"
         style={{
           borderColor: m.titles.length ? "var(--gold)" : "#e8e1cf",
@@ -243,8 +243,8 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
           <span className="font-display absolute -top-4 -left-1 text-[7rem] leading-none font-black text-black/15">
             {place}
           </span>
-          <Image
-            src={`/avatars/${m.id}.jpg`}
+          <MgrPhoto
+            id={m.id}
             alt=""
             width={120}
             height={120}
@@ -284,7 +284,7 @@ function TiltCard({ m, place }: { m: Manager; place: number }) {
             style={{ background: glare }}
           />
         )}
-      </Link>
+      </MgrLink>
     </motion.li>
   );
 }

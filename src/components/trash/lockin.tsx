@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { BenchCrime, LockRow } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
+import { MgrPhoto } from "@/components/trash/brand";
+import { LeagueName } from "@/components/trash/brand";
 
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
 const n0 = (x: number) => Math.round(x).toLocaleString();
@@ -17,8 +18,8 @@ const w = (e: number) =>
 const GOOD = "#7fd49a";
 
 const Av = ({ id, s = 40 }: { id: string; s?: number }) => (
-  <Image
-    src={`/avatars/${id}.jpg`}
+  <MgrPhoto
+    id={id}
     alt=""
     width={s}
     height={s}
@@ -301,7 +302,7 @@ export function LockInIndex({
 
       <Explain>
         <p>
-          In Trash each of the nine starting spots counts one game a week: the
+          In <LeagueName /> each of the nine starting spots counts one game a week: the
           last game its player played while in the lineup. Lock in a 70-point
           night by benching the player for the rest of the week, or gamble that
           he&apos;ll do better.

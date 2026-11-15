@@ -1,12 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { Players, Redraft } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Face, pname } from "./player";
+import { MgrPhoto } from "@/components/trash/brand";
+import { LeagueName } from "@/components/trash/brand";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
 
@@ -130,8 +131,8 @@ export function RedraftBoard({
                         {pname(players, p.took.pid)}
                       </p>
                       <p className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                        <Image
-                          src={`/avatars/${p.by}.jpg`}
+                        <MgrPhoto
+                          id={p.by}
                           alt=""
                           width={16}
                           height={16}
@@ -175,7 +176,7 @@ export function RedraftBoard({
       <Explain>
         <p>
           Every player taken in that season&apos;s draft, all fourteen rounds, is
-          re-ranked by what he actually gave a Trash team: his best single game
+          re-ranked by what he actually gave a <LeagueName /> team: his best single game
           each regular-season week, added up. That&apos;s exactly what a
           locked-in starter can score here, so durable stars who show up every
           week rise and injured ones fall.

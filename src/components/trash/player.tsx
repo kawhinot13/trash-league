@@ -1,5 +1,5 @@
-import Image from "next/image";
 import type { Players } from "@/lib/extras";
+import { PlayerPhoto } from "@/components/trash/brand";
 
 /** A player's headshot when we have one, otherwise a monogram disc. Never a fake face. */
 export function Face({
@@ -14,8 +14,8 @@ export function Face({
   const p = players[pid];
   if (p?.[3])
     return (
-      <Image
-        src={`/players/${pid}.jpg`}
+      <PlayerPhoto
+        pid={pid}
         alt=""
         width={size}
         height={size}
