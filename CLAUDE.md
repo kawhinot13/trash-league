@@ -10,6 +10,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 
 ## Data
 - `src/data/extras.json` is rebuilt by `python3 scripts/build-extras.py <cache-dir> src/data/extras.json` (Sleeper lineups, box scores, transactions, live player bios). A daily scheduled task reruns it and pushes to `main`.
+- Rosterdle/Trashle and The Lineup: from 2026-11-16 every league of a sport (Trash included) gets the same player each
+  day, from `src/data/daily-pool.json` (append-only; `scripts/build-daily-pool.py`; `core/daily-pool.ts`, The Lineup
+  walks its own order). Each league keeps its own history clues ("never" when nobody there rostered him). The
+  daily extras build refreshes pool teams with `--refresh-only`. Never reorder or remove pool entries.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)

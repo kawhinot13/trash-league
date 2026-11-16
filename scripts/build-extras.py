@@ -314,6 +314,9 @@ for pid, v in out["players"].items():
     v.append(int(h) if str(h).isdigit() else 0)
     v.append((b or {}).get("birth_date") or "")
 json.dump(out, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
+# Keep the shared daily-game pool's teams current (adds nobody, keeps the order).
+import subprocess
+subprocess.run([sys.executable, os.path.join(ROOT, "scripts/build-daily-pool.py"), "--refresh-only"], check=False)
 print("replay could not explain", len(MISFIT), "team-weeks", MISFIT[:8], file=sys.stderr)
 print("ok", {s["code"]: (s["weeks"], len(s["trades"]), len(s["draft"])) for s in out["seasons"]},
       len(out["players"]), "players", os.path.getsize(OUT) // 1024, "KB")

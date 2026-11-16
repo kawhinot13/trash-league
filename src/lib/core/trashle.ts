@@ -1,4 +1,5 @@
 import type { Dataset } from "@/lib/core/types";
+import { poolFor, withPool } from "@/lib/core/daily-pool";
 
 /**
  * Trashle: a daily Wordle where the answer is the last name of a player with real history
@@ -26,9 +27,9 @@ export const lastWord = (name: string) => {
     .toUpperCase();
 };
 
-export function trashle(d: Dataset): { answers: TrashleWord[]; valid: string[] } {
+export function trashle(d: Dataset): { answers: TrashleWord[]; valid: string[]; shared: TrashleWord[] } {
   const raw = d.extras;
-  const players = d.extras.players;
+  const players = withPool(d.extras.players, d.sport);
   const league = d.league;
   const weeks = new Map<string, Map<string, number>>();
   for (const s of raw.seasons)
@@ -55,5 +56,15 @@ export function trashle(d: Dataset): { answers: TrashleWord[]; valid: string[] }
     answers.push({ word: w, pid, pos: p[1].join("/"), team: p[2], owner: nick(owner), weeks: ow });
   }
   answers.sort((a, b) => a.word.localeCompare(b.word));
-  return { answers, valid: [...valid].sort() };
+  // The shared daily list: the sport's pool in its fixed order, with this league's history for each
+  // (owner "" and 0 weeks when nobody here ever rostered him).
+  const shared: TrashleWord[] = [];
+  for (const [pid, name, pos, team] of poolFor(d.sport)) {
+    const w = lastWord(name);
+    if (w.length < 4 || w.length > 7) continue;
+    const by = weeks.get(pid);
+    const top = by ? [...by.entries()].sort((a, b) => b[1] - a[1])[0] : null;
+    shared.push({ word: w, pid, pos: pos.join("/"), team, owner: top ? nick(top[0]) : "", weeks: top ? top[1] : 0 });
+  }
+  return { answers, valid: [...valid].sort(), shared };
 }

@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-15: Same Rosterdle / Lineup player for every league of a sport
+- Owner's call: everyone gets the same daily player per sport (Trash too). A committed, append-only pool of the
+  150 top-ranked Sleeper players per sport (football: QB/RB/WR/TE), shuffled once; day n uses entry n. The
+  Lineup has its own order so it never echoes Rosterdle. Starts 2026-11-16 so nobody's game changed mid-day.
+- Rejected: picking from a live Sleeper list at runtime (a re-rank or a deploy could change today's answer).
+- League-specific clues stay (top owner, weeks, first season); "Nobody"/"Never" for players a league never had.
+
 ## 2026-11-15: Mobile pass (phones only; desktop unchanged)
 - Owner: pages felt spread out on phones. Section spacing and titles shrink below md; Matchup of the Week is
   side by side; roster cards are two across; power-ranking cards are tighter; waiver intel shows 10 rows and

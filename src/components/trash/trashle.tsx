@@ -1,5 +1,6 @@
 "use client";
 
+import { sharedDay } from "@/lib/core/daily-pool";
 import confetti from "canvas-confetti";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -74,7 +75,20 @@ function Tile({ ch, mark, i, flip, pop }: { ch: string; mark?: Mark; i: number; 
   );
 }
 
-export function Trashle({ answers, valid, players, people }: { answers: TrashleWord[]; valid: string[]; players: Players; people: Person[] }) {
+export function Trashle({
+  answers,
+  valid,
+  shared,
+  players,
+  people,
+}: {
+  answers: TrashleWord[];
+  valid: string[];
+  /** The sport's shared daily list: every league gets the same player each day (from SHARED_FROM). */
+  shared?: TrashleWord[];
+  players: Players;
+  people: Person[];
+}) {
   const brand = useBrand();
   const reduce = useReducedMotion();
   const [day, setDay] = useState<string | null>(null);
@@ -101,10 +115,12 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : 1;
   const target = useMemo(() => {
     if (!day) return null;
-    // Spread days across the bank without repeats for a long while.
+    const n = sharedDay(day);
+    if (n !== null && shared?.length) return shared[n % shared.length];
+    // Before the shared schedule: each league's own bank, spread without repeats for a long while.
     const idx = (edition * 37 + 11) % answers.length;
     return answers[idx];
-  }, [day, edition, answers]);
+  }, [day, edition, answers, shared]);
   const L = target?.word.length ?? 5;
   const won = !!target && guesses.includes(target.word);
   const lost = !won && guesses.length >= TRIES;
@@ -304,7 +320,13 @@ export function Trashle({ answers, valid, players, people }: { answers: TrashleW
                   <div>
                     <p className="font-display text-4xl leading-none font-black">{pname(players, target.pid)}</p>
                     <p className="mt-1 text-sm text-[var(--muted)]">
-                      {target.owner}&apos;s guy, {target.weeks} weeks on that roster
+                      {target.owner ? (
+                        <>
+                          {target.owner}&apos;s guy, {target.weeks} weeks on that roster
+                        </>
+                      ) : (
+                        <>Never on a {brand.name} roster</>
+                      )}
                     </p>
                   </div>
                 </div>

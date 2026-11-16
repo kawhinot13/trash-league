@@ -1,5 +1,6 @@
 "use client";
 
+import { sharedDay } from "@/lib/core/daily-pool";
 import confetti from "canvas-confetti";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -50,8 +51,11 @@ function clues(g: Suspect, t: Suspect, nick: (id: string) => string, league = "T
     { label: "Age", value: g.age ? String(g.age) : "?", ...num(g.age, t.age, 2) },
     { label: `${league} weeks`, value: String(g.weeks), ...num(g.weeks, t.weeks, 15) },
     { label: `${league} teams`, value: String(g.owners.length), ...num(g.owners.length, t.owners.length, 1) },
-    { label: "Top owner", value: nick(g.owner), mark: g.owner === t.owner ? "hit" : t.owners.includes(g.owner) ? "close" : "miss" },
-    { label: "First season", value: short?.[`s${g.first}`] ?? TRASH_YR[g.first], ...num(g.first, t.first, 1) },
+    { label: "Top owner", value: g.owner ? nick(g.owner) : "Nobody", mark: g.owner === t.owner ? "hit" : g.owner && t.owners.includes(g.owner) ? "close" : "miss" },
+    // 0 = never on one of the league's rosters: only matches another "never".
+    g.first && t.first
+      ? { label: "First season", value: short?.[`s${g.first}`] ?? TRASH_YR[g.first], ...num(g.first, t.first, 1) }
+      : { label: "First season", value: g.first ? (short?.[`s${g.first}`] ?? TRASH_YR[g.first]) : "Never", mark: g.first === t.first ? "hit" : "miss", arrow: undefined },
   ];
 }
 
@@ -364,12 +368,15 @@ function Wall({
 export function Lineup({
   suspects,
   answers,
+  shared,
   nicks,
   players,
   people,
 }: {
   suspects: Suspect[];
   answers: string[];
+  /** The sport's shared daily list (same player for every league each day, from SHARED_FROM). */
+  shared?: string[];
   nicks: Record<string, string>;
   players: Players;
   people: Person[];
@@ -396,7 +403,12 @@ export function Lineup({
     setGuesses(store.get<string[]>(brand.key(`lineup:${d}`)) ?? []);
   }, [brand]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : 1;
-  const target = day ? byId.get(answers[(edition * 53 + 29) % answers.length]) ?? null : null;
+  const n = day ? sharedDay(day) : null;
+  const target = !day
+    ? null
+    : n !== null && shared?.length
+      ? (byId.get(shared[n % shared.length]) ?? null)
+      : (byId.get(answers[(edition * 53 + 29) % answers.length]) ?? null);
   const won = !!target && guesses.includes(target.pid);
   const over = won || guesses.length >= TRIES;
 

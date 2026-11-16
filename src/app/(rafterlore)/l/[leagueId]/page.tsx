@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { withPool } from "@/lib/core/daily-pool";
 import Link from "next/link";
 import { Suspense } from "react";
 import { cacheLife } from "next/cache";
@@ -208,7 +209,7 @@ function Home({ p }: { p: LeaguePage }) {
               A new mystery player every day. Guess the last name in six tries.
             </SectionHead>
             <div className="mx-auto max-w-5xl px-5 md:px-10">
-              <Trashle {...trashle(d)} players={d.extras.players} people={people} />
+              <Trashle {...trashle(d)} players={withPool(d.extras.players, d.sport)} people={people} />
             </div>
           </section>
 
@@ -218,7 +219,7 @@ function Home({ p }: { p: LeaguePage }) {
               pick them out in eight tries.
             </SectionHead>
             <div className="mx-auto max-w-6xl px-5 md:px-10">
-              <Lineup {...lineup(d)} players={d.extras.players} people={people} />
+              <Lineup {...lineup(d)} players={withPool(d.extras.players, d.sport)} people={people} />
             </div>
           </section>
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { withPool } from "@/lib/core/daily-pool";
 import { Suspense } from "react";
 import { DumpsterDive } from "@/components/trash/dive";
 import { Trashle } from "@/components/trash/trashle";
@@ -115,7 +116,7 @@ export default function Home() {
           A new mystery player every day. Guess the last name in six tries.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
-          <Trashle {...trashle()} players={players} people={PEOPLE} />
+          <Trashle {...trashle()} players={withPool(players, "nba")} people={PEOPLE} />
         </div>
       </section>
 
@@ -125,7 +126,7 @@ export default function Home() {
           in eight tries.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <Lineup {...lineup()} players={players} people={PEOPLE} />
+          <Lineup {...lineup()} players={withPool(players, "nba")} people={PEOPLE} />
         </div>
       </section>
 
