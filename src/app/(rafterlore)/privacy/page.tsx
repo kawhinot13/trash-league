@@ -51,10 +51,8 @@ export default function Privacy() {
           the account menu.
         </p>
         <p>
-          Signing in also puts your daily-game scores on your leagues&apos; standings. You prove which Sleeper manager you are
-          once, by putting a one-time code in your own team name (the code and that manager&apos;s public Sleeper user id are
-          kept for at most a day). Your account then plays as that manager in every league they&apos;re in, and no other
-          account can. Deleting the account removes that link.
+          Signing in also puts your daily-game scores on your leagues&apos; standings. You pick which Sleeper manager you are
+          once; your account then plays as that manager in every league they&apos;re in, and no other account can pick them. Deleting the account removes that link.
         </p>
       </section>
       <section>

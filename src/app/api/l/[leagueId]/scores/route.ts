@@ -3,7 +3,7 @@ import { authConfigured, getAccount, sameOrigin, sessionFrom } from "@/lib/app/a
 import { db, hasDb } from "@/lib/app/db";
 import { clientIp, take } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
-import { createChallenge, verifyChallenge } from "@/lib/app/removal";
+import { verifyChallenge } from "@/lib/app/removal";
 import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
 
@@ -122,9 +122,19 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
       const v = await viewerOf(req, fid);
       if (!v.accountId) return Response.json({ error: "Sign in first." }, { status: 401 });
       if (b.claim === true) {
+        // Owner's call: picking yourself is enough (no code). First account to pick a manager keeps them;
+        // picking again moves this account to the new manager if nobody else has them.
         if (!season.users.has(String(b.manager))) return Response.json({ error: "bad request" }, { status: 400 });
-        const c = await createChallenge({ familyId: fid, leagueId: season.leagueId, userId: b.manager!, intent: "link", accountId: v.accountId });
-        return Response.json({ code: c.code, challenge: c.id, expiresAt: c.expiresAt.toISOString() });
+        const [taken] = await sql<{ account_id: string }[]>`select account_id from sleeper_links where sleeper_user = ${b.manager!}`;
+        if (taken && taken.account_id !== v.accountId)
+          return Response.json({ error: `Another account already plays as ${season.names.get(b.manager!) ?? "that manager"}.` }, { status: 409 });
+        await sql.begin(async (tx) => {
+          await tx`delete from sleeper_links where account_id = ${v.accountId}`;
+          await tx`insert into sleeper_links (sleeper_user, account_id) values (${b.manager!}, ${v.accountId})`;
+          const name = season.names.get(b.manager!);
+          if (name) await tx`update accounts set sleeper = coalesce(sleeper, ${name}) where id = ${v.accountId}`;
+        });
+        return Response.json({ linked: true });
       }
       if (!/^[a-f0-9]{32}$/.test(b.verify!)) return Response.json({ error: "Start again: that code isn't valid." }, { status: 400 });
       const r = await verifyChallenge(b.verify!, ["link"]);

@@ -59,14 +59,14 @@ export function Leaderboard({
   const [claimErr, setClaimErr] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [notSuggested, setNotSuggested] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const pendingKey = brand.key("link-code");
+  // Picking needs no code any more: forget any code a browser was still holding.
   const [pending, setPendingState] = useState<Pending | null>(() => {
     try {
-      const p = JSON.parse(localStorage.getItem(pendingKey) ?? "null") as Pending | null;
-      return p && Date.parse(p.expiresAt) > Date.now() ? p : null;
-    } catch {
-      return null;
-    }
+      localStorage.removeItem(pendingKey);
+    } catch {}
+    return null;
   });
   const setPending = (p: Pending | null) => {
     setPendingState(p);
@@ -137,8 +137,10 @@ export function Leaderboard({
       // Ask for a one-time code to prove this account is that manager.
       setClaimErr(null);
       post({ claim: true, manager: id }).then(({ ok, j }) => {
-        if (ok && j.code && j.challenge && j.expiresAt) setPending({ challenge: j.challenge, code: j.code, manager: id, expiresAt: j.expiresAt });
-        else setClaimErr(j.error ?? "That didn't work. Try again.");
+        if (ok && j.linked) {
+          setSwitching(false);
+          setReload((n) => n + 1);
+        } else setClaimErr(j.error ?? "That didn't work. Try again.");
       });
       return;
     }
@@ -267,9 +269,6 @@ export function Leaderboard({
               <span className="block text-[var(--muted)]">That&apos;s the Sleeper username saved on your account.</span>
             </p>
           </div>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            Confirm it once with a quick code in your team name, and you play as them in every league they&apos;re in.
-          </p>
           {claimErr ? (
             <p role="alert" className="mt-2 text-[var(--paper)]">
               {claimErr}
@@ -293,11 +292,11 @@ export function Leaderboard({
           </div>
         </div>
       ) : null}
-      {!me && (!viewer || (viewer.signedIn && !viewer.linked && !pending && (!viewer.suggest || notSuggested))) ? (
+      {(!me && (!viewer || (viewer.signedIn && !viewer.linked && !pending && (!viewer.suggest || notSuggested)))) || switching ? (
         <div className="mt-3">
           <p className="text-sm text-[var(--muted)]">
             {viewer
-              ? "Which manager are you? Pick yourself, then prove it with a code in your Sleeper team name. Your account plays as them in every league they're in."
+              ? "Which manager are you? Pick yourself once: your account plays as them in every league they're in."
               : "Who are you? Pick once and your results post to the board."}
           </p>
           {claimErr ? (
@@ -349,7 +348,14 @@ export function Leaderboard({
       ) : (
         <p className="mt-3 text-sm text-[var(--muted)]">Nobody&apos;s on the board yet{tab === "today" ? " today" : tab === "week" ? " this week" : ""}. Be first.</p>
       )}
-      {me && viewer ? <p className="mt-3 text-xs text-[var(--muted)]">You play as {nick(me)}.</p> : null}
+      {me && viewer && !switching ? (
+        <p className="mt-3 text-xs text-[var(--muted)]">
+          You play as {nick(me)}.{" "}
+          <button type="button" onClick={() => setSwitching(true)} className="cursor-pointer underline-offset-4 hover:underline">
+            Not you? Switch
+          </button>
+        </p>
+      ) : null}
       {me && !viewer ? (
         <button type="button" onClick={() => setMe(null)} className="mt-3 cursor-pointer text-xs text-[var(--muted)] underline-offset-4 hover:underline">
           Not {nick(me)}? Switch

@@ -4,6 +4,10 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Picking your manager needs no code (owner's call)
+- Owner chose "just pick, no code ever" over keeping the team-name code or "code only if disputed". Accepted risk:
+  first account to pick a manager keeps them. The proof code path stays in the API (verify) but the UI no longer uses it.
+
 ## 2026-11-16: Daily games suggest the account's own Sleeper username
 - Owner wants the saved username (e.g. kawhinot13) to be who you play as. The standings now suggest that manager
   first; confirming still takes the team-name code, because a typed username proves nothing (anyone could type it).
