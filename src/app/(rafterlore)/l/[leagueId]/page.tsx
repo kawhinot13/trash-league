@@ -145,6 +145,8 @@ function livePill(p: LeaguePage) {
 function Home({ p }: { p: LeaguePage }) {
   const { view, leagueId, dataset: d } = p;
   const n = view.seasons.length;
+  // One player map for all three games (sent to the browser once).
+  const gamePlayers = d ? withPool(d.extras.players, d.sport) : {};
   const people = d
     ? d.league.seasons[d.league.seasons.length - 1].standings
         // Open roster slots ("r5") have nobody to play as.
@@ -200,7 +202,7 @@ function Home({ p }: { p: LeaguePage }) {
             </SectionHead>
             <div className="mx-auto max-w-5xl px-5 md:px-10">
               <PlayGate game={p.brand.games.dive} anchor="dive">
-                <DumpsterDive pool={divePool(d)} players={d.extras.players} people={people} />
+                <DumpsterDive pool={divePool(d)} players={gamePlayers} people={people} />
               </PlayGate>
             </div>
           </section>
@@ -211,7 +213,7 @@ function Home({ p }: { p: LeaguePage }) {
             </SectionHead>
             <div className="mx-auto max-w-5xl px-5 md:px-10">
               <PlayGate game={p.brand.games.wordle} anchor="trashle">
-                <Trashle {...trashle(d)} players={withPool(d.extras.players, d.sport)} people={people} />
+                <Trashle {...trashle(d)} players={gamePlayers} people={people} />
               </PlayGate>
             </div>
           </section>
@@ -223,7 +225,7 @@ function Home({ p }: { p: LeaguePage }) {
             </SectionHead>
             <div className="mx-auto max-w-6xl px-5 md:px-10">
               <PlayGate game={p.brand.games.lineup} anchor="lineup">
-                <Lineup {...lineup(d)} players={withPool(d.extras.players, d.sport)} people={people} />
+                <Lineup {...lineup(d)} players={gamePlayers} people={people} />
               </PlayGate>
             </div>
           </section>

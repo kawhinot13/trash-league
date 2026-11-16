@@ -27,7 +27,8 @@ export function MusicToggle() {
     const a = new Audio("/audio/sleepmas-eve.mp3");
     a.loop = true;
     a.volume = 0.45;
-    a.preload = "auto";
+    // Only downloads when it actually plays: it's 3.6 MB, and most visits never hear it.
+    a.preload = "none";
     audio.current = a;
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);

@@ -19,6 +19,8 @@ const body = Archivo({
 
 export const viewport: Viewport = {
   themeColor: "#0b2419",
+  // Lets the phone tab bar sit above the home indicator (env(safe-area-inset-bottom)).
+  viewportFit: "cover",
 };
 
 /** Shared shell only: fonts and global CSS. The Trash site's chrome lives in (trash)/layout.tsx,

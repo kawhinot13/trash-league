@@ -203,7 +203,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
   return (
     <LocalPhotos.Provider value={localSet}>
       <Who.Provider value={data.players}>
-    <div data-no-rico className="xmas-drift rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
+    <div data-no-rico className="xmas-drift rounded-[24px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-3 sm:rounded-[28px] sm:p-5 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"]]} />
         <p className="text-xs text-[var(--muted)]">Live Season 4 rosters, week {data.week}</p>
@@ -217,25 +217,25 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
         {tab === "team" ? (
           <motion.div key={`team-${me}`} initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">
             {/* verdict */}
-            <div className="rounded-3xl border border-white/10 bg-black/25 p-6 md:p-8">
+            <div className="rounded-3xl border border-white/10 bg-black/25 p-4 sm:p-6 md:p-8">
               <p className="text-sm text-[var(--muted)]">{nick(me)}&apos;s front office report</p>
               <motion.p
                 initial={reduce ? false : { scale: 1.4, opacity: 0, rotate: -4 }}
                 animate={{ scale: 1, opacity: 1, rotate: 0 }}
                 transition={{ type: "spring", duration: 0.6, bounce: 0.35 }}
-                className="font-display mt-1 text-[clamp(2.8rem,8vw,5rem)] leading-[0.9] font-black"
+                className="font-display mt-1 text-[clamp(2.2rem,8vw,5rem)] leading-[0.9] font-black"
               >
                 {d.archetype}
               </motion.p>
-              <p className="mt-3 max-w-[60ch] text-lg text-[var(--paper)]/85">{d.pitch}</p>
-              <div className="mt-4 flex flex-wrap gap-2 text-sm">
+              <p className="mt-2 max-w-[60ch] text-[15px] leading-snug text-[var(--paper)]/85 sm:mt-3 sm:text-lg sm:leading-normal">{d.pitch}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5 text-xs sm:mt-4 sm:gap-2 sm:text-sm">
                 {d.strengths.map((s) => (
-                  <span key={s} className="rounded-full px-3 py-1 font-semibold" style={{ background: "rgba(127,212,154,0.18)", color: GOOD }}>
+                  <span key={s} className="rounded-full px-2.5 py-1 font-semibold sm:px-3" style={{ background: "rgba(127,212,154,0.18)", color: GOOD }}>
                     Strong: {s}
                   </span>
                 ))}
                 {d.weaknesses.map((s) => (
-                  <span key={s} className="rounded-full px-3 py-1 font-semibold" style={{ background: "rgba(255,138,122,0.15)", color: BAD }}>
+                  <span key={s} className="rounded-full px-2.5 py-1 font-semibold sm:px-3" style={{ background: "rgba(255,138,122,0.15)", color: BAD }}>
                     Lacking: {s}
                   </span>
                 ))}
@@ -243,19 +243,19 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
             </div>
 
             {/* league ranks */}
-            <h3 className="font-display mt-10 text-3xl font-black">Where you rank</h3>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            <h3 className="font-display mt-8 text-2xl font-black sm:mt-10 sm:text-3xl">Where you rank</h3>
+            <ul className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
               {METRICS.map(({ key, label, info }, i) => {
                 const r = d.rank[key as Metric];
                 const n = profiles.length;
                 const tone = r <= 3 ? GOOD : r > n - 3 ? BAD : "var(--paper)";
                 return (
-                  <li key={key} className="rounded-2xl bg-black/20 p-4" title={info}>
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-semibold">{label}</span>
-                      <span className="font-display text-2xl font-black tabular-nums" style={{ color: tone }}>
+                  <li key={key} className="rounded-2xl bg-black/20 p-3 sm:p-4" title={info}>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                      <span className="text-sm font-semibold sm:text-base">{label}</span>
+                      <span className="font-display text-xl font-black tabular-nums sm:text-2xl" style={{ color: tone }}>
                         #{r}
-                        <span className="text-sm text-[var(--muted)]"> of {n}</span>
+                        <span className="text-xs text-[var(--muted)] sm:text-sm"> of {n}</span>
                       </span>
                     </div>
                     <div className="mt-2 h-2 rounded-full bg-white/8">
@@ -267,7 +267,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                         transition={{ duration: 0.7, delay: i * 0.05, ease: [0.23, 1, 0.32, 1] }}
                       />
                     </div>
-                    <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">{info}</p>
+                    <p className="mt-2 hidden text-xs leading-relaxed text-[var(--muted)] sm:block">{info}</p>
                   </li>
                 );
               })}
@@ -282,10 +282,10 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                   initial={reduce ? false : { opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.07 }}
-                  className="rounded-2xl border border-white/10 bg-black/25 p-5"
+                  className="rounded-2xl border border-white/10 bg-black/25 p-3 sm:p-5"
                 >
-                  <p className="font-display text-2xl font-black">{a.title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-[var(--paper)]/80">{a.text}</p>
+                  <p className="font-display text-xl font-black sm:text-2xl">{a.title}</p>
+                  <p className="mt-1 text-[13px] leading-snug text-[var(--paper)]/80 sm:text-sm sm:leading-relaxed">{a.text}</p>
                   {a.targets?.length ? (
                     <ul className="mt-3 space-y-2">
                       {a.targets.map((t) => (
@@ -304,9 +304,10 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                               <span className="block text-xs text-[var(--muted)]">
                                 {t.owner ? `${nick(t.owner)}: ${t.why}` : `Free agent, ${t.why}`}
                               </span>
+                              {t.owner ? <span className="mt-0.5 block text-xs font-semibold text-[var(--wood)] sm:hidden">Analyze trade →</span> : null}
                             </span>
-                            <span className="text-sm font-bold tabular-nums">{n0(P[t.pid]?.value ?? 0)}</span>
-                            {t.owner ? <span className="text-xs font-semibold text-[var(--wood)]">Analyze trade</span> : null}
+                            <span className="shrink-0 text-sm font-bold tabular-nums">{n0(P[t.pid]?.value ?? 0)}</span>
+                            {t.owner ? <span className="hidden shrink-0 text-xs font-semibold text-[var(--wood)] sm:inline">Analyze trade</span> : null}
                           </button>
                         </li>
                       ))}

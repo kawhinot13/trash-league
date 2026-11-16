@@ -262,7 +262,7 @@ export function RicoPeek({ trades, record }: { trades: number; record: string })
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed bottom-0 z-40 select-none"
+      className="pointer-events-none fixed bottom-[calc(64px+env(safe-area-inset-bottom))] z-40 select-none md:bottom-0"
       style={{ left: x, width: plankW }}
     >
       <AnimatePresence>

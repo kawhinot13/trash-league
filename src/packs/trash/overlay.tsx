@@ -13,7 +13,7 @@ export function TrashOverlay({ rico, music }: { rico: { trades: number; record: 
       <PigRide />
       {rico ? <RicoPeek trades={rico.trades} record={rico.record} /> : null}
       {music ? (
-        <div className="fixed right-4 bottom-4 z-50">
+        <div className="fixed right-4 bottom-[calc(80px+env(safe-area-inset-bottom))] z-50 md:bottom-4">
           <MusicToggle />
         </div>
       ) : null}

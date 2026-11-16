@@ -471,3 +471,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .r-loader path { animation: none; stroke-dashoffset: 0; fill-opacity: 1; }
 }
+
+/* Room for the phone tab bar (GlassNav's TabBar). */
+@media (max-width: 767.98px) {
+  body {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+}

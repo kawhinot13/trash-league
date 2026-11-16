@@ -19,6 +19,87 @@ export const onReady = (fn: () => void) => {
   return () => cancelAnimationFrame(id);
 };
 
+/* ── Phone tab bar: the main sections at thumb reach, the rest under "More" ── */
+const TAB_LABELS = new Set(["Home", "Live", "Stats"]);
+const ICONS: Record<string, React.ReactNode> = {
+  Home: <path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" />,
+  Live: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4" />
+    </>
+  ),
+  Games: (
+    <>
+      <rect x="3" y="7" width="18" height="11" rx="4" />
+      <path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 13.5h.01" />
+    </>
+  ),
+  Stats: <path d="M5 19V11M12 19V5M19 19v-6" />,
+  More: (
+    <>
+      <circle cx="5" cy="12" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="19" cy="12" r="1.4" />
+    </>
+  ),
+};
+function TabBar({
+  links,
+  cta,
+  isOn,
+  onMore,
+  moreOn,
+}: {
+  links: readonly (readonly [string, string])[];
+  cta: { href: string; label: string } | null;
+  isOn: (href: string) => boolean;
+  onMore: () => void;
+  moreOn: boolean;
+}) {
+  const main = links.filter(([, l]) => TAB_LABELS.has(l));
+  const tabs: { key: string; label: string; href?: string; on: boolean }[] = [
+    ...main.slice(0, 2).map(([href, label]) => ({ key: label, label, href, on: !moreOn && isOn(href) })),
+    ...(cta ? [{ key: "Games", label: "Games", href: cta.href, on: false }] : []),
+    ...main.slice(2).map(([href, label]) => ({ key: label, label, href, on: !moreOn && isOn(href) })),
+  ];
+  const moreActive = moreOn || links.some(([href, l]) => !TAB_LABELS.has(l) && isOn(href));
+  const cls = (on: boolean) =>
+    `flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] font-semibold transition-colors ${on ? "text-[var(--paper)]" : "text-[var(--muted)]"}`;
+  const icon = (k: string) => (
+    <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {ICONS[k]}
+    </svg>
+  );
+  return (
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-[61] border-t border-white/10 bg-[rgba(10,30,22,0.94)] px-2 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom))] backdrop-blur-md md:hidden"
+    >
+      <ul className="mx-auto flex max-w-md items-stretch">
+        {tabs.map((t) => (
+          <li key={t.key} className="flex flex-1">
+            <Link href={t.href!} aria-current={t.on ? "page" : undefined} className={cls(t.on)}>
+              {t.key === "Games" ? (
+                <span className="flex size-9 items-center justify-center rounded-full bg-[var(--paper)] text-[var(--bin)]">{icon("Games")}</span>
+              ) : (
+                icon(t.key)
+              )}
+              <span>{t.label}</span>
+            </Link>
+          </li>
+        ))}
+        <li className="flex flex-1">
+          <button type="button" onClick={onMore} aria-expanded={moreOn} className={cls(moreActive)}>
+            {icon("More")}
+            <span>More</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+}
+
 /* ── Floating glass nav with a morphing pill on the active section ── */
 const LINKS = [
   ["/", "Home"],
@@ -75,14 +156,14 @@ export function GlassNav({
       >
         {product.name}
       </Link>
-      <Link href={home} className="font-display max-w-[52vw] truncate text-2xl leading-7 font-black tracking-tight md:max-w-[16rem]">
+      <Link href={home} className="font-display max-w-[60vw] truncate text-xl leading-6 font-black tracking-tight md:max-w-[16rem] md:text-2xl md:leading-7">
         {logo}
       </Link>
     </span>
   ) : (
     <Link
       href={home}
-      className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[52vw] truncate md:max-w-[16rem]"}`}
+      className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[60vw] truncate md:max-w-[16rem]"}`}
     >
       {logo}
     </Link>
@@ -92,7 +173,7 @@ export function GlassNav({
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-3 md:pt-4">
         <nav
           aria-label="Sections"
-          className={`pointer-events-auto relative flex w-full max-w-5xl items-center justify-between gap-2 rounded-full border px-2 py-2 pl-5 transition-[background-color,border-color,box-shadow] duration-500 ${
+          className={`pointer-events-auto relative flex w-full max-w-5xl items-center justify-between gap-2 rounded-full border px-1.5 py-1.5 pl-4 transition-[background-color,border-color,box-shadow] duration-500 md:px-2 md:py-2 md:pl-5 ${
             scrolled
               ? "border-white/12 bg-[rgba(10,30,22,0.86)] shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
               : "border-transparent bg-transparent"
@@ -142,33 +223,15 @@ export function GlassNav({
             {cta ? (
               <Link
                 href={cta.href}
-                className="rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97]"
+                className="hidden rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97] md:inline-block"
               >
                 {cta.label}
               </Link>
             ) : null}
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              aria-label="Open menu"
-              aria-expanded={open}
-              className="flex size-10 items-center justify-center rounded-full bg-white/8 md:hidden"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            </button>
           </div>
         </nav>
       </header>
+      <TabBar links={links} cta={cta} isOn={isOn} onMore={() => setOpen(true)} moreOn={open} />
       <AnimatePresence>
         {open ? (
           <motion.div
@@ -179,11 +242,11 @@ export function GlassNav({
             onClick={() => setOpen(false)}
           >
             <motion.nav
-              aria-label="Sections"
-              className="mx-3 mt-3 rounded-3xl border border-white/12 bg-[rgba(16,40,30,0.85)] p-3"
-              initial={{ y: -16, opacity: 0 }}
+              aria-label="More sections"
+              className="absolute inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] rounded-3xl border border-white/12 bg-[rgba(16,40,30,0.92)] p-3"
+              initial={{ y: 16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -12, opacity: 0 }}
+              exit={{ y: 12, opacity: 0 }}
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -210,12 +273,12 @@ export function GlassNav({
               </div>
               <ul className="mt-1">
                 {links.map(([href, label]) => (
-                  <li key={href}>
+                  <li key={href} className={TAB_LABELS.has(label) ? "hidden" : undefined}>
                     <Link
                       href={href}
                       onClick={() => setOpen(false)}
                       aria-current={isOn(href) ? "page" : undefined}
-                      className={`block rounded-2xl px-3 py-3.5 font-display text-3xl font-bold active:bg-white/8 ${isOn(href) ? "text-[var(--paper)]" : "text-[var(--paper)]/70"}`}
+                      className={`block rounded-2xl px-3 py-3 font-display text-2xl font-bold active:bg-white/8 ${isOn(href) ? "text-[var(--paper)]" : "text-[var(--paper)]/70"}`}
                     >
                       {label}
                     </Link>
