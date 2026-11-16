@@ -366,12 +366,56 @@ export type RecapWeek = {
   steal: { id: string; pid: string; pts: number } | null;
 };
 
-/** One recap per finished week of a season, newest first. */
-export function weeklyRecap(d: Dataset, code = lastCode(d)): { years: string; weeks: RecapWeek[] } {
+/** One recap per finished week of a season, newest first.
+ * `verified` (basketball on Rafterlore): Sleeper's weekly team scores aren't reliable there, so team-score
+ * cards (blowout, nail-biter, top/low score, bench crime, most locked in) only appear for weeks with exact
+ * scores (`exact`: week -> manager -> official score), and results come from the official record strings. */
+export function weeklyRecap(
+  d: Dataset,
+  code = lastCode(d),
+  verified?: { exact: Map<number, Map<string, number>>; record: Map<string, string> },
+): { years: string; weeks: RecapWeek[] } {
   const s = d.extras.seasons.find((x) => x.code === code)!;
   const out: RecapWeek[] = [];
   for (const [wk, d] of Object.entries(s.weekly ?? {})) {
     const week = Number(wk);
+    if (verified) {
+      const ex = verified.exact.get(week);
+      const results = d.games
+        .map(([a, b]) => {
+          const r = verified.record.get(a)?.[week - 1];
+          return r === "W" ? { w: a, l: b } : r === "L" ? { w: b, l: a } : null;
+        })
+        .filter((x): x is { w: string; l: string } => !!x);
+      const steal = d.adds.find((a) => a[2] > 0);
+      const base = { week, results, top: d.top.slice(0, 3).map(([id, pid, pts]) => ({ id, pid, pts })), steal: steal ? { id: steal[0], pid: steal[1], pts: steal[2] } : null };
+      if (!ex || !ex.size) {
+        out.push({ ...base, exact: false, blowout: null, close: null, high: null, low: null, crime: null, locked: null });
+        continue;
+      }
+      const scored = results
+        .map((g) => ({ ...g, ws: ex.get(g.w) ?? 0, ls: ex.get(g.l) ?? 0 }))
+        .sort((x, y) => y.ws - y.ls - (x.ws - x.ls));
+      const sc = [...ex].map(([id, pts]) => ({ id, pts })).sort((x, y) => y.pts - x.pts);
+      const lines = Object.entries(s.lineups)
+        .map(([id, ws]) => {
+          const r = ws.find(([w]) => w === week);
+          const act = ex.get(id);
+          return r && act !== undefined ? { id, act, opt: Math.max(r[2], act) } : null;
+        })
+        .filter((x): x is { id: string; act: number; opt: number } => !!x);
+      out.push({
+        ...base,
+        exact: true,
+        blowout: scored[0] ?? null,
+        close: scored[scored.length - 1] ?? null,
+        high: sc[0] ?? null,
+        low: sc[sc.length - 1] ?? null,
+        crime: [...lines].sort((x, y) => y.opt - y.act - (x.opt - x.act))[0] ?? null,
+        locked: [...lines].sort((x, y) => y.act / y.opt - x.act / x.opt)[0] ?? null,
+      });
+      continue;
+    }
     const games = d.games.map(([a, b, pa, pb]) => (pa >= pb ? { w: a, l: b, ws: pa, ls: pb } : { w: b, l: a, ws: pb, ls: pa }));
     const byMargin = [...games].sort((x, y) => y.ws - y.ls - (x.ws - x.ls));
     const scores = d.games.flatMap(([a, b, pa, pb]) => [

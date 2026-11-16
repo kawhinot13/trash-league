@@ -87,7 +87,14 @@ function Live({ p }: { p: LeaguePage }) {
         <Pending p={p} what="The live table, power rankings and recaps" />
       </main>
     );
-  const recap = weeklyRecap(d);
+  // Basketball: Sleeper's weekly team scores aren't reliable, so score-based recap cards use only the exact
+  // weekly scores from the nightly official totals; other weeks show results and player cards only.
+  const teams = p.view.current.teams;
+  const exact = new Map<number, Map<string, number>>();
+  for (const t of teams)
+    if (t.ownerId) for (const [w, v] of p.weekly.get(t.rosterId) ?? []) (exact.get(w) ?? exact.set(w, new Map()).get(w)!).set(t.ownerId, v);
+  const record = new Map(teams.filter((t) => t.ownerId).map((t) => [t.ownerId!, t.record]));
+  const recap = weeklyRecap(d, undefined, p.view.sport === "nfl" ? undefined : { exact, record });
   return (
     <main className="overflow-x-clip">
       <Intro title="Live">The table, this week&apos;s matchups, power rankings and the waiver wire, refreshed every few minutes.</Intro>

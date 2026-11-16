@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Rafterlore weekly recap uses only verified scores (basketball)
+- Owner flagged a week-3 "bench crime" that wasn't true: Rafterlore's recap used Sleeper's weekly team scores, which are
+  unreliable for basketball. Now basketball weeks show team-score cards (blowout, nail-biter, top/low, bench crime,
+  most locked in) only with exact scores from the nightly official totals; other weeks show official results, top
+  performances and the best pickup, plus a note. Football unchanged (its weekly scores were verified).
+
 ## 2026-11-16: Admin "People" count
 - Owner wanted a count of unique people: each distinct Sleeper username that searches and then opens a league counts
   once (same username, other leagues: still one). Stored as a keyed HMAC (AUTH_SECRET) of the lowercased username so

@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
-import { useBrand } from "@/components/trash/brand";
+import { useBrand, Src } from "@/components/trash/brand";
 import type { Players, RecapWeek } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Segmented } from "./intel";
@@ -88,9 +88,10 @@ export function WeeklyRecap({
               </ul>
               {!r.exact ? (
                 <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
-                  Team scores aren&apos;t shown for this week. Sleeper&apos;s data feed reports them inconsistently for
-                  daily-lineup leagues, so the only exact source is the official season points total, which the site
-                  started saving after week 3. Every week from 4 on gets exact scores.
+                  Team scores, the bench crime and the lineup awards aren&apos;t shown for this week. <Src />&apos;s weekly
+                  scores for basketball don&apos;t always match the official totals, and this week came before the site
+                  started saving the official totals each night, so there&apos;s no exact score to go on. Weeks after that
+                  get them.
                 </p>
               ) : null}
             </li>
