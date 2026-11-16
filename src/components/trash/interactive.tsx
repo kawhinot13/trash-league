@@ -10,7 +10,7 @@ import {
 } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { Manager } from "@/lib/league";
-import { Handle, MgrPhoto, MgrLink, useNameOf } from "@/components/trash/brand";
+import { Handle, MgrPhoto, MgrLink, useNameOf, Src } from "@/components/trash/brand";
 
 /** Reduced-motion preference, read after hydration so server and client HTML always match. */
 function useCalm() {
@@ -96,7 +96,7 @@ export function OwnsGrid({
       <div className="overflow-x-auto rounded-3xl bg-[var(--bin-2)] p-3 md:p-5">
         <table className="mx-auto border-separate border-spacing-[3px] text-xs">
           <caption className="sr-only">
-            Head-to-head wins, row manager against column manager, per Sleeper
+            Head-to-head wins, row manager against column manager, per <Src />
           </caption>
           <thead>
             <tr>

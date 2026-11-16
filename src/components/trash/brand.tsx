@@ -44,6 +44,8 @@ export type BrandConfig = {
    * site (lock-in, with its own original wording).
    */
   lineup?: "lock-in" | "daily" | "weekly";
+  /** Where the league lives ("Yahoo"); Sleeper when unset. Used in copy like "per Sleeper". */
+  source?: string;
   /** First season's year, for "since 2023" copy. Trash's when unset. */
   since?: string;
   /** Season code -> short year label ("’25"), for compact season lists. */
@@ -198,6 +200,12 @@ export function useNameOf() {
 export function Handle({ id }: { id: string }) {
   return <>{useBrand().names?.[id] ?? id}</>;
 }
+
+/** The platform the league lives on, in copy ("per Sleeper", "per Yahoo"). */
+export function Src() {
+  return <>{useBrand().source ?? "Sleeper"}</>;
+}
+export const useSource = () => useBrand().source ?? "Sleeper";
 
 /** The league's name, for server components that render shared copy. */
 export function LeagueName() {

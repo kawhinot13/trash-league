@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Manager, Season } from "@/lib/league";
 import { Explain } from "./intel";
-import { Handle, MgrPhoto } from "@/components/trash/brand";
+import { Handle, MgrPhoto, Src, useSource } from "@/components/trash/brand";
 
 const round = (r: number) =>
   ({ 1: "Quarterfinal", 2: "Semifinal", 3: "Final" })[r] ?? `Round ${r}`;
@@ -100,6 +100,7 @@ export function RivalryMachine({
   /** The two managers it opens on. */
   initial?: [string, string];
 }) {
+  const source = useSource();
   const [a, setA] = useState(initial[0]);
   const [b, setB] = useState(initial[1]);
   const A = managers.find((m) => m.id === a)!;
@@ -208,7 +209,7 @@ export function RivalryMachine({
           </p>
 
           <div className="mx-auto mt-6 max-w-2xl">
-            <Stat label="Head to head (per Sleeper)" x={data.aw} y={data.bw} />
+            <Stat label={`Head to head (per ${source})`} x={data.aw} y={data.bw} />
             <Stat label="Playoff meetings won" x={data.pw} y={data.pl} />
             <Stat label="Titles" x={A.titles.length} y={B.titles.length} />
             <Stat
@@ -324,8 +325,8 @@ export function RivalryMachine({
           the other. Most points has the upper hand.
         </p>
         <p>
-          Trades, playoff results, titles and finishes come from Sleeper&apos;s
-          official records. Head to head comes from Sleeper&apos;s weekly
+          Trades, playoff results, titles and finishes come from <Src />&apos;s
+          official records. Head to head comes from <Src />&apos;s weekly
           scores, which don&apos;t always match the official standings for this
           league.
         </p>

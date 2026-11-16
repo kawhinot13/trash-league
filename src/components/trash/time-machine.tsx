@@ -6,7 +6,7 @@ import type { MachineSeason, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain } from "./intel";
 import { Face, pname } from "./player";
-import { MgrPhoto } from "@/components/trash/brand";
+import { MgrPhoto, Src } from "@/components/trash/brand";
 
 type Stop = { si: number; week: number };
 type Arrival =
@@ -349,7 +349,7 @@ export function TimeMachine({
       <Explain>
         <p>
           Every stop on the slider is a team&apos;s roster at the end of that
-          week, straight from Sleeper&apos;s weekly lineups, starting from draft
+          week, straight from <Src />&apos;s weekly lineups, starting from draft
           day. Green cards arrived that week. Each player shows how he got
           there: drafted, traded for, or picked up off waivers.
         </p>

@@ -6,7 +6,7 @@ import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Pickup } from "@/lib/live";
 import type { Manager, Season, Standing } from "@/lib/league";
-import { Handle, MgrLink, MgrPhoto } from "@/components/trash/brand";
+import { Handle, MgrLink, MgrPhoto, Src } from "@/components/trash/brand";
 import { LivePlayerPhoto, useBrand, useNameOf } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
@@ -612,7 +612,7 @@ export function Almanac({
   partners: { a: string; b: string; n: number }[];
 }) {
   const [tab, setTab] = useState<Tab>("luck");
-  const [season, setSeason] = useState(seasons[seasons.length - 2].code);
+  const [season, setSeason] = useState(seasons[Math.max(0, seasons.length - 2)].code);
   const done = seasons.filter((s) => s.status === "complete");
   // Luck: actual wins vs expected wins from season points for/against (Pythagorean, exponent 9).
   const luck = done
@@ -1218,7 +1218,7 @@ const ALMANAC_NOTES: Record<string, React.ReactNode> = {
   ),
   oddities: (
     <p>
-      Everything here comes from the Sleeper trade log, drafts and official
+      Everything here comes from the <Src /> trade log, drafts and official
       season standings. Playoff spots are the top 8 seeds.
     </p>
   ),
@@ -1236,7 +1236,7 @@ const ALMANAC_NOTES: Record<string, React.ReactNode> = {
   ),
   waivers: (
     <p>
-      Every player added through waivers or free agency, from Sleeper&apos;s
+      Every player added through waivers or free agency, from <Src />&apos;s
       transaction log for all four seasons.
     </p>
   ),

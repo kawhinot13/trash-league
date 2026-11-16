@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MgrPhoto, useBrand } from "@/components/trash/brand";
+import { MgrPhoto, useBrand, Src } from "@/components/trash/brand";
 import { Explain, Segmented } from "@/components/trash/intel";
 import type { PlayoffRow } from "@/lib/core/trapezoid";
 
@@ -11,6 +11,7 @@ const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "â€
 /** Postseason track record, kept apart from the regular-season trapezoid. */
 export function PlayoffReport({ rows, people, years }: { rows: PlayoffRow[]; people: Person[]; years: Record<string, string> }) {
   const brand = useBrand();
+  const source = brand.source ?? "Sleeper";
   const nick = (id: string) => people.find((p) => p.id === id)?.nick ?? brand.names?.[id] ?? id;
   const [sort, setSort] = useState<"titles" | "rate" | "scoring">("titles");
   if (!rows.some((r) => r.eligible)) return <p className="text-[var(--muted)]">Insufficient data: no finished seasons yet.</p>;
@@ -21,7 +22,7 @@ export function PlayoffReport({ rows, people, years }: { rows: PlayoffRow[]; peo
         ? (b.lift ?? -Infinity) - (a.lift ?? -Infinity)
         : b.titles.length - a.titles.length || b.finals - a.finals || b.w - a.w,
   );
-  const cols = ["Manager", "Playoffs", "Record", "Titles", "Finals", "Semis", "Upsets", "Pts / game (per Sleeper)", "vs regular season (per Sleeper)"];
+  const cols = ["Manager", "Playoffs", "Record", "Titles", "Finals", "Semis", "Upsets", `Pts / game (per ${source})`, `vs regular season (per ${source})`];
   return (
     <div>
       <Segmented
@@ -84,7 +85,7 @@ export function PlayoffReport({ rows, people, years }: { rows: PlayoffRow[]; peo
           <li>Record, titles, finals and semifinals come from the winners bracket.</li>
           <li>Upsets: playoff wins over a better seed, and losses to a worse one.</li>
           <li>
-            Points per game are Sleeper&apos;s weekly playoff scores (per Sleeper), with the number of games beside them: one big game
+            Points per game are <Src />&apos;s weekly playoff scores (per <Src />), with the number of games beside them: one big game
             isn&apos;t a track record.
           </li>
           <li>

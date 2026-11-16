@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MgrLink, MgrPhoto, useBrand } from "@/components/trash/brand";
+import { MgrLink, MgrPhoto, useBrand, Src } from "@/components/trash/brand";
 import { Explain, Segmented } from "@/components/trash/intel";
 import type { backtest as Backtest, Classification, TrapPoint, TrapView } from "@/lib/core/trapezoid";
 
@@ -392,7 +392,7 @@ export function Trapezoid({ views, bt, people }: { views: TrapView[]; bt: Bt; pe
             <strong>Across:</strong> regular-season win %. Wins divided by games; a tie counts as a game but not a win.
           </li>
           <li>
-            <strong>Up:</strong> points per matchup, from Sleeper&apos;s official regular-season points for, divided by completed weeks.
+            <strong>Up:</strong> points per matchup, from <Src />&apos;s official regular-season points for, divided by completed weeks.
             Playoffs, projections and unfinished weeks never count. Leagues that also play the weekly median aren&apos;t counted twice.
           </li>
           <li>

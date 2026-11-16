@@ -4,6 +4,19 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Yahoo Fantasy football (members only)
+- Owner chose members-only over public pages (Yahoo leagues are private; Rafterlore otherwise promises public data only).
+  Official API + per-member OAuth; pages render per request behind a membership check. Rejected: public ISR pages from
+  one member's import (privacy/terms risk); ESPN (no official API; private leagues need users' cookies).
+- Adapter, not a rewrite: Yahoo data becomes Sleeper-shaped bundles + replayed weeks, so grading and UI are shared.
+  Players map to Sleeper ids via Sleeper's `yahoo_id`, so the daily-game pool and badges work.
+- Couldn't read Yahoo's terms pages from the sandbox (blocked hosts); built conservatively: non-commercial, text credit,
+  no logo, data only for members, disconnect/remove delete data. The owner must apply for Yahoo API access and sign
+  Yahoo's agreement. The Yahoo JSON parsing was tested against hand-made fixtures in Yahoo's documented shape, not real
+  responses: expect fixes after the first real import.
+- Not built yet: daily-game standings for Yahoo leagues (games play, no board), nightly refresh (members' visits refresh
+  every 6h in season), Live/Front office, category leagues, basketball.
+
 ## 2026-11-16: Phone navigation and load weight
 - Phones get an app-style bottom tab bar (GlassNav's TabBar: Home, Live, Front office, Stats, More; More opens a sheet with
   the rest). Owner asked for Front office in the bar; Daily games is a short "Games" pill in the top bar. Desktop/iPad (md+) unchanged. Body has bottom padding on phones; fixed bottom elements sit above the bar.

@@ -6,7 +6,7 @@ import type { Players, Redraft } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Face, pname } from "./player";
-import { MgrPhoto } from "@/components/trash/brand";
+import { MgrPhoto, Src } from "@/components/trash/brand";
 import { LeagueName } from "@/components/trash/brand";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
@@ -184,7 +184,7 @@ export function RedraftBoard({
         <p>
           The re-do column is who should go at each pick if everyone drafted
           again knowing how the season went. Picks come from the league&apos;s
-          official Sleeper draft; game scores use the league&apos;s own scoring.
+          official <Src /> draft; game scores use the league&apos;s own scoring.
         </p>
       </Explain>
     </div>

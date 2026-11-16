@@ -153,6 +153,14 @@ export function Finder() {
         A league id or Sleeper league link works too.
         {me?.configured && !account ? " Sign in to keep your leagues on every device." : ""}
       </p>
+      {me?.yahoo ? (
+        <p className="mt-2 text-sm">
+          <Link href="/l/yahoo" className="font-semibold text-[var(--paper)] underline underline-offset-4">
+            Yahoo football league? Bring it in here
+          </Link>
+          <span className="text-[var(--muted)]"> (private to its managers).</span>
+        </p>
+      ) : null}
       {err ? (
         <p role="alert" className="mt-6 text-[var(--paper)]">
           {err}

@@ -153,5 +153,7 @@ export async function deleteAccount(s: Session) {
     const [row] = await tx<{ id: string }[]>`delete from accounts where id = ${s.id} and session_v = ${s.v} returning id`;
     // Their Sleeper link goes too, so that Sleeper user can be linked again.
     if (row) await tx`delete from sleeper_links where account_id = ${row.id}`;
+    // And its Yahoo connection (the encrypted Yahoo key goes with it).
+    if (row) await tx`delete from yahoo_links where account_id = ${row.id}`;
   });
 }

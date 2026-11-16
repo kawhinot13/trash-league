@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Handle, MgrLink, MgrPhoto } from "@/components/trash/brand";
+import { Handle, MgrLink, MgrPhoto, Src } from "@/components/trash/brand";
 import { Face, pname } from "@/components/trash/player";
 import { draftEye, lockIn, myGuys, tradeCourt, yearsOf } from "@/lib/core/extras";
 import { h2h as coreH2h, record } from "@/lib/core/league";
@@ -196,7 +196,7 @@ export function ManagerProfileView({
           <ul className="list-disc space-y-1 pl-5">
             <li>
               <strong>Lineups:</strong> the points this manager&apos;s starters scored, divided by the most the roster could have
-              scored with the best lineup each week. 100% means a perfect lineup every week (per Sleeper).
+              scored with the best lineup each week. 100% means a perfect lineup every week (per <Src />).
             </li>
             <li>
               <strong>Their guys:</strong> the players who scored the most for this manager while in the starting lineup.
@@ -248,7 +248,7 @@ export function ManagerProfileView({
           ].map((b) => (
             <section key={b.title} className="rounded-3xl bg-[var(--bin-2)] p-6">
               <h2 className="font-display text-4xl font-black">{b.title}</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Head to head, per Sleeper</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">Head to head, per <Src /></p>
               {b.list.length ? (
                 <ul className="mt-5 space-y-3">
                   {b.list.map((r) => (

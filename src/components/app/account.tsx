@@ -9,6 +9,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
  */
 export type Me = {
   configured: boolean;
+  /** Yahoo leagues are switched on. */
+  yahoo?: boolean;
   account: { name: string; sleeper: string | null; leagues: { id: string; name: string }[]; admin?: boolean } | null;
 };
 

@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { yahooConfigured } from "@/lib/yahoo/oauth";
 import { MAX_LEAGUES, SESSION_COOKIE, addLeagues, authConfigured, cookieFlags, deleteAccount, forgetLeague, getAccount, sameOrigin, saveSleeper, sessionFrom } from "@/lib/app/account";
 import { isSleeperId } from "@/lib/app/validate";
 import { logError } from "@/lib/app/safe";
@@ -13,10 +14,10 @@ export async function GET(req: Request) {
   const id = sessionFrom(req);
   try {
     const account = id ? await getAccount(id) : null;
-    return json({ configured: true, account: account && { name: account.name, sleeper: account.sleeper, leagues: account.leagues, admin: account.admin } });
+    return json({ configured: true, yahoo: yahooConfigured(), account: account && { name: account.name, sleeper: account.sleeper, leagues: account.leagues, admin: account.admin } });
   } catch (e) {
     logError("me", e);
-    return json({ configured: true, account: null });
+    return json({ configured: true, yahoo: yahooConfigured(), account: null });
   }
 }
 

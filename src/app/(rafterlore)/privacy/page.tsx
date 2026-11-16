@@ -10,7 +10,8 @@ export default function Privacy() {
         <h2>The short version</h2>
         <p>
           Rafterlore has no ads and no tracking cookies, and you can browse every league without an account (the daily games need one). It shows fantasy basketball and
-          football league history built from data Sleeper already makes public, and it keeps only what it needs to do that.
+          football league history. For Sleeper leagues that&apos;s data Sleeper already makes public; Yahoo leagues are private and
+          shown only to their own managers (see below). It keeps only what it needs.
           The leagues you open are remembered in your browser. If you choose to sign in with Google, they&apos;re kept on your
           account instead, with your Sleeper username.
         </p>
@@ -31,8 +32,8 @@ export default function Privacy() {
           <li>Daily-game results posted to a league&apos;s standings (manager, day and score), kept for about a year.</li>
         </ul>
         <p>
-          We don&apos;t store anything Sleeper doesn&apos;t show publicly. No emails, phone numbers, passwords, chats or
-          payment details.
+          For Sleeper leagues we don&apos;t store anything Sleeper doesn&apos;t show publicly. Nowhere do we store emails, phone
+          numbers, passwords, chats or payment details.
         </p>
       </section>
       <section>
@@ -50,6 +51,22 @@ export default function Privacy() {
           once, by putting a one-time code in your own team name (the code and that manager&apos;s public Sleeper user id are
           kept for at most a day). Your account then plays as that manager in every league they&apos;re in, and no other
           account can. Deleting the account removes that link.
+        </p>
+      </section>
+      <section>
+        <h2>Yahoo leagues (optional)</h2>
+        <p>
+          If you connect a Yahoo account, Rafterlore uses Yahoo&apos;s official Fantasy Sports API to read the football leagues you
+          play in, only when you ask it to. We keep your Yahoo account&apos;s id number and an encrypted access key, so a league you
+          brought in can update during the season. We never see your Yahoo password, and we don&apos;t read anything else on your
+          Yahoo account.
+        </p>
+        <p>
+          A Yahoo league you bring in is private: only its own managers can see it, after signing in to Rafterlore and connecting
+          their Yahoo account. We store its league data (teams, every manager&apos;s Yahoo nickname and Yahoo account id number, records,
+          rosters, lineups, drafts and trades), including for managers who never use Rafterlore, and show it to that league&apos;s
+          managers only. Disconnecting Yahoo deletes your access key; deleting your Rafterlore account deletes it
+          too. Any manager in the league&apos;s current season can remove it from Rafterlore, which deletes its stored data.
         </p>
       </section>
       <section>

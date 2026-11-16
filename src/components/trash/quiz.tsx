@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { QuizManager, Trait } from "@/lib/extras";
 import { Explain } from "./intel";
-import { MgrPhoto } from "@/components/trash/brand";
+import { MgrPhoto, Src } from "@/components/trash/brand";
 
 type Answer = { text: string; v: Partial<Record<Trait, number>> };
 const QUESTIONS: { q: string; a: Answer[] }[] = [
@@ -225,7 +225,7 @@ export function ManagerQuiz({ managers }: { managers: QuizManager[] }) {
 
       <Explain>
         <p>
-          Every manager has a real profile built from four seasons on Sleeper:
+          Every manager has a real profile built from four seasons on <Src />:
           trades per season, waiver adds per season, lineup efficiency from the
           Lock-In Index, how their early draft picks finished versus where they
           went, career win rate, and playoff and title history.

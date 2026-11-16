@@ -6,7 +6,7 @@ import type { GradedTrade, Players } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Face, pname } from "./player";
-import { MgrPhoto, useBrand } from "@/components/trash/brand";
+import { MgrPhoto, useBrand, Src } from "@/components/trash/brand";
 import { lineupTerms } from "@/lib/core/lineup-terms";
 import { usePhone } from "./use-phone";
 import { tradeRule } from "@/lib/core/stat-notes";
@@ -122,7 +122,7 @@ export function TradeCourt({
     <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       {/* records */}
       <h3 className="font-display text-3xl font-black">Trade records</h3>
-      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and the net value gained across all of them (per Sleeper). {tradeRule(terms.avg, even)}</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and the net value gained across all of them (per <Src />). {tradeRule(terms.avg, even)}</p>
       <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {records.map((r, i) => (
           <li key={r.id}>
@@ -209,7 +209,7 @@ export function TradeCourt({
         </p>
         <p>
           If he&apos;s traded again, his value counts toward the next trade instead. Draft picks are listed but not scored.
-          Averages come from Sleeper&apos;s weekly lineups (per Sleeper).
+          Averages come from <Src />&apos;s weekly lineups (per <Src />).
         </p>
       </Explain>
     </div>

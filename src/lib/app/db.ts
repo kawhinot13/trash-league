@@ -202,6 +202,27 @@ alter table accounts add column if not exists session_v int not null default 1;
 -- Site admin (owner), decided at each sign-in from ADMIN_EMAILS; the email itself is never stored.
 alter table accounts add column if not exists is_admin boolean not null default false;
 -- The recreational-use acknowledgement given when the league was first imported (version + time; nobody's details).
+create table if not exists yahoo_links (
+  account_id text primary key,
+  guid       text not null,
+  tokens     text not null,            -- AES-256-GCM sealed { access, refresh, exp }
+  linked_at  timestamptz not null default now()
+);
+create index if not exists yahoo_links_guid on yahoo_links(guid);
+-- Imported Yahoo leagues, readable only by their members (guids). id = newest season's league key.
+create table if not exists yahoo_leagues (
+  id         text primary key,
+  name       text not null,
+  members    text[] not null default '{}',
+  seasons    jsonb not null default '[]',  -- league keys, oldest first
+  parts      jsonb not null default '{}',  -- per-season converted data (bundle + weeks), by league key
+  dataset    jsonb,
+  status     text not null default 'importing',
+  error      text,
+  use_ack    text,                         -- recreational-use acknowledgement version (no person data)
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
 alter table families add column if not exists use_ack text;
 -- Standings links are proven with the same team-name code; the code remembers which account asked.
 alter table removal_challenges add column if not exists account_id text;

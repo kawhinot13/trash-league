@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { BenchCrime, LockRow } from "@/lib/extras";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
-import { Handle, MgrPhoto } from "@/components/trash/brand";
+import { Handle, MgrPhoto, Src } from "@/components/trash/brand";
 import { LeagueName, useBrand } from "@/components/trash/brand";
 
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
@@ -321,7 +321,7 @@ export function LockInIndex({
           100% without knowing the future; the point is who gets closest.
         </p>
         <p>
-          Regular-season weeks only. Built from Sleeper&apos;s lineups and
+          Regular-season weeks only. Built from <Src />&apos;s lineups and
           per-game box scores, which explain every slot score we checked.
         </p>
           </>
@@ -344,8 +344,8 @@ export function LockInIndex({
             </p>
             <p>
               {brand.sport === "nfl"
-                ? "Regular-season weeks only. Built from Sleeper's weekly lineups and player scores."
-                : "Regular-season weeks only. Built from Sleeper's lineups and per-game box scores."}
+                ? `Regular-season weeks only. Built from ${brand.source ?? "Sleeper"}'s weekly lineups and player scores.`
+                : `Regular-season weeks only. Built from ${brand.source ?? "Sleeper"}'s lineups and per-game box scores.`}
             </p>
           </>
         )}

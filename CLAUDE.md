@@ -78,6 +78,15 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Legal: free and non-commercial (Sleeper's API terms). No payments, ads or paywalls; no Sleeper logo; footer says
   "works with Sleeper leagues, not affiliated with or endorsed by Sleeper". Store only public league data
   (`sanitizeBundle` in `family.ts` strips everything else). Optional `RAFTERLORE_CONTACT_EMAIL` shows on /privacy and /terms.
+  Exception: Yahoo leagues (private) are stored for, and shown only to, their own managers (below).
+- Yahoo Fantasy football (`src/lib/yahoo/`, `/api/yahoo/*`, `/l/yahoo`, `/y/[key]/*`): official Yahoo API, non-commercial,
+  text credit "League data from Yahoo Fantasy", no Yahoo logo. Needs `YAHOO_CLIENT_ID` + `YAHOO_CLIENT_SECRET` (+ optional
+  `YAHOO_REDIRECT_URI`) and Google sign-in; hidden otherwise. A signed-in account connects Yahoo (OAuth; tokens AES-GCM
+  sealed in `yahoo_links`). Import is per member request, one season per step (`import.ts`), converted to Sleeper-shaped
+  bundles (`adapter.ts`, players mapped to Sleeper ids via Sleeper's `yahoo_id`) so `analyse`/`buildDataset` and every
+  shared feature run unchanged. `/y/*` pages are MEMBERS ONLY, rendered per request (`YahooGate`: signed in + Yahoo
+  linked + guid in league members, else notFound), noindex, never cached for others. Brand `source: "Yahoo"` makes shared
+  copy say Yahoo (`<Src />`). Head-to-head points leagues only; no Live/Front office for Yahoo (those use Sleeper live data).
 - Removal: a manager of the newest season proves it with a one-time code in their own Sleeper team name
   (`removal.ts`; a username alone proves nothing), then can remove at `/l/[id]/remove`. Hidden at once, deleted
   after 7 days by the nightly job, ids kept so it isn't re-imported; restorable the same way until then.

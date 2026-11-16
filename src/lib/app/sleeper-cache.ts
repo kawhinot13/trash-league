@@ -73,6 +73,17 @@ export function playerDirectory(sport: Sport = "nba"): Promise<PlayerDir> {
   });
 }
 
+/** Yahoo player id -> Sleeper player id, from Sleeper's football player list (its yahoo_id field).
+ * Lets Yahoo leagues share player ids (and the daily-game pool, badges, bios) with Sleeper leagues. */
+export function yahooIndex(): Promise<Record<string, string>> {
+  return cached(`players/nfl/yahoo/v1`, DAY, async () => {
+    const all = (await sleeper<Record<string, RawPlayer & { yahoo_id?: number | string | null }> | null>(`/v1/players/nfl`)) ?? {};
+    const out: Record<string, string> = {};
+    for (const [pid, p] of Object.entries(all)) if (p.yahoo_id != null && p.yahoo_id !== "") out[String(p.yahoo_id)] = pid;
+    return out;
+  });
+}
+
 /** One week of per-game box scores, trimmed to what scoring and the replay need. */
 export async function weekStats(season: string, week: number, final: boolean): Promise<SStatRow[]> {
   const rows = await cached<StatRow[]>(`stats/nba/${season}/${week}`, final ? 365 * DAY : 3600_000, async () => {

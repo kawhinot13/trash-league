@@ -47,6 +47,11 @@ export default function Terms() {
           a trademark of its owner. League data comes from Sleeper&apos;s public API.
         </p>
         <p>
+          Yahoo leagues are read with Yahoo&apos;s official Fantasy Sports API, with each member&apos;s permission, and shown only to
+          that league&apos;s managers. League data from Yahoo Fantasy. Rafterlore is not affiliated with, endorsed by or sponsored
+          by Yahoo, and uses Yahoo&apos;s API only for this free, non-commercial site under Yahoo&apos;s API terms.
+        </p>
+        <p>
           Rafterlore is not affiliated with or endorsed by any professional sports league, team, university or athletic
           governing body. Team, league and player names are used only to describe the statistics shown.
         </p>

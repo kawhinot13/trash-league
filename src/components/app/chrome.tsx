@@ -57,6 +57,37 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
   );
 }
 
+/** Nav for a members-only Yahoo league (no Live or Front office: those use Sleeper's live data). */
+export function YahooNav({ name, id }: { name: string; id: string }) {
+  return (
+    <Suspense fallback={null}>
+      <YNav name={name} id={id} />
+    </Suspense>
+  );
+}
+function YNav({ name, id }: { name: string; id: string }) {
+  const home = `/y/${id}`;
+  return (
+    <GlassNav
+      logo={name}
+      product={{ name: PRODUCT, href: "/l" }}
+      mark={<RMark className="h-9 w-auto text-[var(--paper)]" />}
+      home={home}
+      links={[
+        [home, "Home"],
+        [`${home}/stats`, "Stats"],
+        [`${home}/history`, "History"],
+        [`${home}/managers`, "Managers"],
+        [`${home}/rivals`, "Rivals"],
+      ]}
+      cta={{ href: `${home}#dive`, label: "Daily games" }}
+      holiday={HOLIDAY}
+      music={false}
+      extra={<AccountButton />}
+    />
+  );
+}
+
 export function AppFooter() {
   return (
     <footer className="relative overflow-hidden border-t border-[var(--line)] px-5 pt-12 text-sm text-[var(--muted)] md:px-10">
