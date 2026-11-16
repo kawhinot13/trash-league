@@ -4,6 +4,11 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Daily games suggest the account's own Sleeper username
+- Owner wants the saved username (e.g. kawhinot13) to be who you play as. The standings now suggest that manager
+  first; confirming still takes the team-name code, because a typed username proves nothing (anyone could type it).
+  Rejected: trusting the saved username outright (reopens the squatting hole fixed earlier the same day).
+
 ## 2026-11-16: Rafterlore weekly recap uses only verified scores (basketball)
 - Owner flagged a week-3 "bench crime" that wasn't true: Rafterlore's recap used Sleeper's weekly team scores, which are
   unreliable for basketball. Now basketball weeks show team-score cards (blowout, nail-biter, top/low, bench crime,

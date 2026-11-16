@@ -27,7 +27,7 @@ type Board = {
   /** Rafterlore: every day on record (a year). */
   all?: Record<string, { points: number; played: number; wins: number }>;
   /** Rafterlore: who's looking. Absent on the Trash site (honor system). */
-  viewer?: { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null };
+  viewer?: { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; suggest?: string | null };
 };
 type Tab = "today" | "week" | "all";
 /** A one-time code waiting to show up in the manager's Sleeper team name (kept across app switches). */
@@ -58,6 +58,7 @@ export function Leaderboard({
   const [tab, setTab] = useState<Tab>("today");
   const [claimErr, setClaimErr] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [notSuggested, setNotSuggested] = useState(false);
   const pendingKey = brand.key("link-code");
   const [pending, setPendingState] = useState<Pending | null>(() => {
     try {
@@ -257,7 +258,42 @@ export function Leaderboard({
           </div>
         </div>
       ) : null}
-      {!me && (!viewer || (viewer.signedIn && !viewer.linked && !pending)) ? (
+      {viewer?.signedIn && !viewer.linked && !pending && viewer.suggest && !notSuggested ? (
+        <div className="mt-3 rounded-xl border border-[var(--paper)]/25 bg-white/6 p-4 text-sm">
+          <div className="flex items-center gap-3">
+            <MgrPhoto id={viewer.suggest} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" />
+            <p className="min-w-0 flex-1">
+              <span className="block font-semibold break-words">Play as {nick(viewer.suggest)}?</span>
+              <span className="block text-[var(--muted)]">That&apos;s the Sleeper username saved on your account.</span>
+            </p>
+          </div>
+          <p className="mt-2 text-xs text-[var(--muted)]">
+            Confirm it once with a quick code in your team name, and you play as them in every league they&apos;re in.
+          </p>
+          {claimErr ? (
+            <p role="alert" className="mt-2 text-[var(--paper)]">
+              {claimErr}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => pick(viewer.suggest!)}
+              className="inline-flex h-10 cursor-pointer items-center rounded-full bg-[var(--paper)] px-5 font-semibold text-[var(--bin)] transition-transform duration-150 active:scale-[0.97]"
+            >
+              Yes, that&apos;s me
+            </button>
+            <button
+              type="button"
+              onClick={() => setNotSuggested(true)}
+              className="inline-flex h-10 cursor-pointer items-center rounded-full border border-white/15 px-5 font-semibold transition-colors hover:bg-white/8"
+            >
+              Someone else
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {!me && (!viewer || (viewer.signedIn && !viewer.linked && !pending && (!viewer.suggest || notSuggested))) ? (
         <div className="mt-3">
           <p className="text-sm text-[var(--muted)]">
             {viewer

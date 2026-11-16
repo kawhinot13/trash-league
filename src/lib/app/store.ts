@@ -255,10 +255,21 @@ export async function housekeeping() {
 }
 
 /** The family's newest season: where a manager proves who they are (their current team name). */
-export async function newestSeason(familyId: string): Promise<{ leagueId: string; name: string; season: string; users: Set<string> } | null> {
+export async function newestSeason(
+  familyId: string,
+): Promise<{ leagueId: string; name: string; season: string; users: Set<string>; names: Map<string, string> } | null> {
   const f = await readFamily(familyId);
   const s = f?.seasons[f.seasons.length - 1];
-  return s ? { leagueId: s.league.league_id, name: s.league.name, season: s.league.season, users: new Set(s.users.map((u) => u.user_id)) } : null;
+  return s
+    ? {
+        leagueId: s.league.league_id,
+        name: s.league.name,
+        season: s.league.season,
+        users: new Set(s.users.map((u) => u.user_id)),
+        // Sleeper user id -> username (display name), to match an account's saved Sleeper username.
+        names: new Map(s.users.map((u) => [u.user_id, u.display_name])),
+      }
+    : null;
 }
 
 /** Nightly: refresh in-progress seasons and look for a renewed season. */

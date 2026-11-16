@@ -24,7 +24,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
  * only play as that user, only in leagues where they're a manager. Never returns the account id.
  */
 async function viewerOf(req: Request, fid: string) {
-  const none = { configured: authConfigured(), signedIn: false, linked: false, member: false, manager: null as string | null };
+  const none = { configured: authConfigured(), signedIn: false, linked: false, member: false, manager: null as string | null, suggest: null as string | null };
   if (!authConfigured()) return { ...none, accountId: null as string | null };
   const s = sessionFrom(req);
   const account = s ? await getAccount(s).catch(() => null) : null;
@@ -34,7 +34,10 @@ async function viewerOf(req: Request, fid: string) {
   const users = [...(season?.users ?? [])];
   const [link] = await sql<{ sleeper_user: string }[]>`select sleeper_user from sleeper_links where account_id = ${account.id}`;
   const member = !!link && users.includes(link.sleeper_user);
-  return { configured: true, signedIn: true, linked: !!link, member, manager: member ? link.sleeper_user : null, accountId: account.id };
+  // Not linked yet: the manager whose Sleeper username matches the one saved on the account, if any.
+  const saved = account.sleeper?.toLowerCase();
+  const suggest = !link && saved ? ([...(season?.names ?? [])].find(([, n]) => n?.toLowerCase() === saved)?.[0] ?? null) : null;
+  return { configured: true, signedIn: true, linked: !!link, member, manager: member ? link.sleeper_user : null, suggest, accountId: account.id };
 }
 
 export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/scores">) {
@@ -139,6 +142,9 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
       await sql.begin(async (tx) => {
         await tx`delete from sleeper_links where account_id = ${v.accountId} or sleeper_user = ${r.challenge.userId}`;
         await tx`insert into sleeper_links (sleeper_user, account_id) values (${r.challenge.userId}, ${v.accountId})`;
+        // The proven manager's username becomes the account's saved one, if it has none yet.
+        const name = season.names.get(r.challenge.userId);
+        if (name) await tx`update accounts set sleeper = coalesce(sleeper, ${name}) where id = ${v.accountId}`;
       });
       return Response.json({ linked: true });
     }
