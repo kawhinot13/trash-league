@@ -21,9 +21,16 @@ function Doors() {
     {
       href: "/live",
       title: "Live",
-      line: "The Season 4 table, this week's matchups and the waiver wire.",
+      line: "The Season 4 table, power rankings and the weekly recap.",
       stat: "Updated every few minutes",
       tone: "var(--wood)",
+    },
+    {
+      href: "/waivers",
+      title: "Waivers",
+      line: "Everyone on the wire, ranked for Trash's scoring, with recent form and games left this week.",
+      stat: "Live from Sleeper",
+      tone: "#8fe3d1",
     },
     {
       href: "/managers",

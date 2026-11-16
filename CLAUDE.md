@@ -24,7 +24,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   default everywhere so Trash is untouched. Football replays weeks from matchup `players_points` (no box scores).
   No player photos on Rafterlore: designed badges (`brand.headshots = "badge"`, `PlayerBadge`); Trash keeps photos. Pages live in
   `src/app/(rafterlore)/` with their own shell; the Trash site lives in `src/app/(trash)/`. Rafterlore never imports Trash
-  data or chrome. League pages: overview, this week (live, per Sleeper), rivals, managers + profiles, remove.
+  data or chrome. League pages: overview, this week (live, per Sleeper), waivers, rivals, managers + profiles, remove.
 - Shared features: `src/lib/core/` holds every league feature as pure functions over a `Dataset` (Trash's
   league.json + extras.json shape) or a `LiveSource`. Trash's `src/lib/*.ts` are thin wrappers passing Trash's data;
   Rafterlore builds each league's dataset in the grade step (`src/lib/app/dataset.ts`, stored in `analyses`).
@@ -33,7 +33,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   the same (verify by diffing prerendered pages before/after).
 - Rafterlore code: `src/lib/app/` (Sleeper client + throttle, caches, discovery, replay, grading, store, jobs, live
   features, rate limits, validation, redaction). League pages under `src/app/(rafterlore)/l/[leagueId]/`: home
-  (games), live, managers (+ profiles), rivals, history, stats, front-office, remove. `gate.tsx` loads a league, handles not
+  (games), live, waivers, managers (+ profiles), rivals, history, stats, front-office, remove. `gate.tsx` loads a league, handles not
   found / limited / removed / error and wraps pages in the league's brand.
 - Logo: the ribbon R (owner's design), one traced path in `components/app/mark-path.ts` (`RMark`, `RLoader` in
   `mark.tsx`; green #013825). Assets in `public/brand/` (adaptive tab SVG, PNG tiles, .ico, webmanifest);

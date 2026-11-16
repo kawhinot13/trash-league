@@ -4,6 +4,10 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Waivers gets its own tab
+- Owner asked: waiver intel moved off the bottom of Live into /waivers (Trash) and /l/[id]/waivers (Rafterlore), in the
+  nav after Live and on the home doors. Phone tab bar unchanged (Waivers sits under More).
+
 ## 2026-11-16: Front office "Right now" vs "Full strength"
 - Complaint: teams with injured stars showed "lacking star power". The team analyzer now has a toggle: Right now
   (default, injury-discounted `avail`) and Full strength (`fullStrength` = healthy value). Health always measures who's

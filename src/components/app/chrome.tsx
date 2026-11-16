@@ -43,6 +43,7 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
       links={[
         [home, "Home"],
         [`${home}/live`, "Live"],
+        [`${home}/waivers`, "Waivers"],
         [`${home}/front-office`, "Front office"],
         [`${home}/managers`, "Managers"],
         [`${home}/rivals`, "Rivals"],

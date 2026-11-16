@@ -235,7 +235,7 @@ function Home({ p }: { p: LeaguePage }) {
             <Doors
               leagueId={leagueId}
               items={[
-                { href: "/live", title: "Live", line: "This season's table, this week's matchups, power rankings and the waiver wire.", stat: "Updated every few minutes", tone: "var(--wood)" },
+                { href: "/live", title: "Live", line: "This season's table, this week's matchups, power rankings and the weekly recap.", stat: "Updated every few minutes", tone: "var(--wood)" },
                 {
                   href: "/managers",
                   title: "Managers",
@@ -246,6 +246,7 @@ function Home({ p }: { p: LeaguePage }) {
                 { href: "/rivals", title: "Rivals", line: "Who owns who, and the rivalry machine for any two managers.", stat: `${court?.trades.length ?? 0} trades and counting`, tone: "var(--paper)" },
                 { href: "/history", title: "History", line: "Every champion, season by season, trade crimes, the time machine and the almanac.", stat: `${n} season${n === 1 ? "" : "s"} on record`, tone: "var(--gold)" },
                 { href: "/stats", title: "Stats", line: "The Trapezoid of Excellence, the playoff report, the trade court and the re-draft.", stat: `${court?.trades.length ?? 0} trades judged`, tone: "#c9b6ff" },
+                { href: "/waivers", title: "Waivers", line: "The best players nobody in the league has, ranked for this league's scoring.", stat: "Live from Sleeper", tone: "#8fe3d1" },
                 { href: "/front-office", title: "Front office", line: "Your roster's strengths, trade ideas and a trade evaluator, from live rosters.", stat: "Live from Sleeper", tone: "#9fc3ff" },
               ]}
             />

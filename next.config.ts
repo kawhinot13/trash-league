@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: "/:page(live|front-office|managers|rivals|history|stats)", has: RAFTERLORE_HOST, destination: "/", permanent: false },
+      { source: "/:page(live|waivers|front-office|managers|rivals|history|stats)", has: RAFTERLORE_HOST, destination: "/", permanent: false },
       { source: "/managers/:id*", has: RAFTERLORE_HOST, destination: "/", permanent: false },
     ];
   },

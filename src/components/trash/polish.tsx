@@ -98,6 +98,7 @@ function TabBar({
 const LINKS = [
   ["/", "Home"],
   ["/live", "Live"],
+  ["/waivers", "Waivers"],
   ["/front-office", "Front office"],
   ["/managers", "Managers"],
   ["/rivals", "Rivals"],
