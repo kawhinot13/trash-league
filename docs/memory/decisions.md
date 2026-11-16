@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Daily games require sign-in (Rafterlore)
+- Owner wants the games to drive sign-ups. `PlayGate` swaps each game for a "Sign in to play" card when signed out
+  (replaces the old StandingsNudge). Client-side only: pages stay pre-built and the answer still ships in the
+  bundle, so it's an invitation, not security. Trash has no accounts and is unchanged. Without the auth env vars
+  everyone can play (so a misconfigured deploy never locks the games).
+
 ## 2026-11-15: Same Rosterdle / Lineup player for every league of a sport
 - Owner's call: everyone gets the same daily player per sport (Trash too). A committed, append-only pool of the
   150 top-ranked Sleeper players per sport (football: QB/RB/WR/TE), shuffled once; day n uses entry n. The

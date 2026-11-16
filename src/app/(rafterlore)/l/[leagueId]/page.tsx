@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { cacheLife } from "next/cache";
 import { ImportStatus } from "@/components/app/import-status";
-import { StandingsNudge } from "@/components/app/standings-nudge";
+import { PlayGate } from "@/components/app/play-gate";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
 import { PackSection, Section } from "@/components/app/league";
 import { Hero } from "@/components/trash/hero";
@@ -198,9 +198,10 @@ function Home({ p }: { p: LeaguePage }) {
               Five prompts a day from the league&apos;s history. Any right answer counts, but the more niche your pick,
               the more it scores. Same prompts for everyone, so the group chat can compare.
             </SectionHead>
-            <StandingsNudge league={p.brand.name} />
             <div className="mx-auto max-w-5xl px-5 md:px-10">
-              <DumpsterDive pool={divePool(d)} players={d.extras.players} people={people} />
+              <PlayGate game={p.brand.games.dive} anchor="dive">
+                <DumpsterDive pool={divePool(d)} players={d.extras.players} people={people} />
+              </PlayGate>
             </div>
           </section>
 
@@ -209,7 +210,9 @@ function Home({ p }: { p: LeaguePage }) {
               A new mystery player every day. Guess the last name in six tries.
             </SectionHead>
             <div className="mx-auto max-w-5xl px-5 md:px-10">
-              <Trashle {...trashle(d)} players={withPool(d.extras.players, d.sport)} people={people} />
+              <PlayGate game={p.brand.games.wordle} anchor="trashle">
+                <Trashle {...trashle(d)} players={withPool(d.extras.players, d.sport)} people={people} />
+              </PlayGate>
             </div>
           </section>
 
@@ -219,7 +222,9 @@ function Home({ p }: { p: LeaguePage }) {
               pick them out in eight tries.
             </SectionHead>
             <div className="mx-auto max-w-6xl px-5 md:px-10">
-              <Lineup {...lineup(d)} players={withPool(d.extras.players, d.sport)} people={people} />
+              <PlayGate game={p.brand.games.lineup} anchor="lineup">
+                <Lineup {...lineup(d)} players={withPool(d.extras.players, d.sport)} people={people} />
+              </PlayGate>
             </div>
           </section>
 
