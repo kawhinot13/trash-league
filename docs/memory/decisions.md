@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Rosterdle hints (Rafterlore only)
+- Owner asked for hints "not too easy". Earned by missing (after 3, 4, 5 misses), opened on purpose, -10 points each
+  off a win (min 10): broad position group, conference (not team), then one league-history fact. Brand flag
+  `wordleHints`; Trash's Trashle stays hint-free (owner removed its hints earlier). Rejected: the old team + owner
+  hints (too easy: the team nearly gives it away).
+
 ## 2026-11-16: Picking your manager needs no code (owner's call)
 - Owner chose "just pick, no code ever" over keeping the team-name code or "code only if disputed". Accepted risk:
   first account to pick a manager keeps them. The proof code path stays in the API (verify) but the UI no longer uses it.

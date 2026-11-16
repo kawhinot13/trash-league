@@ -1,5 +1,6 @@
 "use client";
 
+import { AFC, EAST } from "@/lib/core/lineup";
 import { sharedDay } from "@/lib/core/daily-pool";
 import confetti from "canvas-confetti";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
@@ -98,6 +99,7 @@ export function Trashle({
   const [streak, setStreak] = useState(0);
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(0); // rows whose flip has finished
+  const [hints, setHints] = useState<number[]>([]); // hints opened today (each costs points)
   const [boardRef, animate] = useAnimate();
   const fx = useRef<HTMLCanvasElement>(null);
   const validSet = useMemo(() => new Set(valid), [valid]);
@@ -108,6 +110,7 @@ export function Trashle({
     setDay(d);
     const saved = store.get<string[]>(brand.key(`trashle:${d}`)) ?? [];
     setGuesses(saved);
+    setHints(store.get<number[]>(brand.key(`trashle-hints:${d}`)) ?? []);
     setRevealed(saved.length);
     setStreak(store.get<{ last: string; n: number }>(brand.key("trashle:streak"))?.n ?? 0);
   }, [brand]);
@@ -126,6 +129,38 @@ export function Trashle({
   const lost = !won && guesses.length >= TRIES;
   const over = won || lost;
   const settled = revealed >= guesses.length;
+  // Hints: earned by missing (after 3, 4 and 5 misses), opened on purpose, 10 points each off a win.
+  // Deliberately vague: a position group, the conference (not the team), then one piece of league history.
+  const misses = guesses.filter((g) => g !== target?.word).length;
+  const nfl = brand.sport === "nfl";
+  const posGroup = (pos: string) => {
+    const ps = pos.split("/");
+    if (nfl) return ps.join(" or ");
+    const g = ps.some((p) => p === "PG" || p === "SG") ? "Guard" : null;
+    const f = ps.some((p) => p === "SF" || p === "PF") ? "Forward" : null;
+    const c = ps.includes("C") ? "Center" : null;
+    return [g, f, c].filter(Boolean).join(" / ") || "Unknown";
+  };
+  const conference = (team: string) =>
+    !team ? "Not on a team right now" : nfl ? (AFC.has(team) ? "Plays in the AFC" : "Plays in the NFC") : EAST.has(team) ? "Plays in the East" : "Plays in the West";
+  const hintList = target
+    ? [
+        { at: 3, label: "Position", text: posGroup(target.pos) },
+        { at: 4, label: "Conference", text: conference(target.team) },
+        {
+          at: 5,
+          label: `${brand.name} history`,
+          text: target.owner ? `Spent the most time on ${target.owner}'s roster` : `Never on a ${brand.name} roster`,
+        },
+      ]
+    : [];
+  const openHint = (i: number) => {
+    if (!day || hints.includes(i)) return;
+    const next = [...hints, i];
+    setHints(next);
+    store.set(brand.key(`trashle-hints:${day}`), next);
+  };
+  const hintNote = hints.length ? ` (${hints.length} hint${hints.length === 1 ? "" : "s"})` : "";
 
   const keyMarks = useMemo(() => {
     const m: Record<string, Mark> = {};
@@ -217,7 +252,7 @@ export function Trashle({
       .map((g) => score(g, target.word).map((s) => (s === "hit" ? "🟩" : s === "near" ? "🟫" : "⬛")).join(""))
       .join("\n");
     try {
-      await navigator.clipboard.writeText(`${brand.games.wordle} #${edition} ${won ? guesses.length : "X"}/${TRIES}\n${grid}\n${location.origin}${brand.base || "/"}#trashle`);
+      await navigator.clipboard.writeText(`${brand.games.wordle} #${edition} ${won ? guesses.length : "X"}/${TRIES}${hintNote}\n${grid}\n${location.origin}${brand.base || "/"}#trashle`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {}
@@ -305,6 +340,28 @@ export function Trashle({
             Guess today&apos;s mystery player by last name. Green is the right letter in the right spot, brown is in
             the name but somewhere else. Every guess has to be a player from {brand.name} history.
           </div>
+          {!over && target && brand.wordleHints ? (
+            <div className="space-y-2">
+              {hintList.map((h, i) => {
+                const earned = misses >= h.at;
+                const open = hints.includes(i);
+                return (
+                  <div key={h.label} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-white/10 px-4 py-3">
+                    <span className="text-xs font-bold text-[var(--wood)]">{h.label}</span>
+                    {open ? (
+                      <span className="text-sm">{h.text}</span>
+                    ) : earned ? (
+                      <button type="button" onClick={() => openHint(i)} className="cursor-pointer rounded-full border border-white/15 px-3 py-1 text-xs font-semibold hover:bg-white/8">
+                        Use hint (−10 pts)
+                      </button>
+                    ) : (
+                      <span className="text-xs text-[var(--muted)]">Unlocks after {h.at} misses</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
           <AnimatePresence>
             {over && settled && target ? (
               <motion.div
@@ -314,7 +371,7 @@ export function Trashle({
                 className="rounded-3xl border-2 p-5"
                 style={{ borderColor: won ? COLOR.hit : "var(--ticket)" }}
               >
-                <p className="text-sm text-[var(--muted)]">{won ? `Got it in ${guesses.length}` : "Today's player was"}</p>
+                <p className="text-sm text-[var(--muted)]">{won ? `Got it in ${guesses.length}${hintNote}` : "Today's player was"}</p>
                 <div className="mt-2 flex items-center gap-4">
                   <Face pid={target.pid} players={players} size={72} />
                   <div>
@@ -345,7 +402,10 @@ export function Trashle({
               game="trashle"
               day={day}
               people={people}
-              result={{ score: won ? (TRIES + 1 - guesses.length) * 20 : 0, label: won ? `Got it in ${guesses.length}` : "Missed" }}
+              result={{
+                score: won ? Math.max(10, (TRIES + 1 - guesses.length) * 20 - hints.length * 10) : 0,
+                label: won ? `Got it in ${guesses.length}${hintNote}` : "Missed",
+              }}
             />
           ) : null}
         </div>

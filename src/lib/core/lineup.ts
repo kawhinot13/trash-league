@@ -24,8 +24,8 @@ export type Suspect = {
   age: number;
 };
 
-const EAST = new Set(["ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND", "MIA", "MIL", "NYK", "ORL", "PHI", "TOR", "WAS"]);
-const AFC = new Set(["BAL", "BUF", "CIN", "CLE", "DEN", "HOU", "IND", "JAX", "KC", "LV", "LAC", "MIA", "NE", "NYJ", "PIT", "TEN"]);
+export const EAST = new Set(["ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND", "MIA", "MIL", "NYK", "ORL", "PHI", "TOR", "WAS"]);
+export const AFC = new Set(["BAL", "BUF", "CIN", "CLE", "DEN", "HOU", "IND", "JAX", "KC", "LV", "LAC", "MIA", "NE", "NYJ", "PIT", "TEN"]);
 export function lineup(d: Dataset): { suspects: Suspect[]; answers: string[]; nicks: Record<string, string>; shared: string[] } {
   const raw = d.extras;
   const players = withPool(d.extras.players, d.sport);

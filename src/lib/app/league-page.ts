@@ -131,6 +131,7 @@ function brandFor(
       Object.entries(d?.extras.players ?? {}).map(([pid, p]) => [pid, [initialsOf(p[0]), p[1]?.[0] ?? ""] as [string, string]]),
     ),
     games: { dive: "Deep Cut", wordle: "Rosterdle", lineup: "The Lineup" },
+    wordleHints: true,
     names: Object.fromEntries(view.careers.map((c) => [c.ownerId, c.name])),
     short: Object.fromEntries(
       (d?.league.seasons ?? []).map((s) => [s.code, `’${s.years.slice(2, 4)}`]),

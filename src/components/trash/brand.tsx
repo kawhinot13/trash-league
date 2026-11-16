@@ -44,6 +44,8 @@ export type BrandConfig = {
    * site (lock-in, with its own original wording).
    */
   lineup?: "lock-in" | "daily" | "weekly";
+  /** Rosterdle hints (earned by missing, cost points). Off on the Trash site's Trashle. */
+  wordleHints?: boolean;
   /** Where the league lives ("Yahoo"); Sleeper when unset. Used in copy like "per Sleeper". */
   source?: string;
   /** First season's year, for "since 2023" copy. Trash's when unset. */
