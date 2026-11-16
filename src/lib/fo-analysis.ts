@@ -92,15 +92,20 @@ export const metricsFor = (sport: Sport = "nba") => (sport === "nfl" ? METRICS_N
 
 const topN = (xs: number[], n: number) => [...xs].sort((a, b) => b - a).slice(0, n).reduce((a, x) => a + x, 0);
 
-export function profile(t: FOTeam, P: Record<string, FOPlayer>, slots: string[], sport: Sport = "nba") {
+/** Full strength: every player at his healthy value, as if everyone injured were back. */
+export const fullStrength = (p: FOPlayer) => p.value;
+
+/** `worth`: how a player counts. Right now (default) discounts injuries; `fullStrength` ignores them.
+ * Health always measures who's actually available. */
+export function profile(t: FOTeam, P: Record<string, FOPlayer>, slots: string[], sport: Sport = "nba", worth: (p: FOPlayer) => number = avail) {
   const pl = t.players.map((id) => P[id]).filter(Boolean);
-  const lu = bestLineup(pl, slots);
-  const group = (pos: string[], n: number) => topN(pl.filter((p) => p.pos.some((x) => pos.includes(x))).map(avail), n);
+  const lu = bestLineup(pl, slots, worth);
+  const group = (pos: string[], n: number) => topN(pl.filter((p) => p.pos.some((x) => pos.includes(x))).map(worth), n);
   const full = topN(pl.map((p) => p.value), 9);
   const m: Record<Metric, number> = {
-    stars: topN(pl.map(avail), 3),
+    stars: topN(pl.map(worth), 3),
     lineup: lu.total,
-    depth: lu.bench.slice(0, 5).reduce((a, id) => a + avail(P[id]), 0),
+    depth: lu.bench.slice(0, 5).reduce((a, id) => a + worth(P[id]), 0),
     guards: sport === "nba" ? group(["PG", "SG"], 3) : 0,
     forwards: sport === "nba" ? group(["SF", "PF"], 3) : 0,
     centers: sport === "nba" ? group(["C"], 2) : 0,

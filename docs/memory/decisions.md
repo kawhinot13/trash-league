@@ -4,6 +4,11 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Front office "Right now" vs "Full strength"
+- Complaint: teams with injured stars showed "lacking star power". The team analyzer now has a toggle: Right now
+  (default, injury-discounted `avail`) and Full strength (`fullStrength` = healthy value). Health always measures who's
+  actually available. Trades already used rest-of-season value (`healthy`), unchanged.
+
 ## 2026-11-16: Daily games: who you are is your saved Sleeper username, confirmed before playing
 - Owner: confirm identity before a game, and you can't play as someone else in a league that isn't yours. The
   account's saved Sleeper username decides (typed once if none); claims for any other manager are refused, and

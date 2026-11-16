@@ -4,7 +4,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { FrontOffice } from "@/lib/front-office";
-import { diagnose, evaluateTrade, market, metricsFor, profile, tradeNotes, type Metric, type Mover } from "@/lib/fo-analysis";
+import { diagnose, evaluateTrade, market, metricsFor, profile, tradeNotes, type Metric, type Mover, fullStrength } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Handle, MgrPhoto } from "@/components/trash/brand";
@@ -176,7 +176,13 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
   const sport = data.sport ?? "nba";
   const nfl = sport === "nfl";
   const METRICS = metricsFor(sport);
-  const profiles = useMemo(() => data.teams.map((t) => profile(t, P, data.slots, sport)), [data, P, sport]);
+  // "Right now" discounts injured players (what you can field this week); "Full strength" counts
+  // everyone healthy (what the roster is when they're back).
+  const [strength, setStrength] = useState<"now" | "full">("now");
+  const profiles = useMemo(
+    () => data.teams.map((t) => profile(t, P, data.slots, sport, strength === "full" ? fullStrength : undefined)),
+    [data, P, sport, strength],
+  );
   const mine = profiles.find((p) => p.id === me)!;
   const d = useMemo(() => diagnose(mine, profiles, P, data.teams, data.free, data.slots, sport), [mine, profiles, P, data, sport]);
   // The trade partner can never be your own team (e.g. after your team is restored from a past
@@ -216,6 +222,22 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
       <AnimatePresence mode="wait">
         {tab === "team" ? (
           <motion.div key={`team-${me}`} initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <Segmented
+                id="fo-strength"
+                value={strength}
+                onChange={setStrength}
+                options={[
+                  ["now", "Right now"],
+                  ["full", "Full strength"],
+                ]}
+              />
+              <p className="text-xs text-[var(--muted)]">
+                {strength === "now"
+                  ? "Injured players count less (Out and IR barely count): the team you can field this week."
+                  : "Everyone counted healthy, as if injured players were back."}
+              </p>
+            </div>
             {/* verdict */}
             <div className="rounded-3xl border border-white/10 bg-black/25 p-4 sm:p-6 md:p-8">
               <p className="text-sm text-[var(--muted)]">{nick(me)}&apos;s front office report</p>
