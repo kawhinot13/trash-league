@@ -20,7 +20,7 @@ export const onReady = (fn: () => void) => {
 };
 
 /* ── Phone tab bar: the main sections at thumb reach, the rest under "More" ── */
-const TAB_LABELS = new Set(["Home", "Live", "Stats"]);
+const TAB_LABELS = new Set(["Home", "Live", "Front office", "Stats"]);
 const ICONS: Record<string, React.ReactNode> = {
   Home: <path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" />,
   Live: (
@@ -29,13 +29,13 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4" />
     </>
   ),
-  Games: (
+  Stats: <path d="M5 19V11M12 19V5M19 19v-6" />,
+  "Front office": (
     <>
-      <rect x="3" y="7" width="18" height="11" rx="4" />
-      <path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 13.5h.01" />
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18" />
     </>
   ),
-  Stats: <path d="M5 19V11M12 19V5M19 19v-6" />,
   More: (
     <>
       <circle cx="5" cy="12" r="1.4" />
@@ -58,11 +58,9 @@ function TabBar({
   moreOn: boolean;
 }) {
   const main = links.filter(([, l]) => TAB_LABELS.has(l));
-  const tabs: { key: string; label: string; href?: string; on: boolean }[] = [
-    ...main.slice(0, 2).map(([href, label]) => ({ key: label, label, href, on: !moreOn && isOn(href) })),
-    ...(cta ? [{ key: "Games", label: "Games", href: cta.href, on: false }] : []),
-    ...main.slice(2).map(([href, label]) => ({ key: label, label, href, on: !moreOn && isOn(href) })),
-  ];
+  // Games lives in the top bar on phones; the tab bar is for sections.
+  void cta;
+  const tabs = main.map(([href, label]) => ({ key: label, label, href, on: !moreOn && isOn(href) }));
   const moreActive = moreOn || links.some(([href, l]) => !TAB_LABELS.has(l) && isOn(href));
   const cls = (on: boolean) =>
     `flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] font-semibold transition-colors ${on ? "text-[var(--paper)]" : "text-[var(--muted)]"}`;
@@ -80,12 +78,8 @@ function TabBar({
         {tabs.map((t) => (
           <li key={t.key} className="flex flex-1">
             <Link href={t.href!} aria-current={t.on ? "page" : undefined} className={cls(t.on)}>
-              {t.key === "Games" ? (
-                <span className="flex size-9 items-center justify-center rounded-full bg-[var(--paper)] text-[var(--bin)]">{icon("Games")}</span>
-              ) : (
-                icon(t.key)
-              )}
-              <span>{t.label}</span>
+              {icon(t.key)}
+              <span className="whitespace-nowrap">{t.label}</span>
             </Link>
           </li>
         ))}
@@ -156,14 +150,14 @@ export function GlassNav({
       >
         {product.name}
       </Link>
-      <Link href={home} className="font-display max-w-[60vw] truncate text-xl leading-6 font-black tracking-tight md:max-w-[16rem] md:text-2xl md:leading-7">
+      <Link href={home} className="font-display max-w-[44vw] truncate text-xl leading-6 font-black tracking-tight md:max-w-[16rem] md:text-2xl md:leading-7">
         {logo}
       </Link>
     </span>
   ) : (
     <Link
       href={home}
-      className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[60vw] truncate md:max-w-[16rem]"}`}
+      className={`font-display text-2xl font-black tracking-tight${logo === "Trash" ? "" : " max-w-[44vw] truncate md:max-w-[16rem]"}`}
     >
       {logo}
     </Link>
@@ -223,9 +217,11 @@ export function GlassNav({
             {cta ? (
               <Link
                 href={cta.href}
-                className="hidden rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97] md:inline-block"
+                className="rounded-full bg-[var(--paper)] px-3.5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--bin)] transition-transform duration-200 active:scale-[0.97] md:px-4"
               >
-                {cta.label}
+                {/* Short on phones so the league name keeps its room. */}
+                <span className="md:hidden">Games</span>
+                <span className="hidden md:inline">{cta.label}</span>
               </Link>
             ) : null}
           </div>

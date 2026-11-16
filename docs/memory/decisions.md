@@ -5,9 +5,8 @@ approaches that were tried and dropped. This repo is public: no secrets, persona
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
 ## 2026-11-16: Phone navigation and load weight
-- Phones get an app-style bottom tab bar (GlassNav's TabBar: Home, Live, Games, Stats, More; More opens a sheet with
-  the rest). The top bar on phones keeps only the logo, league name and account; Daily games and the hamburger
-  moved down. Desktop/iPad (md+) unchanged. Body has bottom padding on phones; fixed bottom elements sit above the bar.
+- Phones get an app-style bottom tab bar (GlassNav's TabBar: Home, Live, Front office, Stats, More; More opens a sheet with
+  the rest). Owner asked for Front office in the bar; Daily games is a short "Games" pill in the top bar. Desktop/iPad (md+) unchanged. Body has bottom padding on phones; fixed bottom elements sit above the bar.
 - The holiday song was preloaded (3.6 MB on every Trash page); now `preload="none"`, so it downloads only when played.
 - Game pages pass one shared player map to all three games (it was serialized three times).
 - Front office compacted on phones (2-up rank cards, "Analyze trade" under the note, less nested padding).
