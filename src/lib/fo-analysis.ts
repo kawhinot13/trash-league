@@ -319,6 +319,133 @@ export function evaluateTrade(
   };
 }
 
+/** Same total as bestLineup(...).total, without the lineup itself: fast enough to try hundreds of trades. */
+export function lineupTotal(pl: FOPlayer[], slots: string[], worth: (p: FOPlayer) => number = avail) {
+  const ps = [...pl].sort((a, b) => worth(b) - worth(a)).slice(0, 16);
+  const n = slots.length;
+  const size = 1 << n;
+  let dp = new Float64Array(size).fill(-1);
+  dp[0] = 0;
+  for (const p of ps) {
+    const v = worth(p);
+    const ok = slots.map((s, i) => (SLOT_OK[s]?.some((x) => p.pos.includes(x)) ? i : -1)).filter((i) => i >= 0);
+    if (!ok.length) continue;
+    const next = dp.slice();
+    for (let mask = 0; mask < size; mask++) {
+      const cur = dp[mask];
+      if (cur < 0) continue;
+      for (const i of ok) {
+        const bit = 1 << i;
+        if (mask & bit) continue;
+        if (next[mask | bit] < cur + v) next[mask | bit] = cur + v;
+      }
+    }
+    dp = next;
+  }
+  let best = 0;
+  for (let m = 0; m < size; m++) if (dp[m] > best) best = dp[m];
+  return best;
+}
+
+/* ── Trade finder ──────────────────────────────────────────── */
+export type TradeIdea = {
+  partner: string;
+  give: string[];
+  get: string[];
+  meDelta: number;
+  themDelta: number;
+  valueOut: number;
+  valueIn: number;
+  meDrops: string[];
+  themDrops: string[];
+};
+
+/**
+ * Realistic trades that make your starting lineup better: 1-for-1, 2-for-1 (consolidate) and 1-for-2.
+ * Realistic means the other manager would say yes too: their best lineup stays about the same or gets
+ * better (at most 3 a week worse), you never take more than about 15% extra raw value, and you never
+ * pay more than half again what you get. Players are valued rest-of-season (`healthy`);
+ * nobody on IR is offered or asked for. Best gain for you first, at most two ideas per team, and
+ * each player you'd get appears once.
+ */
+export function tradeFinder(me: FOTeam, teams: FOTeam[], P: Record<string, FOPlayer>, slots: string[], sport: Sport = "nba", roster = 15): TradeIdea[] {
+  const k = SCALE[sport];
+  const h = (id: string) => healthy(P[id]);
+  const lineupOf = (ids: string[]) => {
+    const drops: string[] = [];
+    let keep = ids;
+    while (keep.length > roster) {
+      const worst = [...keep].sort((a, b) => h(a) - h(b))[0];
+      drops.push(worst);
+      keep = keep.filter((x) => x !== worst);
+    }
+    return { total: lineupTotal(keep.map((id) => P[id]), slots, healthy), drops };
+  };
+  const usable = (t: FOTeam) =>
+    t.players.filter((id) => P[id] && !P[id].onIR && h(id) >= 8 * k).sort((a, b) => h(b) - h(a)).slice(0, 12);
+  const mineIds = me.players.filter((id) => P[id]);
+  const myBase = lineupTotal(mineIds.map((id) => P[id]), slots, healthy);
+  const mine = usable(me);
+  const sum = (ids: string[]) => ids.reduce((a, id) => a + h(id), 0);
+  const ideas: TradeIdea[] = [];
+
+  for (const t of teams) {
+    if (t.id === me.id) continue;
+    const theirIds = t.players.filter((id) => P[id]);
+    const theirBase = lineupTotal(theirIds.map((id) => P[id]), slots, healthy);
+    const theirs = usable(t);
+    const cands: [string[], string[]][] = [];
+    // 1-for-1, values within about 15% of each other
+    for (const a of mine) for (const b of theirs) if (h(b) <= h(a) * 1.15 && h(b) >= h(a) * 0.8) cands.push([[a], [b]]);
+    // 2-for-1: two of yours for one better player (you pay at least what he's worth)
+    const pairs = (ids: string[]) => ids.flatMap((x, i) => ids.slice(i + 1).map((y) => [x, y]));
+    for (const b of theirs.slice(0, 5)) {
+      const fits = pairs(mine.filter((a) => h(a) < h(b)))
+        .filter((pr) => sum(pr) >= h(b) * 0.95 && sum(pr) <= h(b) * 1.8)
+        .sort((x, y) => Math.abs(sum(x) - h(b) * 1.25) - Math.abs(sum(y) - h(b) * 1.25))
+        .slice(0, 8);
+      for (const pr of fits) cands.push([pr, [b]]);
+    }
+    // 1-for-2: one of yours for two of theirs (they consolidate)
+    for (const a of mine.slice(0, 5)) {
+      const fits = pairs(theirs.filter((b) => h(b) < h(a)))
+        .filter((pr) => sum(pr) >= h(a) * 0.95 && sum(pr) <= h(a) * 1.15)
+        .sort((x, y) => sum(y) - sum(x))
+        .slice(0, 8);
+      for (const pr of fits) cands.push([[a], pr]);
+    }
+    for (const [give, get] of cands) {
+      const valueOut = sum(give);
+      const valueIn = sum(get);
+      // Fair on paper both ways: you don't take more than ~15% extra, and don't overpay by half.
+      if (valueIn > valueOut * 1.15 || valueOut > valueIn * 1.5) continue;
+      const meA = lineupOf(mineIds.filter((id) => !give.includes(id)).concat(get));
+      const meDelta = meA.total - myBase;
+      if (meDelta < 5 * k) continue;
+      const themA = lineupOf(theirIds.filter((id) => !get.includes(id)).concat(give));
+      const themDelta = themA.total - theirBase;
+      // They'd say yes: their best lineup stays about the same or gets better.
+      if (themDelta < -3 * k) continue;
+      ideas.push({ partner: t.id, give, get, meDelta, themDelta, valueOut, valueIn, meDrops: meA.drops, themDrops: themA.drops });
+    }
+  }
+  // Your gain first, nudged toward deals that help them too (easier to get done).
+  ideas.sort((a, b) => b.meDelta + 0.5 * b.themDelta - (a.meDelta + 0.5 * a.themDelta));
+  const out: TradeIdea[] = [];
+  const perTeam = new Map<string, number>();
+  const gotten = new Set<string>();
+  const sent = new Map<string, number>();
+  for (const i of ideas) {
+    if ((perTeam.get(i.partner) ?? 0) >= 2 || i.get.some((x) => gotten.has(x)) || i.give.some((x) => (sent.get(x) ?? 0) >= 2)) continue;
+    out.push(i);
+    perTeam.set(i.partner, (perTeam.get(i.partner) ?? 0) + 1);
+    i.get.forEach((x) => gotten.add(x));
+    i.give.forEach((x) => sent.set(x, (sent.get(x) ?? 0) + 1));
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 /* ── Buy low / sell high ───────────────────────────────────── */
 export type Mover = { pid: string; owner: string | null; gap: number; reasons: string[] };
 

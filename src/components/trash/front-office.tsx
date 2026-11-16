@@ -4,7 +4,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { FrontOffice } from "@/lib/front-office";
-import { diagnose, evaluateTrade, market, metricsFor, profile, tradeNotes, type Metric, type Mover, fullStrength } from "@/lib/fo-analysis";
+import { diagnose, evaluateTrade, market, metricsFor, profile, tradeFinder, tradeNotes, type Metric, type Mover, fullStrength } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Handle, MgrPhoto } from "@/components/trash/brand";
@@ -145,7 +145,7 @@ function MoverList({
 export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice; managers: Manager[]; local: string[] }) {
   const brand = useBrand();
   const localSet = useMemo(() => new Set(local), [local]);
-  const [tab, setTab] = useState<"team" | "trade" | "market">("team");
+  const [tab, setTab] = useState<"team" | "finder" | "trade" | "market">("team");
   const [me, setMe] = useState(data.teams[0].id);
   const [them, setThem] = useState(data.teams[1].id);
   const [give, setGive] = useState<string[]>([]);
@@ -196,6 +196,17 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
   const trade = give.length && get.length ? evaluateTrade(give, get, meTeam, themTeam, P, data.slots, undefined, sport) : null;
 
   const mk = useMemo(() => market(P, data.teams, sport), [P, data, sport]);
+  // Only searched while the Trade finder is open (it tries a few hundred trades).
+  const ideas = useMemo(
+    () => (tab === "finder" ? tradeFinder(data.teams.find((t) => t.id === me)!, data.teams, P, data.slots, sport) : []),
+    [tab, me, data, P, sport],
+  );
+  const openIdea = (partnerId: string, g: string[], r: string[]) => {
+    setThem(partnerId);
+    setGive(g);
+    setGet(r);
+    setTab("trade");
+  };
   const sellMine = (pid: string) => {
     setGive([pid]);
     setGet([]);
@@ -214,7 +225,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
       <Who.Provider value={data.players}>
     <div data-no-rico className="xmas-drift rounded-[24px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-3 sm:rounded-[28px] sm:p-5 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"]]} />
+        <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["finder", "Trade finder"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"]]} />
         <p className="text-xs text-[var(--muted)]">Live Season 4 rosters, week {data.week}</p>
       </div>
       <div className="mt-6">
@@ -420,6 +431,74 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
               <MoverList title="Sell high" tone="sell" items={mk.sell} P={P} nick={nick} me={me} onAct={(m) => (m.owner === me ? sellMine(m.pid) : loadTrade(m.pid, m.owner))} />
               <MoverList title="Buy low" tone="buy" items={mk.buy} P={P} nick={nick} me={me} onAct={(m) => (m.owner === me ? sellMine(m.pid) : loadTrade(m.pid, m.owner))} />
             </div>
+          </motion.div>
+        ) : tab === "finder" ? (
+          <motion.div key={`finder-${me}`} initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">
+            <h3 className="font-display text-3xl font-black">Trades worth sending</h3>
+            <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-[var(--muted)]">
+              Every 1-for-1, 2-for-1 and 1-for-2 with every team, kept only if your starting {nfl ? "lineup" : "nine"} gets better{" "}
+              <span className="text-[var(--paper)]">and theirs stays about the same or better</span>, and you don&apos;t take more than about 15% extra
+              value. So they have a reason to say yes. Players are valued for the rest of the season; nobody on IR.
+            </p>
+            {ideas.length ? (
+              <ul className="mt-6 grid gap-3 md:grid-cols-2">
+                {ideas.map((i) => (
+                  <li key={i.partner + i.give.join() + i.get.join()} className="flex flex-col rounded-2xl bg-black/25 p-4 sm:p-5">
+                    <p className="text-sm text-[var(--muted)]">
+                      With <span className="font-semibold text-[var(--paper)]">{nick(i.partner)}</span>
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      {[
+                        { label: "You give", ids: i.give },
+                        { label: "You get", ids: i.get },
+                      ].map((col) => (
+                        <div key={col.label} className="min-w-0">
+                          <p className="text-xs font-semibold tracking-wide text-[var(--muted)] uppercase">{col.label}</p>
+                          <ul className="mt-2 space-y-2">
+                            {col.ids.map((pid) => (
+                              <li key={pid} className="flex items-center gap-2">
+                                <Head pid={pid} size={30} />
+                                <span className="min-w-0 break-words text-sm leading-tight font-semibold">
+                                  {P[pid].name}
+                                  <span className="block text-xs font-normal text-[var(--muted)]">
+                                    {P[pid].pos.join("/")} · {n0(P[pid].value)}
+                                    {P[pid].injury ? ` · ${P[pid].injury}` : ""}
+                                  </span>
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-sm">
+                      <span className="font-display text-2xl font-black tabular-nums" style={{ color: GOOD }}>
+                        +{n0(i.meDelta)}
+                      </span>{" "}
+                      a week for your lineup,{" "}
+                      <span className="font-semibold tabular-nums">{Math.abs(i.themDelta) < 0.5 ? "no change" : `${i.themDelta > 0 ? "+" : "−"}${n0(Math.abs(i.themDelta))}`}</span> for theirs
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Value: you send {n0(i.valueOut)}, you get {n0(i.valueIn)}.
+                      {i.meDrops.length ? ` You'd drop ${i.meDrops.map((x) => P[x].name).join(", ")}.` : ""}
+                      {i.themDrops.length ? ` They'd drop ${i.themDrops.map((x) => P[x].name).join(", ")}.` : ""}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openIdea(i.partner, i.give, i.get)}
+                      className="mt-4 inline-flex min-h-11 cursor-pointer items-center self-start rounded-full border border-white/15 px-4 text-sm font-semibold text-[var(--wood)] transition-[background-color,transform] duration-150 hover:bg-white/5 active:scale-[0.98]"
+                    >
+                      Open in the trade analyzer →
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-6 rounded-2xl bg-black/20 p-5 text-[var(--muted)]">
+                No trade right now makes both lineups better without overpaying. Check back after the next round of moves, or try your own
+                ideas in the trade analyzer.
+              </p>
+            )}
           </motion.div>
         ) : (
           <motion.div key="trade" initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-6">

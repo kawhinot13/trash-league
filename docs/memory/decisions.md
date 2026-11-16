@@ -4,6 +4,15 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Front office Trade finder
+- Owner asked for "best trades that would upgrade your lineup, but realistic". New tab (`tradeFinder` in fo-analysis):
+  1-for-1, 2-for-1, 1-for-2 with every team; kept only if your best lineup gains >= 5 a week, theirs loses at most 3
+  (usually unchanged or better), you take <= 15% extra raw value and never pay more than 1.5x. Rest-of-season values
+  (`healthy`), no IR players. Max 2 ideas per team, each incoming player once, top 8. Opens in the trade analyzer.
+- `lineupTotal`: same total as bestLineup with typed arrays (~5x faster), so a search is ~0.2 s.
+- Rejected: "their lineup can drop up to 8" (the analyzer's "likely") let in lopsided 2-for-1 overpays; requiring them to
+  gain left almost nothing. Few ideas for some teams is the honest result.
+
 ## 2026-11-16: Weekly scores must be proven (points for = opponent's points against)
 - Bug: Junkyard Dog's week 4 showed 460 (bench crime "460 of 603"). The week-3 total was saved 11 minutes after his
   mid-week roster move; Sleeper had rewritten his season total with some week-4 points, so "after week 4 minus after
