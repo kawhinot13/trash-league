@@ -184,7 +184,10 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
     [data, P, sport, strength],
   );
   const mine = profiles.find((p) => p.id === me)!;
-  const d = useMemo(() => diagnose(mine, profiles, P, data.teams, data.free, data.slots, sport), [mine, profiles, P, data, sport]);
+  const d = useMemo(
+    () => diagnose(mine, profiles, P, data.teams, data.free, data.slots, sport, strength === "full"),
+    [mine, profiles, P, data, sport, strength],
+  );
   // The trade partner can never be your own team (e.g. after your team is restored from a past
   // visit); fall back to the first other team so the picker, titles and rosters always agree.
   const partner = them !== me && ids.includes(them) ? them : ids.find((x) => x !== me)!;
@@ -237,6 +240,13 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                   ? "Injured players count less (Out and IR barely count): the team you can field this week."
                   : "Everyone counted healthy, as if injured players were back."}
               </p>
+              {strength === "full" ? (
+                <p className="w-full text-sm text-[var(--paper)]/85">
+                  {d.out.length
+                    ? `${d.out.length} of ${nick(me)}'s top 5 ${d.out.length === 1 ? "is" : "are"} out right now: ${d.out.map((p) => p.name).join(", ")}.`
+                    : `None of ${nick(me)}'s top 5 are out right now.`}
+                </p>
+              ) : null}
             </div>
             {/* verdict */}
             <div className="rounded-3xl border border-white/10 bg-black/25 p-4 sm:p-6 md:p-8">
@@ -267,7 +277,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
             {/* league ranks */}
             <h3 className="font-display mt-8 text-2xl font-black sm:mt-10 sm:text-3xl">Where you rank</h3>
             <ul className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
-              {METRICS.map(({ key, label, info }, i) => {
+              {METRICS.filter((x) => !(strength === "full" && x.key === "health")).map(({ key, label, info }, i) => {
                 const r = d.rank[key as Metric];
                 const n = profiles.length;
                 const tone = r <= 3 ? GOOD : r > n - 3 ? BAD : "var(--paper)";

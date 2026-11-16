@@ -8,6 +8,8 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
 - Complaint: teams with injured stars showed "lacking star power". The team analyzer now has a toggle: Right now
   (default, injury-discounted `avail`) and Full strength (`fullStrength` = healthy value). Health always measures who's
   actually available. Trades already used rest-of-season value (`healthy`), unchanged.
+- Full strength hides Health (bar, chips) since everyone counts healthy there; instead one line says how many
+  of your top 5 are out (Out or IR) right now. `diagnose(..., full)`.
 
 ## 2026-11-16: Daily games: who you are is your saved Sleeper username, confirmed before playing
 - Owner: confirm identity before a game, and you can't play as someone else in a league that isn't yours. The

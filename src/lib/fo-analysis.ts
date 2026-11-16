@@ -141,9 +141,12 @@ export function diagnose(
   free: string[],
   slots: string[],
   sport: Sport = "nba",
+  full = false,
 ) {
   const nfl = sport === "nfl";
   const k = SCALE[sport];
+  // At full strength everyone counts as healthy, so Health isn't a strength or a weakness there.
+  const shown = metricsFor(sport).filter((x) => !(full && x.key === "health"));
   const R = ranks(all, sport);
   const r = R[me.id];
   const n = all.length;
@@ -177,8 +180,8 @@ export function diagnose(
       : "The starting nine is near the bottom. Sell depth for upside and hit the waiver wire hard.";
   }
 
-  const strengths = metricsFor(sport).filter((x) => top(x.key)).map((x) => x.label);
-  const weaknesses = metricsFor(sport).filter((x) => low(x.key)).map((x) => x.label);
+  const strengths = shown.filter((x) => top(x.key)).map((x) => x.label);
+  const weaknesses = shown.filter((x) => low(x.key)).map((x) => x.label);
   const advice: Advice[] = [];
 
   // How much a team's best lineup drops without a player. Lineups change daily, so "on the bench"
@@ -257,13 +260,15 @@ export function diagnose(
   if (hurt.length)
     advice.push({
       title: "Injury watch",
-      text: `${hurt.map((p) => `${p.name} (${p.onIR ? "IR" : p.injury})`).join(", ")}. Their value is discounted until they're back.`,
+      text: `${hurt.map((p) => `${p.name} (${p.onIR ? "IR" : p.injury})`).join(", ")}. ${full ? "Counted healthy in this view; switch to Right now to see the team without them." : "Their value is discounted until they're back."}`,
     });
 
   const best = [...mine].sort((a, b) => b.value - a.value);
   const mvp = best[0];
   const deadweight = [...me.lineup.bench].reverse().slice(0, 2).map((id) => P[id]).filter(Boolean);
-  return { archetype, pitch, strengths, weaknesses, advice, rank: r, mvp, deadweight, ownerOf: owner };
+  // Of your five most valuable players, who is out right now (Out or on IR).
+  const out = best.slice(0, 5).filter((p) => p.onIR || p.injury === "Out");
+  return { archetype, pitch, strengths, weaknesses, advice, rank: r, mvp, deadweight, ownerOf: owner, out };
 }
 
 /** Trade evaluation: how each side's best lineup changes per week, plus raw value in and out. */
