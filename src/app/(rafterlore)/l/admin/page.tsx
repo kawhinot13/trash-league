@@ -59,15 +59,20 @@ async function Admin() {
         sign in.
       </Gate>
     );
-  const { totals: t, leagues, plays, failures, crons } = await adminStats();
+  const { totals: t, leagues, plays, failures, crons, more: m, weeks, sports, topPlayed } = await adminStats();
   const cards: [string, string, string?][] = [
-    ["Leagues", n0(t.leagues), `${n0(t.seasons)} seasons stored`],
-    ["Accounts", n0(t.accounts), `${n0(t.active7)} active, ${n0(t.new7)} new this week`],
-    ["Daily-game plays", n0(t.plays7), "last 7 days"],
+    ["People", n0(m.people), `unique Sleeper usernames that searched and opened a league; ${n0(m.people7)} new, ${n0(m.peopleActive7)} active this week`],
+    ["Leagues", n0(t.leagues), `${n0(t.seasons)} seasons stored, ${n0(m.imports7)} new this week, ${n0(m.inSeason)} in season`],
+    ["Accounts", n0(t.accounts), `${n0(t.active7)} active this week, ${n0(m.active30)} this month, ${n0(t.new7)} new this week`],
+    ["Proven managers", n0(m.linked), `accounts linked to their Sleeper manager; ${n0(m.withUsername)} saved a username`],
+    ["Daily-game plays", n0(t.plays7), `last 7 days, by ${n0(m.players7)} players; ${n0(m.plays30)} in 30 days`],
+    ["League opens", n0(m.opens), "leagues opened from a username search, all time"],
+    ["Yahoo", n0(m.yahooLeagues), `leagues imported, ${n0(m.yahooLinks)} accounts connected`],
     ["Sleeper calls", n0(t.calls24), "last 24 hours (limit 500/min)"],
     ["Import queue", `${t.queued + t.running}`, `${t.running} running, ${t.failed7} failed this week`],
     ["Removed leagues", n0(t.removed), "waiting to be deleted"],
   ];
+  const peak = (k: "leagues" | "accounts" | "people" | "plays") => Math.max(1, ...weeks.map((w) => w[k]));
   return (
     <>
       <AppNav />
@@ -87,6 +92,42 @@ async function Admin() {
             </div>
           ))}
         </dl>
+
+        <h2 className="font-display mt-16 text-4xl font-black">Last 8 weeks</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              ["people", "New people"],
+              ["accounts", "New accounts"],
+              ["leagues", "New leagues"],
+              ["plays", "Daily-game plays"],
+            ] as const
+          ).map(([k, label]) => (
+            <div key={k} className="rounded-2xl bg-[var(--bin-2)] p-5">
+              <p className="text-sm text-[var(--muted)]">{label}, by week</p>
+              <div className="mt-3 flex h-24 items-end gap-1.5" role="img" aria-label={`${label}: ${weeks.map((w) => w[k]).join(", ")}`}>
+                {weeks.map((w) => (
+                  <div key={w.wk.toISOString()} className="flex flex-1 flex-col items-center justify-end gap-1">
+                    <span className="text-[10px] text-[var(--muted)] tabular-nums">{w[k] || ""}</span>
+                    <span className="w-full rounded-t bg-[var(--paper)]/70" style={{ height: `${Math.max(2, (w[k] / peak(k)) * 72)}px` }} />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 flex justify-between text-[10px] text-[var(--muted)]">
+                <span>{weeks[0] ? weeks[0].wk.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</span>
+                <span>this week</span>
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 grid gap-3 text-sm text-[var(--muted)] sm:grid-cols-2">
+          <p>
+            Sports: {sports.map((x) => `${x.sport === "nfl" ? "football" : "basketball"} ${n0(x.n)}`).join(" · ") || "none yet"}. Recreational-use
+            confirmations: {n0(m.acked)}.
+          </p>
+          {topPlayed.length ? <p>Most daily-game plays this week: {topPlayed.map((x) => `${x.name} (${n0(x.n)})`).join(", ")}.</p> : null}
+        </div>
 
         {plays.length ? (
           <p className="mt-6 text-sm text-[var(--muted)]">

@@ -30,6 +30,10 @@ export default function Privacy() {
             version, with no details about who gave it.
           </li>
           <li>Daily-game results posted to a league&apos;s standings (manager, day and score), kept for about a year.</li>
+          <li>
+            When you search a Sleeper username and open one of its leagues, a scrambled (keyed hash) form of that username, so
+            we can count how many different people use Rafterlore. The username itself isn&apos;t kept and can&apos;t be read back.
+          </li>
         </ul>
         <p>
           For Sleeper leagues we don&apos;t store anything Sleeper doesn&apos;t show publicly. Nowhere do we store emails, phone

@@ -209,6 +209,14 @@ create table if not exists yahoo_links (
   linked_at  timestamptz not null default now()
 );
 create index if not exists yahoo_links_guid on yahoo_links(guid);
+-- Unique people who searched a Sleeper username and opened a league from the results (admin count only).
+-- Only a keyed hash of the lowercased username: the name itself is never stored.
+create table if not exists finder_people (
+  h        text primary key,
+  first_at timestamptz not null default now(),
+  last_at  timestamptz not null default now(),
+  opens    int not null default 1
+);
 -- Imported Yahoo leagues, readable only by their members (guids). id = newest season's league key.
 create table if not exists yahoo_leagues (
   id         text primary key,

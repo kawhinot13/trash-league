@@ -66,7 +66,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   "independent ... for recreational and informational use only". Never mention the owner's personal circumstances.
 - Admin (`/l/admin`, per request, noindex): owner dashboard of totals and league-level facts, never individual
   people. Admin = Google-verified email listed in `ADMIN_EMAILS` (Vercel env; never in the repo), checked at each
-  sign-in; the email is not stored (only `accounts.is_admin`). Others get not-found.
+  sign-in; the email is not stored (only `accounts.is_admin`). Others get not-found. "People" = unique Sleeper usernames
+  that searched and opened a league (`finder_people`: keyed HMAC of the lowercased username only, never the name;
+  `/api/l/find/opened`, sent by the Finder on open). Plus 8-week series, accounts, proven managers, Yahoo, plays.
 - Traffic: Vercel Web Analytics (`<Analytics />` in the root layout; cookieless; enable in the Vercel dashboard).
 - Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across

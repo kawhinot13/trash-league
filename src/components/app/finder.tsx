@@ -28,6 +28,8 @@ export function Finder() {
   const me = useMe();
   const account = me?.account ?? null;
 
+  // The username behind the current results (for the anonymous unique-people count).
+  const [searched, setSearched] = useState("");
   const lookup = useCallback(
     async (v: string, remember: boolean) => {
       setBusy(true);
@@ -37,6 +39,7 @@ export function Finder() {
         const j = await r.json();
         if (!r.ok) throw new Error(j.error ?? "Something went wrong.");
         setRes(j);
+        setSearched(v);
         // Signed in: remember the username that found leagues, so they show up next time.
         if (remember && j.user && account && account.sleeper?.toLowerCase() !== v.toLowerCase()) void updateMe({ sleeper: v });
       } catch (x) {
@@ -179,7 +182,7 @@ export function Finder() {
               {res.leagues.map((l) => (
                 <li key={l.leagueId}>
                   {l.format.supported ? (
-                    <Link href={`/l/${l.leagueId}`} className="group flex items-center gap-4 py-4">
+                    <Link href={`/l/${l.leagueId}`} onClick={() => counted(searched, l.leagueId)} className="group flex items-center gap-4 py-4">
                       <LeagueRow l={l} />
                       <span className="ml-auto shrink-0 rounded-full border border-[var(--line)] px-4 py-1.5 text-sm font-semibold transition-colors group-hover:border-[var(--wood)]">
                         Open
@@ -201,6 +204,14 @@ export function Finder() {
       ) : null}
     </div>
   );
+}
+
+/** Counts a username once (as an anonymous hash) when a league is opened from its search results. */
+function counted(u: string, league: string) {
+  if (!u) return;
+  try {
+    navigator.sendBeacon("/api/l/find/opened", new Blob([JSON.stringify({ u, league })], { type: "application/json" }));
+  } catch {}
 }
 
 function LeagueRow({ l }: { l: FoundLeague }) {

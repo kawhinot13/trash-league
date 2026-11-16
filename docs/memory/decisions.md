@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Admin "People" count
+- Owner wanted a count of unique people: each distinct Sleeper username that searches and then opens a league counts
+  once (same username, other leagues: still one). Stored as a keyed HMAC (AUTH_SECRET) of the lowercased username so
+  it can be counted but not read back; rejected storing usernames (admin must never list people). Counting only on
+  open (not on search) so typos and browsing don't inflate it. Disclosed on /privacy.
+
 ## 2026-11-16: Yahoo Fantasy football (members only)
 - Owner chose members-only over public pages (Yahoo leagues are private; Rafterlore otherwise promises public data only).
   Official API + per-member OAuth; pages render per request behind a membership check. Rejected: public ISR pages from
