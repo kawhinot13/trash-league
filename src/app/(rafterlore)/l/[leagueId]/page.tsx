@@ -201,7 +201,7 @@ function Home({ p }: { p: LeaguePage }) {
               the more it scores. Same prompts for everyone, so the group chat can compare.
             </SectionHead>
             <div className="mx-auto max-w-5xl px-5 md:px-10">
-              <PlayGate game={p.brand.games.dive} anchor="dive">
+              <PlayGate game={p.brand.games.dive} anchor="dive" primary>
                 <DumpsterDive pool={divePool(d)} players={gamePlayers} people={people} />
               </PlayGate>
             </div>

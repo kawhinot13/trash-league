@@ -47,6 +47,14 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
   const game = u.searchParams.get("game") ?? "";
   const day = u.searchParams.get("day") ?? "";
   if (!hasDb() || !isSleeperId(leagueId)) return Response.json({ enabled: false });
+  // ?who=1: just who's looking (the games ask before you play).
+  if (u.searchParams.get("who") === "1") {
+    const fid = await familyIdOf(leagueId).catch(() => null);
+    if (!fid) return Response.json({ enabled: false });
+    const { accountId: _a, ...viewer } = await viewerOf(req, fid);
+    void _a;
+    return Response.json({ enabled: true, viewer }, { headers: { "cache-control": "no-store" } });
+  }
   if (!GAMES.has(game) || !DAY.test(day)) return Response.json({ error: "bad request" }, { status: 400 });
   try {
     const fid = await familyIdOf(leagueId);
@@ -106,6 +114,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
     score?: number;
     label?: string;
     claim?: boolean;
+    username?: string;
     verify?: string;
   } | null;
   if (!b) return Response.json({ error: "bad request" }, { status: 400 });
@@ -122,17 +131,25 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
       const v = await viewerOf(req, fid);
       if (!v.accountId) return Response.json({ error: "Sign in first." }, { status: 401 });
       if (b.claim === true) {
-        // Owner's call: picking yourself is enough (no code). First account to pick a manager keeps them;
-        // picking again moves this account to the new manager if nobody else has them.
+        // Owner's rules: no code, but you can only be the manager whose Sleeper username is on your account
+        // (saved when you search it, or typed here once). First account to claim a manager keeps them.
+        if (typeof b.username === "string") {
+          const want = b.username.trim().toLowerCase();
+          b.manager = [...season.names].find(([, n]) => n?.toLowerCase() === want)?.[0];
+          if (!b.manager) return Response.json({ error: `${b.username.trim()} isn't a manager in this league.` }, { status: 404 });
+        }
         if (!season.users.has(String(b.manager))) return Response.json({ error: "bad request" }, { status: 400 });
+        const [acct] = await sql<{ sleeper: string | null }[]>`select sleeper from accounts where id = ${v.accountId}`;
+        const target = season.names.get(b.manager!) ?? "";
+        if (acct?.sleeper && acct.sleeper.toLowerCase() !== target.toLowerCase())
+          return Response.json({ error: `Your account plays as ${acct.sleeper}. You can only play as your own Sleeper username.` }, { status: 409 });
         const [taken] = await sql<{ account_id: string }[]>`select account_id from sleeper_links where sleeper_user = ${b.manager!}`;
         if (taken && taken.account_id !== v.accountId)
           return Response.json({ error: `Another account already plays as ${season.names.get(b.manager!) ?? "that manager"}.` }, { status: 409 });
         await sql.begin(async (tx) => {
           await tx`delete from sleeper_links where account_id = ${v.accountId}`;
           await tx`insert into sleeper_links (sleeper_user, account_id) values (${b.manager!}, ${v.accountId})`;
-          const name = season.names.get(b.manager!);
-          if (name) await tx`update accounts set sleeper = coalesce(sleeper, ${name}) where id = ${v.accountId}`;
+          if (target) await tx`update accounts set sleeper = coalesce(sleeper, ${target}) where id = ${v.accountId}`;
         });
         return Response.json({ linked: true });
       }

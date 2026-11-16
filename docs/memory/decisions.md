@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Daily games: who you are is your saved Sleeper username, confirmed before playing
+- Owner: confirm identity before a game, and you can't play as someone else in a league that isn't yours. The
+  account's saved Sleeper username decides (typed once if none); claims for any other manager are refused, and
+  leagues without that manager show "You're not in this league" instead of the games. Still no code (owner's call):
+  someone could type another person's username first; first claim keeps it.
+
 ## 2026-11-16: Rosterdle hints (Rafterlore only)
 - Owner asked for hints "not too easy". Earned by missing (after 3, 4, 5 misses), opened on purpose, -10 points each
   off a win (min 10): broad position group, conference (not team), then one league-history fact. Brand flag

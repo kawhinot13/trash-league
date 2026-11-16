@@ -59,7 +59,6 @@ export function Leaderboard({
   const [claimErr, setClaimErr] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [notSuggested, setNotSuggested] = useState(false);
-  const [switching, setSwitching] = useState(false);
   const pendingKey = brand.key("link-code");
   // Picking needs no code any more: forget any code a browser was still holding.
   const [pending, setPendingState] = useState<Pending | null>(() => {
@@ -138,7 +137,6 @@ export function Leaderboard({
       setClaimErr(null);
       post({ claim: true, manager: id }).then(({ ok, j }) => {
         if (ok && j.linked) {
-          setSwitching(false);
           setReload((n) => n + 1);
         } else setClaimErr(j.error ?? "That didn't work. Try again.");
       });
@@ -292,7 +290,7 @@ export function Leaderboard({
           </div>
         </div>
       ) : null}
-      {(!me && (!viewer || (viewer.signedIn && !viewer.linked && !pending && (!viewer.suggest || notSuggested)))) || switching ? (
+      {(!me && (!viewer || (viewer.signedIn && !viewer.linked && !pending && (!viewer.suggest || notSuggested)))) ? (
         <div className="mt-3">
           <p className="text-sm text-[var(--muted)]">
             {viewer
@@ -348,14 +346,7 @@ export function Leaderboard({
       ) : (
         <p className="mt-3 text-sm text-[var(--muted)]">Nobody&apos;s on the board yet{tab === "today" ? " today" : tab === "week" ? " this week" : ""}. Be first.</p>
       )}
-      {me && viewer && !switching ? (
-        <p className="mt-3 text-xs text-[var(--muted)]">
-          You play as {nick(me)}.{" "}
-          <button type="button" onClick={() => setSwitching(true)} className="cursor-pointer underline-offset-4 hover:underline">
-            Not you? Switch
-          </button>
-        </p>
-      ) : null}
+      {me && viewer ? <p className="mt-3 text-xs text-[var(--muted)]">You play as {nick(me)}, the Sleeper username on your account.</p> : null}
       {me && !viewer ? (
         <button type="button" onClick={() => setMe(null)} className="mt-3 cursor-pointer text-xs text-[var(--muted)] underline-offset-4 hover:underline">
           Not {nick(me)}? Switch

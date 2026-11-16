@@ -75,7 +75,7 @@ function Home({ d, id }: { d: Dataset; id: string }) {
           Five prompts a day from the league&apos;s history. Any right answer counts, but the more niche your pick, the more it scores.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
-          <PlayGate game="Deep Cut" anchor="dive">
+          <PlayGate game="Deep Cut" anchor="dive" primary>
             <DumpsterDive pool={divePool(d)} players={players} people={people} />
           </PlayGate>
         </div>
