@@ -1,4 +1,5 @@
 import "server-only";
+import { earliestTotals, verifiedWeeks, type OfficialSnap } from "@/lib/core/official";
 import { cacheLife } from "next/cache";
 import { db, hasDb } from "@/lib/app/db";
 import { sleeper } from "@/lib/app/sleeper";
@@ -30,17 +31,27 @@ const get = <T,>(path: string): Promise<T> => {
 };
 const source = (leagueId: string, sport: Sport = "nba"): LiveSource => ({ leagueId, get, idOf: (u) => u.user_id, sport });
 
-/** Official points-for totals after k finished weeks, per manager, from the nightly snapshots. */
-async function snapshotTotals(leagueId: string): Promise<Record<number, Record<string, number>>> {
+/** The nightly official snapshots, per manager. */
+async function officialSnaps(leagueId: string): Promise<OfficialSnap[]> {
   "use cache: remote";
   cacheLife("minutes");
-  if (!hasDb()) return {};
+  if (!hasDb()) return [];
   const sql = await db();
-  const rows = await sql<{ owner_id: string | null; roster_id: number; weeks_done: number; pf: string }[]>`
-    select distinct on (roster_id, weeks_done) owner_id, roster_id, weeks_done, pf from pf_snapshots
-    where league_id = ${leagueId} order by roster_id, weeks_done, taken_on desc`;
+  const rows = await sql<{ owner_id: string | null; roster_id: number; weeks_done: number; pf: string; pa: string | null; taken_on: Date | string }[]>`
+    select owner_id, roster_id, weeks_done, pf, pa, taken_on from pf_snapshots where league_id = ${leagueId}`;
+  return rows.map((r) => ({
+    key: r.owner_id ?? `r${r.roster_id}`,
+    weeksDone: r.weeks_done,
+    pf: Number(r.pf),
+    pa: r.pa === null ? null : Number(r.pa),
+    day: typeof r.taken_on === "string" ? r.taken_on : r.taken_on.toISOString().slice(0, 10),
+  }));
+}
+
+/** Official points-for totals after k finished weeks, per manager (earliest snapshot of each). */
+async function snapshotTotals(leagueId: string): Promise<Record<number, Record<string, number>>> {
   const out: Record<number, Record<string, number>> = {};
-  for (const r of rows) (out[r.weeks_done] ??= {})[r.owner_id ?? `r${r.roster_id}`] = Number(r.pf);
+  for (const [k, m] of earliestTotals(await officialSnaps(leagueId))) for (const [key, s] of m) (out[k] ??= {})[key] = s.pf;
   return out;
 }
 
@@ -72,16 +83,16 @@ export async function frontOffice(leagueId: string, sport: Sport = "nba") {
 /** Power rankings: live table + front office + this season's lineups + exact weekly scores. */
 export async function power(leagueId: string, d: Dataset, sport: Sport = "nba") {
   const cur = d.league.seasons[d.league.seasons.length - 1];
-  const [{ rows: table, week }, fo, totals] = await Promise.all([
+  const [{ rows: table, week }, fo, snaps] = await Promise.all([
     liveTable(leagueId, cur.standings, sport),
     frontOffice(leagueId, sport),
-    snapshotTotals(leagueId).catch(() => ({}) as Record<number, Record<string, number>>),
+    officialSnaps(leagueId).catch(() => [] as OfficialSnap[]),
   ]);
+  // Only proven weekly scores (core/official.ts); a week with any team unproven sits out.
+  const verified = verifiedWeeks(snaps);
   const officialWeek = (w: number) => {
-    const a = totals[w];
-    const b = w === 1 ? {} : totals[w - 1];
-    if (!a || !b) return null;
-    return new Map(Object.entries(a).map(([id, pf]) => [id, Math.round((pf - (b[id] ?? 0)) * 10) / 10]));
+    const m = verified.get(w);
+    return m && m.size === table.length ? m : null;
   };
   const lines = d.extras.seasons[d.extras.seasons.length - 1]?.lineups ?? {};
   const nick = (id: string) => d.league.managers.find((m) => m.id === id)?.nick ?? id;

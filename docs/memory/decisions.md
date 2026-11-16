@@ -4,6 +4,17 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-16: Weekly scores must be proven (points for = opponent's points against)
+- Bug: Junkyard Dog's week 4 showed 460 (bench crime "460 of 603"). The week-3 total was saved 11 minutes after his
+  mid-week roster move; Sleeper had rewritten his season total with some week-4 points, so "after week 4 minus after
+  week 3" came out ~100 short. Every other team checked out.
+- Fix (`core/official.ts`): use the EARLIEST saved total per finished-week count, and accept a team's weekly score
+  only if another team's change in points against equals it (and vice versa). Recap superlatives (blowout,
+  high/low, bench crime, locked in) and power-ranking form need every team proven, else that week shows results
+  only. Trash's official.json now also stores points against (`s4_pa`); week 4 there can't be proven (no PA in the
+  week-3 capture), weeks 5+ can. ANALYSIS_VERSION 9 regrades Rafterlore leagues.
+- Rejected: Sleeper's matchup feed as a cross-check (different team scores on each request); estimating the bad value.
+
 ## 2026-11-16: Waivers gets its own tab
 - Owner asked: waiver intel moved off the bottom of Live into /waivers (Trash) and /l/[id]/waivers (Rafterlore), in the
   nav after Live and on the home doors. Phone tab bar unchanged (Waivers sits under More).

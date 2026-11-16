@@ -389,7 +389,8 @@ export function weeklyRecap(
         .filter((x): x is { w: string; l: string } => !!x);
       const steal = d.adds.find((a) => a[2] > 0);
       const base = { week, results, top: d.top.slice(0, 3).map(([id, pid, pts]) => ({ id, pid, pts })), steal: steal ? { id: steal[0], pid: steal[1], pts: steal[2] } : null };
-      if (!ex || !ex.size) {
+      // Superlatives need every team's proven score: a missing one could be the top, low or blowout.
+      if (!ex || !results.length || !results.every((g) => ex.has(g.w) && ex.has(g.l))) {
         out.push({ ...base, exact: false, blowout: null, close: null, high: null, low: null, crime: null, locked: null });
         continue;
       }

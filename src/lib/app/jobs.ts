@@ -1,4 +1,5 @@
 import "server-only";
+import { verifiedWeeks } from "@/lib/core/official";
 import { db, hasDb } from "@/lib/app/db";
 import type { SeasonBundle } from "@/lib/app/family";
 import { analyse, seasonWeeks } from "@/lib/app/analysis";
@@ -152,18 +153,25 @@ async function replayOne(b: SeasonBundle, week: number, final: boolean) {
 async function exactWeeks(bs: SeasonBundle[]): Promise<Map<string, number>> {
   const sql = await db();
   const ids = bs.map((b) => b.league.league_id);
-  const rows = await sql<{ league_id: string; roster_id: number; weeks_done: number; pf: string }[]>`
-    select distinct on (league_id, roster_id, weeks_done) league_id, roster_id, weeks_done, pf
-    from pf_snapshots where league_id in ${sql(ids)} order by league_id, roster_id, weeks_done, taken_on desc`;
-  const at = new Map(rows.map((r) => [`${r.league_id}|${r.roster_id}|${r.weeks_done}`, Number(r.pf)]));
+  const rows = await sql<{ league_id: string; roster_id: number; weeks_done: number; pf: string; pa: string | null; taken_on: Date | string }[]>`
+    select league_id, roster_id, weeks_done, pf, pa, taken_on from pf_snapshots where league_id in ${sql(ids)}`;
   const out = new Map<string, number>();
   for (const b of bs) {
+    const lid = b.league.league_id;
     const start = Math.max(1, b.league.settings?.start_week || 1);
-    for (const r of rows.filter((x) => x.league_id === b.league.league_id && x.weeks_done > 0)) {
-      const before = r.weeks_done === 1 ? 0 : at.get(`${r.league_id}|${r.roster_id}|${r.weeks_done - 1}`);
-      if (before !== undefined)
-        out.set(`${r.league_id}|${r.roster_id}|${start + r.weeks_done - 1}`, Math.round((Number(r.pf) - before) * 10) / 10);
-    }
+    // Only weekly scores the official totals prove (points for = the opponent's points against).
+    const v = verifiedWeeks(
+      rows
+        .filter((r) => r.league_id === lid)
+        .map((r) => ({
+          key: String(r.roster_id),
+          weeksDone: r.weeks_done,
+          pf: Number(r.pf),
+          pa: r.pa === null ? null : Number(r.pa),
+          day: typeof r.taken_on === "string" ? r.taken_on : r.taken_on.toISOString().slice(0, 10),
+        })),
+    );
+    for (const [k, week] of v) for (const [rid, pts] of week) out.set(`${lid}|${rid}|${start + k - 1}`, pts);
   }
   return out;
 }

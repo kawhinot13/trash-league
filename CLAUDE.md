@@ -98,6 +98,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Nightly cron (`vercel.json`, 10:17 UTC, needs `CRON_SECRET`): housekeeping and purges, refresh every league, save
   official points for into `pf_snapshots`, queue the incremental import. Each run is logged in `cron_runs`;
   `/l/status` shows whether last night ran and failures.
+- Exact weekly team scores = change in official points for between saved totals, kept only when it equals the
+  opponent's change in points against (`core/official.ts`, earliest capture per week). Never estimate a missing one.
 - Numbers: season efficiency uses official totals; anything from weekly matchups (H2H, live, single weeks) says "per Sleeper".
   Words follow the lineup type (`brand.lineup`, `lineupTerms` in `core/lineup-terms.ts`): a "start" is a week in
   the starting lineup, so lock-in leagues say "lock-ins" (Lock-In Index), daily ones "weeks in the lineup" and

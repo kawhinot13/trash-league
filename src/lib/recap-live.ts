@@ -3,6 +3,7 @@ import data from "@/data/extras.json";
 import official from "@/data/official.json";
 import type { RecapWeek } from "@/lib/extras";
 import { league } from "@/lib/league";
+import { verifiedWeeks } from "@/lib/core/official";
 
 /**
  * Season 4 weekly recap, built only from numbers Sleeper reports reliably.
@@ -29,14 +30,18 @@ const get = async <T>(path: string): Promise<T> => {
   return r.json() as Promise<T>;
 };
 
-/** Official points-for after N completed weeks: { "3": { manager: pf } }. */
-const snaps = (official as unknown as Record<string, Record<string, Record<string, number>>>).s4 ?? {};
-/** Exact weekly team score from two official snapshots, or null. */
+/** Official points for / against after N completed weeks: { "3": { manager: total } } (first capture). */
+const off = official as unknown as Record<string, Record<string, Record<string, number>>>;
+const verified = verifiedWeeks(
+  Object.entries(off.s4 ?? {}).flatMap(([k, m]) =>
+    Object.entries(m).map(([key, pf]) => ({ key, weeksDone: Number(k), pf, pa: off.s4_pa?.[k]?.[key] ?? null, day: "" })),
+  ),
+);
+/** Exact weekly team scores, only when every team's score is proven (core/official.ts), else null. */
 export function officialWeek(week: number): Map<string, number> | null {
-  const now = snaps[String(week)];
-  const before = week === 1 ? {} : snaps[String(week - 1)];
-  if (!now || !before) return null;
-  return new Map(Object.entries(now).map(([id, pf]) => [id, Math.round((pf - (before[id] ?? 0)) * 10) / 10]));
+  const m = verified.get(week);
+  const teams = Object.keys(off.s4?.[String(week)] ?? {}).length;
+  return m && teams && m.size === teams ? m : null;
 }
 
 /** Best possible lineup per week per manager, from the nightly box-score replay. */

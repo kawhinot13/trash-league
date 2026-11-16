@@ -374,8 +374,13 @@ for sn in LG["seasons"]:
     weeks_done = {len((r.get("metadata") or {}).get("record", "")) for r in ros}
     if len(weeks_done) == 1:  # every team has the same number of finished games: totals are final
         wk = str(weeks_done.pop())
-        OFF.setdefault(sn["code"], {}).setdefault(wk, {
-            users[r["owner_id"]]: round(r["settings"].get("fpts", 0) + r["settings"].get("fpts_decimal", 0) / 100, 1) for r in ros})
+        # First capture only (closest to the week's end). Points against too: the site only trusts a
+        # weekly score when it equals the opponent's change in points against (src/lib/core/official.ts).
+        if wk not in OFF.setdefault(sn["code"], {}):
+            OFF[sn["code"]][wk] = {
+                users[r["owner_id"]]: round(r["settings"].get("fpts", 0) + r["settings"].get("fpts_decimal", 0) / 100, 1) for r in ros}
+            OFF.setdefault(sn["code"] + "_pa", {})[wk] = {
+                users[r["owner_id"]]: round(r["settings"].get("fpts_against", 0) + r["settings"].get("fpts_against_decimal", 0) / 100, 1) for r in ros}
 json.dump(OFF, open(OPATH, "w"), indent=1)
 print("official snapshots:", {k: sorted(v) for k, v in OFF.items()})
 print("league.json in-progress season refreshed")

@@ -5,6 +5,7 @@ import { familyView } from "@/lib/app/model";
 import { formatOf } from "@/lib/app/family";
 import { clientIp } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
+import { verifiedWeeks } from "@/lib/core/official";
 import { analysisOf, datasetOf, getFamily, snapshots, storedLeague, type Snapshot, type StoredLeague } from "@/lib/app/store";
 import type { BrandConfig } from "@/components/trash/brand";
 import { initialsOf } from "@/lib/core/names";
@@ -179,18 +180,10 @@ function progressOf(j: StoredLeague["job"]): Progress | null {
 }
 
 /** roster id -> week number (1-based count of finished weeks) -> exact official score. */
+/** Exact weekly scores per roster, only those the official totals prove (core/official.ts). */
 function exactWeekly(snaps: Snapshot[]) {
-  const at = new Map<number, Map<number, number>>();
-  for (const s of snaps) (at.get(s.rosterId) ?? at.set(s.rosterId, new Map()).get(s.rosterId)!).set(s.weeksDone, s.pf);
+  const v = verifiedWeeks(snaps.map((s) => ({ key: String(s.rosterId), weeksDone: s.weeksDone, pf: s.pf, pa: s.pa, day: s.day })));
   const out = new Map<number, Map<number, number>>();
-  for (const [rid, m] of at) {
-    const w = new Map<number, number>();
-    for (const [k, pf] of m) {
-      if (k < 1) continue;
-      const before = k === 1 ? 0 : m.get(k - 1);
-      if (before !== undefined) w.set(k, Math.round((pf - before) * 10) / 10);
-    }
-    out.set(rid, w);
-  }
+  for (const [k, week] of v) for (const [rid, pts] of week) (out.get(Number(rid)) ?? out.set(Number(rid), new Map()).get(Number(rid))!).set(k, pts);
   return out;
 }

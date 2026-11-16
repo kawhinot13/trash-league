@@ -316,19 +316,20 @@ export async function snapshotFamily(f: Family): Promise<number> {
   return n;
 }
 
-export type Snapshot = { rosterId: number; ownerId: string | null; day: string; pf: number; weeksDone: number };
+export type Snapshot = { rosterId: number; ownerId: string | null; day: string; pf: number; pa?: number | null; weeksDone: number };
 
 export async function snapshots(leagueId: string): Promise<Snapshot[]> {
   if (!hasDb()) return [];
   const sql = await db();
-  const rows = await sql<{ roster_id: number; owner_id: string | null; taken_on: Date | string; pf: string; weeks_done: number }[]>`
-    select roster_id, owner_id, taken_on, pf, weeks_done from pf_snapshots where league_id = ${leagueId}
+  const rows = await sql<{ roster_id: number; owner_id: string | null; taken_on: Date | string; pf: string; pa: string | null; weeks_done: number }[]>`
+    select roster_id, owner_id, taken_on, pf, pa, weeks_done from pf_snapshots where league_id = ${leagueId}
     order by taken_on, roster_id`;
   return rows.map((r) => ({
     rosterId: r.roster_id,
     ownerId: r.owner_id,
     day: typeof r.taken_on === "string" ? r.taken_on : r.taken_on.toISOString().slice(0, 10),
     pf: Number(r.pf),
+    pa: r.pa === null ? null : Number(r.pa),
     weeksDone: r.weeks_done,
   }));
 }
