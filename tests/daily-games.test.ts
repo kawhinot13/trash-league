@@ -89,12 +89,10 @@ describe("Dumpster Dive: the same prompts on every device", () => {
     const normal = days.map((d) => dailyPrompts(pool, d).map((q) => q.prompt));
     const orig = Array.prototype.sort;
     try {
-      // eslint-disable-next-line no-extend-native
       Array.prototype.sort = insertionSort as typeof orig;
       const other = days.map((d) => dailyPrompts(pool, d).map((q) => q.prompt));
       expect(other).toEqual(normal);
     } finally {
-      // eslint-disable-next-line no-extend-native
       Array.prototype.sort = orig;
     }
   });
