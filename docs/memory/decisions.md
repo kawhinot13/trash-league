@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: New Dumpster Dive questions: waivers and NBA teams (from 2026-11-18)
+- Owner asked for more, not too niche. Three shapes (`v: 3`, only in the schedule from RESTART so earlier days keep
+  their prompts): "picked up off waivers in <season>" (obvious = scored more for the team that picked him up),
+  "<manager> has picked up off waivers" (obvious = kept longer), "<NBA team> player who has been on a <league>
+  roster" (basketball only; current NBA team; obvious = more weeks rostered). Pickup = on a team's roster in a week
+  without being drafted by it or traded to it that season (rosters week "0" is the draft).
+- Trash pool 94 -> 140 prompts, 12 -> 15 shapes; back-to-back shape repeats over 4 weeks 54 -> 4.
+
 ## 2026-11-17: Power rankings: momentum (recency)
 - Owner wanted recency even when form sits out. Momentum = last three official results (W 1, T 0.5, L 0), weighted
   3/2/1 newest first (`momentumOf`, core/power.ts; `Standing.results` carries Sleeper's record string). Weights:

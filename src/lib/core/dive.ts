@@ -19,8 +19,9 @@ export type Prompt = {
   answers: [string, number][];
   /** The manager the prompt is about, so a day doesn't ask about the same one twice. */
   who?: string;
-  /** Added with the no-repeat schedule (2026-11-16); older days are picked without these. */
-  v?: 2;
+  /** 2: added with the no-repeat schedule (2026-11-16). 3: added 2026-11-18 (waivers, NBA teams); only
+   * the schedule from RESTART uses them, so earlier days keep their prompts. */
+  v?: 2 | 3;
   /** The question's shape ("roster", "traded-for"...), so a day never asks the same kind of thing twice. */
   t?: string;
 };
@@ -31,6 +32,8 @@ type Raw = {
     status: string;
     draft: { no: number; pid: string; by: string; round: number }[];
     trades: { sides: Record<string, string[]> }[];
+    /** Week -> manager -> roster; week "0" is the draft. */
+    rosters?: Record<string, Record<string, string[]>>;
     playoffs: { starters: [string, number][] }[];
     guys: Record<string, Record<string, [number, number, number]>>;
   }[];
@@ -179,10 +182,57 @@ export function divePool(d: Dataset): Prompt[] {
   const late = new Map<string, number>();
   for (const s of raw.seasons) for (const x of s.draft.filter((y) => y.round >= 8)) late.set(x.pid, Math.max(late.get(x.pid) ?? 0, s.guys[x.by]?.[x.pid]?.[2] ?? 0));
   add("Late rounds", `Name a player taken in round 8 or later of any ${d.name} draft.`, late, 0.5, { ...v2, t: "late" });
+
+  // More prompts (v3, from the restart): waiver pickups and NBA teams.
+  const v3 = { v: 3 } as const;
+  // A pickup: on a team's roster in some week without being drafted by it or traded to it that season.
+  const pickedBy = new Map<string, Map<string, number>>(); // manager -> player -> weeks kept
+  for (const s of raw.seasons) {
+    if (!s.rosters) continue;
+    const drafted = new Set(s.draft.map((x) => `${x.by}|${x.pid}`));
+    const traded = new Set(s.trades.flatMap((t) => Object.entries(t.sides).flatMap(([m, ps]) => ps.map((p) => `${m}|${p}`))));
+    const season = new Map<string, number>(); // player -> points for the team that picked him up
+    for (const [w, teams] of Object.entries(s.rosters)) {
+      if (w === "0") continue;
+      for (const [m, ps] of Object.entries(teams))
+        for (const p of ps) {
+          if (drafted.has(`${m}|${p}`) || traded.has(`${m}|${p}`) || p.startsWith("pick:")) continue;
+          const mine = pickedBy.get(m) ?? pickedBy.set(m, new Map()).get(m)!;
+          if (!mine.has(`${s.code}|${p}`)) mine.set(`${s.code}|${p}`, s.guys[m]?.[p]?.[0] ?? 1);
+          season.set(p, Math.max(season.get(p) ?? 0, s.guys[m]?.[p]?.[2] ?? 0));
+        }
+    }
+    add("Waiver wire", `Name a player picked up off waivers in ${years[s.code]}.`, season, 0.5, { ...v3, t: "waivers-season" });
+  }
+  for (const m of active) {
+    const kept = new Map<string, number>();
+    for (const [k, w] of pickedBy.get(m) ?? []) sum(kept, k.split("|")[1], w);
+    add("Waiver wire", `Name a player ${nick(m)} has picked up off waivers.`, kept, 0.55, { ...v3, who: m, t: "waivers-mgr" });
+  }
+  // NBA teams: players on that team now who have been on a league roster (basketball leagues).
+  if (d.sport !== "nfl") {
+    const weeksIn = new Map<string, number>();
+    for (const s of raw.seasons) for (const ps of Object.values(s.guys)) for (const [pid, [w]] of Object.entries(ps)) sum(weeksIn, pid, w);
+    const byTeam = new Map<string, Map<string, number>>();
+    for (const [pid, w] of weeksIn) {
+      const team = players[pid]?.[2];
+      if (team && NBA_TEAMS[team]) (byTeam.get(team) ?? byTeam.set(team, new Map()).get(team)!).set(pid, w);
+    }
+    for (const [team, ps] of [...byTeam].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      add("NBA teams", `Name a ${NBA_TEAMS[team]} player who has been on a ${d.name} roster.`, ps, 0.4, { ...v3, t: "nba-team" });
+  }
   return out;
 }
 
 const ROUNDS = 5;
+
+/** NBA team names by Sleeper's abbreviation (players' current team). */
+const NBA_TEAMS: Record<string, string> = {
+  ATL: "Hawks", BOS: "Celtics", BKN: "Nets", CHA: "Hornets", CHI: "Bulls", CLE: "Cavaliers", DAL: "Mavericks", DEN: "Nuggets",
+  DET: "Pistons", GSW: "Warriors", HOU: "Rockets", IND: "Pacers", LAC: "Clippers", LAL: "Lakers", MEM: "Grizzlies", MIA: "Heat",
+  MIL: "Bucks", MIN: "Timberwolves", NOP: "Pelicans", NYK: "Knicks", OKC: "Thunder", ORL: "Magic", PHI: "76ers", PHX: "Suns",
+  POR: "Trail Blazers", SAC: "Kings", SAS: "Spurs", TOR: "Raptors", UTA: "Jazz", WAS: "Wizards",
+};
 const rng = (seed: number) => () => {
   seed = (seed * 1664525 + 1013904223) % 4294967296;
   return seed / 4294967296;
@@ -219,9 +269,11 @@ const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_40
  * about twice. When fresh prompts run short, a kind is used twice before an old prompt returns,
  * and the longest-rested prompt comes back first.
  */
-export function dailyPrompts(pool: Prompt[], day: string) {
+export function dailyPrompts(all: Prompt[], day: string) {
+  if (day >= RESTART) return planned(all, day);
+  // Days before the restart keep exactly the prompts they had (nothing added since).
+  const pool = all.filter((q) => q.v !== 3);
   if (day < SCHEDULE_FROM) return legacy(pool, day);
-  if (day >= RESTART) return planned(pool, day);
   const restart = false;
   const from = restart ? RESTART : SCHEDULE_FROM;
   const cooldown = Math.max(1, Math.min(14, Math.floor(pool.length / ROUNDS) - 1));
