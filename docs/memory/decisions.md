@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive game feel pass
+- Owner: the game felt basic. Added: a round slate ("ROUND 2 · TRADE LOG") that wipes across with a drum hit, then the
+  question drops in word by word; a wind-up before the throw and a three-ghost motion trail; impact dust and a camera
+  punch (60+); the depth meter "charging" (SOLID / DEEP / DIVER / DEEPEST pop with rising tones as the score passes
+  25/60/90/100); the score readout pulses as it rolls. All transform/opacity; reduced motion shows end states only.
+
 ## 2026-11-17: Dumpster Dive: a perfect 100 has its own holographic tier
 - Owner: 100 is the "one in a krillion" answer and should feel unique. New tier "Deepest in the bin" (`tierOf(100)`):
   `bg` = HOLO foil gradient (cyan, violet, pink, gold) with a shimmer (`.dd-holo`, still under reduced motion), violet

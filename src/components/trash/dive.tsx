@@ -183,7 +183,8 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
   const shown = useRef(0);
   const reportNum = useRef<HTMLSpanElement>(null);
   const [fresh, setFresh] = useState(false);
-  const [savedQs, setSavedQs] = useState<string[] | null>(null); // finished just now (not a revisit): the report plays its full show
+  const [savedQs, setSavedQs] = useState<string[] | null>(null);
+  const [slate, setSlate] = useState<number | null>(null); // finished just now (not a revisit): the report plays its full show
   const [best, setBest] = useState<{ prev: number | null; now: number } | null>(null);
 
   useEffect(() => {
@@ -262,6 +263,17 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
     if (settled) nextBtn.current?.focus();
   }, [settled]);
 
+  // Each round opens with its slate (and a drum hit), then clears so the question takes over.
+  useEffect(() => {
+    if (phase !== "play" || picks.length > i) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSlate(i);
+    sfx.slate();
+    const t = setTimeout(() => setSlate(null), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, i]);
+
   const answer = async (pid: string | null, typed: string) => {
     if (!q || current) return;
     const hit = pid ? q.answers.find(([p]) => p === pid) : undefined;
@@ -334,6 +346,43 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
 
   return (
     <div data-no-rico className="xmas-drift relative overflow-visible rounded-[28px] border border-white/10 bg-[radial-gradient(120%_70%_at_70%_0%,rgba(201,138,75,0.16),rgba(12,32,24,0.92)_60%)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.7)]">
+      {/* Round slate: "ROUND 2 · TRADE LOG" slams across the game as each prompt starts. */}
+      <AnimatePresence>
+        {slate !== null && qs[slate] ? (
+          <motion.div
+            key={`slate-${slate}`}
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-[34%] z-30 flex justify-center overflow-hidden"
+            exit={{ opacity: 0, transition: { duration: 0.18 } }}
+          >
+            <motion.div
+              initial={reduce ? { opacity: 0 } : { scaleX: 0 }}
+              animate={reduce ? { opacity: 1 } : { scaleX: 1 }}
+              transition={{ duration: 0.28, ease: [0.77, 0, 0.175, 1] }}
+              style={{ originX: 0 }}
+              className="w-full -rotate-2 border-y-4 border-[#10141a] bg-[var(--wood)] py-3 text-center text-[#10141a] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            >
+              <motion.p
+                initial={reduce ? { opacity: 0 } : { opacity: 0, x: -80, skewX: -12 }}
+                animate={{ opacity: 1, x: 0, skewX: 0 }}
+                transition={{ delay: 0.12, type: "spring", duration: 0.5, bounce: 0.35 }}
+                className="font-display text-5xl leading-none font-black md:text-7xl"
+              >
+                ROUND {slate + 1}
+              </motion.p>
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.22, duration: 0.25 }}
+                className="font-display mt-1 text-lg font-black tracking-[0.25em] uppercase md:text-2xl"
+              >
+                {kindText(qs[slate].kind, brand.lineup)}
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
       {/* HUD */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 md:px-8">
         <div className="flex items-baseline gap-3">
@@ -469,8 +518,25 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                   <p className="inline-flex rounded-full bg-[var(--wood)]/20 px-3 py-1 text-xs font-bold text-[var(--wood)]">
                     {kindText(q.kind, brand.lineup)}, prompt {i + 1} of {qs.length}
                   </p>
-                  <h3 className="font-display mt-3 max-w-[20ch] text-[clamp(2rem,4.8vw,3.3rem)] leading-[0.96] font-black">
-                    {promptText(q.prompt, brand.lineup)}
+                  <h3
+                    aria-label={promptText(q.prompt, brand.lineup)}
+                    className="font-display mt-3 max-w-[20ch] text-[clamp(2rem,4.8vw,3.3rem)] leading-[0.96] font-black"
+                  >
+                    {/* The question drops in word by word, right after the round's slate. */}
+                    {promptText(q.prompt, brand.lineup)
+                      .split(" ")
+                      .map((w, k) => (
+                        <motion.span
+                          key={k}
+                          aria-hidden
+                          className="inline-block"
+                          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 26, rotate: -4 }}
+                          animate={{ opacity: 1, y: 0, rotate: 0 }}
+                          transition={{ delay: 0.55 + k * 0.045, type: "spring", duration: 0.5, bounce: 0.35 }}
+                        >
+                          {w}&nbsp;
+                        </motion.span>
+                      ))}
                   </h3>
                   <p className="mt-2 text-sm text-[var(--muted)]">{q.answers.length} right answers are in the bin.</p>
                 </motion.div>

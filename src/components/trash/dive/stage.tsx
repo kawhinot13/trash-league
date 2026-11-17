@@ -34,6 +34,14 @@ export const tierOf = (s: number | null): Tier =>
             ? tier({ label: "Solid pull", short: "Solid", color: "var(--paper)", hex: "#f6f3ea" })
             : tier({ label: "Everybody said that", short: "Obvious", color: "var(--muted)", hex: "#a4b8ab" });
 
+/** Depth meter levels: the score where each starts, and its name. */
+const LEVELS: [number, string][] = [
+  [25, "SOLID"],
+  [60, "DEEP"],
+  [90, "DIVER"],
+  [100, "DEEPEST"],
+];
+
 export type StageApi = {
   open: () => void;
   /** `heat`: deep cuts (60+) in a row before this one, for the escalating reveal. */
@@ -111,6 +119,8 @@ export function Stage({
   const flash = useRef<HTMLDivElement>(null);
   const pop = useRef<HTMLSpanElement>(null);
   const spin = useRef<gsap.core.Tween | null>(null);
+  const ghosts = useRef<(HTMLDivElement | null)[]>([]);
+  const levels = useRef<(HTMLDivElement | null)[]>([]);
   const [shown, setShown] = useState<{ pid: string | null; score: number | null } | null>(null);
   const reduce = useRef(false);
 
@@ -120,7 +130,8 @@ export function Stage({
       gsap.set(card.current, { xPercent: -50, yPercent: -50, opacity: 0 });
       gsap.set(banner.current, { xPercent: -50, opacity: 0 });
       gsap.set(lid.current, { svgOrigin: "338 112", rotation: 0 });
-      gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current], { opacity: 0 });
+      gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current, ...ghosts.current, ...levels.current], { opacity: 0 });
+      gsap.set(ghosts.current, { xPercent: -50, yPercent: -50 });
       gsap.set(ring.current, { xPercent: -50, yPercent: -50 });
       gsap.set(pop.current, { xPercent: -50 });
     },
@@ -182,7 +193,13 @@ export function Stage({
       onUpdate: () => {
         const v = Math.round(o.v);
         if (readout.current) readout.current.textContent = String(v);
-        if (Math.floor(v / 10) !== Math.floor(last / 10)) sfx.tick();
+        if (Math.floor(v / 10) !== Math.floor(last / 10)) {
+          sfx.tick();
+          if (readout.current && !reduce.current) gsap.fromTo(readout.current, { scale: 1.12 }, { scale: 1, duration: 0.12, ease: "power2.out" });
+        }
+        LEVELS.forEach(([t], k) => {
+          if (last < t && v >= t) popLevel(k);
+        });
         last = v;
       },
     });
@@ -207,6 +224,36 @@ export function Stage({
     gsap.fromTo(ring.current, { scale: 0.35, opacity: 0.95 }, { scale: 1.6 + strength * 0.5, opacity: 0, duration: 0.75, ease: "power3.out" });
     gsap.set(glow.current, { background: `radial-gradient(closest-side, ${hex}88, transparent)` });
     gsap.fromTo(glow.current, { opacity: 0 }, { keyframes: [{ opacity: 0.55 + strength * 0.25, duration: 0.18 }, { opacity: 0.18 + strength * 0.1, duration: 0.9 }], ease: "power2.out" });
+  };
+
+  /** Impact dust: grey puffs rolling out from where the card hits the trash. */
+  const dust = (topPx: number) => {
+    const host = bits.current;
+    if (!host || reduce.current) return;
+    for (let i = 0; i < 7; i++) {
+      const d = document.createElement("span");
+      d.className = "absolute rounded-full";
+      const size = 26 + Math.random() * 30;
+      Object.assign(d.style, { left: "50%", top: `${topPx}px`, width: `${size}px`, height: `${size}px`, marginLeft: `${-size / 2}px`, marginTop: `${-size / 2}px`, background: "rgba(205,200,185,0.35)" });
+      host.appendChild(d);
+      const a = (i / 7) * Math.PI * 2;
+      gsap.fromTo(d, { scale: 0.3, opacity: 0.8 }, { x: Math.cos(a) * (50 + Math.random() * 40), y: Math.sin(a) * 18 - 10, scale: 1.6, opacity: 0, duration: 0.7, ease: "power2.out", onComplete: () => d.remove() });
+    }
+  };
+
+  /** A quick camera punch: the whole stage pushes in and settles. */
+  const punch = (amt: number) => {
+    if (reduce.current || !root.current) return;
+    gsap.fromTo(root.current, { scale: 1 + amt }, { scale: 1, duration: 0.45, ease: "power3.out" });
+  };
+
+  /** The depth meter charging: each level the card sinks past pops its name, a step higher in pitch. */
+  const popLevel = (i: number) => {
+    const el = levels.current[i];
+    if (!el) return;
+    sfx.level(i);
+    if (reduce.current) return void gsap.set(el, { opacity: 1 });
+    gsap.fromTo(el, { opacity: 0, scale: 1.8, x: -10 }, { opacity: 1, scale: 1, x: 0, duration: 0.32, ease: "back.out(3)" });
   };
 
   /** The score floats up off the card. */
@@ -265,7 +312,7 @@ export function Stage({
   const clearFx = () => {
     spin.current?.kill();
     spin.current = null;
-    gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current], { opacity: 0 });
+    gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current, ...ghosts.current, ...levels.current], { opacity: 0 });
     gsap.set(card.current, { scale: 1 });
   };
 
@@ -305,6 +352,9 @@ export function Stage({
           gsap.set(el, { opacity: 1, left: "50%", top: px(score === null ? 60 : depthY(score)), rotation: 0, scale: 1 });
           if (readout.current) readout.current.textContent = String(score ?? 0);
           gsap.set(needle.current, { y: score === null ? 0 : depthY(score) - depthY(0) });
+          LEVELS.forEach(([t], k) => {
+            if (score !== null && score >= t) gsap.set(levels.current[k], { opacity: 1 });
+          });
           slamBanner();
           if (score === null) sfx.buzz();
           else {
@@ -315,24 +365,36 @@ export function Stage({
           done();
           return;
         }
-        sfx.whoosh();
         const tl = gsap.timeline({ onComplete: () => done() });
-        tl.set(el, { opacity: 1, left: "14%", top: -h * 0.12, rotation: -30, scale: 0.75 });
-        // the throw: an arc up and over the rim
-        tl.to(el, { left: "50%", duration: 0.75, ease: "power1.out" }, 0);
-        tl.to(el, { top: px(40), duration: 0.38, ease: "power2.out" }, 0);
-        tl.to(el, { rotation: 200, scale: 0.9, duration: 0.75, ease: "power1.inOut" }, 0);
+        // wind-up: the card pulls back before the throw
+        tl.set(el, { opacity: 1, left: "14%", top: -h * 0.1, rotation: -20, scale: 0.7 });
+        tl.to(el, { left: "9%", top: -h * 0.06, rotation: -48, scale: 0.66, duration: 0.16, ease: "power2.in" });
+        tl.call(() => sfx.whoosh());
+        tl.addLabel("throw");
+        // the throw: an arc up and over the rim, with a motion trail of ghosts a beat behind
+        tl.to(el, { left: "50%", duration: 0.62, ease: "power1.out" }, "throw");
+        tl.to(el, { top: px(40), duration: 0.32, ease: "power2.out" }, "throw");
+        tl.to(el, { rotation: 220, scale: 0.92, duration: 0.62, ease: "power1.inOut" }, "throw");
+        ghosts.current.forEach((g, k) => {
+          if (!g) return;
+          const lag = 0.045 * (k + 1);
+          tl.set(g, { opacity: 0.32 - k * 0.09, left: "9%", top: -h * 0.06, rotation: -48, scale: 0.66, borderColor: tierOf(score).hex }, `throw+=${lag}`);
+          tl.to(g, { left: "50%", duration: 0.62, ease: "power1.out" }, `throw+=${lag}`);
+          tl.to(g, { top: px(40), duration: 0.32, ease: "power2.out" }, `throw+=${lag}`);
+          tl.to(g, { rotation: 220, scale: 0.92, duration: 0.62, ease: "power1.inOut" }, `throw+=${lag}`);
+          tl.to(g, { opacity: 0, duration: 0.18 }, `throw+=${0.5 + lag}`);
+        });
 
         if (score === null) {
           // the lid slams, the card bounces off and spins away
-          tl.to(lid.current, { rotation: 0, duration: 0.18, ease: "power4.in", onComplete: () => { sfx.slam(); shake(9); } }, 0.2);
-          tl.to(el, { top: px(RIM - 40), duration: 0.37, ease: "power2.in" }, 0.38);
-          tl.to(el, { top: px(-40), left: "96%", rotation: 560, opacity: 0, duration: 0.7, ease: "power2.out" }, 0.75);
-          tl.call(() => { slamBanner(); sfx.buzz(); }, [], 0.85);
+          tl.to(lid.current, { rotation: 0, duration: 0.18, ease: "power4.in", onComplete: () => { sfx.slam(); shake(9); punch(0.03); } }, "throw+=0.16");
+          tl.to(el, { top: px(RIM - 40), duration: 0.3, ease: "power2.in" }, "throw+=0.32");
+          tl.to(el, { top: px(-40), left: "96%", rotation: 560, opacity: 0, duration: 0.7, ease: "power2.out" }, "throw+=0.62");
+          tl.call(() => { slamBanner(); sfx.buzz(); }, [], "throw+=0.72");
           return;
         }
         const target = px(depthY(score));
-        tl.to(el, { top: px(RIM + 10), duration: 0.37, ease: "power2.in" }, 0.38);
+        tl.to(el, { top: px(RIM + 10), duration: 0.3, ease: "power2.in" }, "throw+=0.32");
         const tier = tierOf(score);
         tl.call(() => {
           sfx.thud(score);
@@ -342,14 +404,17 @@ export function Stage({
             return;
           }
           burst(score);
+          dust(px(RIM + 12));
           shake(3 + score / 25);
+          if (score >= 60) punch(0.02 + (score - 60) / 2000);
           gsap.to(".dd-prop", { y: "+=5", duration: 0.12, yoyo: true, repeat: 1, stagger: 0.03 });
           if (score >= 60) shockwave(tier.hex, Math.min(1, (score - 60) / 40 + heat * 0.2));
-        }, [], 0.75);
+        }, [], "throw+=0.62");
         // sinking through the trash, then a little settle
-        tl.to(el, { top: target + px(10), rotation: 360 + (score % 2 ? 7 : -7), scale: 1, duration: 0.55 + score / 160, ease: "power2.in" }, 0.75);
+        tl.to(el, { top: target + px(10), rotation: 360 + (score % 2 ? 7 : -7), scale: 1, duration: 0.55 + score / 160, ease: "power2.in" }, "throw+=0.62");
         tl.to(el, { top: target, rotation: 360 + (score % 2 ? -3 : 3), duration: 0.6, ease: "elastic.out(1, 0.45)" });
-        tl.call(() => countTo(score, 0.9), [], 0.8);
+        // the meter charges while the card sinks, a little longer for deeper answers
+        tl.call(() => countTo(score, 0.75 + score / 220), [], "throw+=0.67");
         tl.call(() => {
           slamBanner();
           sfx.chime(score, heat);
@@ -415,6 +480,17 @@ export function Stage({
       {/* the bin lights up in the tier's color on deep cuts */}
       <div ref={glow} className="pointer-events-none absolute top-[30%] left-[12%] h-[62%] w-[76%]" style={{ opacity: 0 }} />
 
+      {/* motion trail: ghosts of the card a beat behind the throw */}
+      {[0, 1, 2].map((k) => (
+        <div
+          key={k}
+          ref={(el) => {
+            ghosts.current[k] = el;
+          }}
+          className="pointer-events-none absolute top-0 left-1/2 aspect-[4/5] w-[20%] rounded-xl border-[3px] bg-[#f6f3ea]/10"
+          style={{ opacity: 0 }}
+        />
+      ))}
       {/* the card */}
       <div ref={card} className="absolute top-0 left-1/2 w-[20%] will-change-transform">
         <div
@@ -473,6 +549,20 @@ export function Stage({
           ) : null}
         </g>
       </svg>
+
+      {/* depth meter levels, popping as the card sinks past them */}
+      {LEVELS.map(([t, name], k) => (
+        <div
+          key={t}
+          ref={(el) => {
+            levels.current[k] = el;
+          }}
+          className="font-display pointer-events-none absolute z-10 shadow-[0_4px_12px_rgba(0,0,0,0.45)] rounded px-1.5 py-0.5 text-[10px] leading-none font-black tracking-wider text-[#10141a] sm:text-xs"
+          style={{ opacity: 0, left: `${(84 / W) * 100}%`, top: `${(depthY(t) / H) * 100}%`, transform: "translateY(-50%)", background: t === 100 ? HOLO : tierOf(t).hex }}
+        >
+          {name}
+        </div>
+      ))}
 
       {/* shockwave from the impact at the rim */}
       <div ref={ring} className="pointer-events-none absolute left-1/2 aspect-square w-[60%] rounded-full border-[6px]" style={{ top: `${(RIM / H) * 100}%`, opacity: 0 }} />

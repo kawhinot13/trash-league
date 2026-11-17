@@ -103,6 +103,17 @@ export const sfx = {
   },
   /** Personal best on the report. */
   record: () => [0, 4, 7, 12, 16, 19].forEach((s, i) => tone(523 * 2 ** (s / 12), 0.45, "triangle", 0.1, i * 0.06)),
+  /** The depth meter passing a level (0 solid, 1 deep, 2 diver, 3 deepest): each a step higher. */
+  level: (i: number) => {
+    const f = [523, 659, 784, 1047][Math.max(0, Math.min(3, i))];
+    tone(f, 0.16, "square", 0.05);
+    tone(f * 2, 0.22, "triangle", 0.06, 0.04);
+  },
+  /** A round's title slate slamming in: a low drum hit with a snap. */
+  slate: () => {
+    tone(80, 0.3, "sine", 0.3, 0, 45);
+    noise(0.09, 2400, 800, 0.12);
+  },
   /** Final report fanfare. */
   fanfare: () => [0, 4, 7, 12].forEach((s, i) => tone(392 * 2 ** (s / 12), 0.6, "triangle", 0.12, i * 0.11)),
 };
