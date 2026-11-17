@@ -6,7 +6,7 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 ## Shipped
 - Trash site (`src/app/(trash)`): unchanged by the Rafterlore work.
 - Rafterlore (`/l`): username finder; every generic Trash feature for any league: home (banners,
-  stats, ticker, Deep Cut / Rosterdle / The Lineup with per-league leaderboards), live (table, matchup
+  stats, ticker, Dumpster Dive / Rosterdle / The Lineup with per-league leaderboards), live (table, matchup
   of the week, this week, power rankings, recap, waiver wire), managers (cards, all-time, my guys,
   Lock-In, quiz, profiles), rivals (machine, who owns who), history (seasons, trade court, generated
   trade crimes, almanac, re-draft, time machine, pickups), front office; verified removal; /privacy, /terms;

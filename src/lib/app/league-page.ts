@@ -131,7 +131,7 @@ function brandFor(
     badges: Object.fromEntries(
       Object.entries(d?.extras.players ?? {}).map(([pid, p]) => [pid, [initialsOf(p[0]), p[1]?.[0] ?? ""] as [string, string]]),
     ),
-    games: { dive: "Deep Cut", wordle: "Rosterdle", lineup: "The Lineup" },
+    games: { dive: "Dumpster Dive", wordle: "Rosterdle", lineup: "The Lineup" },
     wordleHints: true,
     names: Object.fromEntries(view.careers.map((c) => [c.ownerId, c.name])),
     short: Object.fromEntries(

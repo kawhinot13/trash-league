@@ -83,7 +83,10 @@ export function Stage({
   /** When set, the lid opens for a fresh round every time this changes. */
   round?: number;
 }) {
-  const brandHoliday = useBrand().holiday;
+  const brand = useBrand();
+  const brandHoliday = brand.holiday;
+  // Trash's bin says TRASH; other leagues get a plain dumpster.
+  const binLabel = brand.base ? "DUMPSTER" : "TRASH";
   const holiday = HOLIDAY && brandHoliday;
   const root = useRef<HTMLDivElement>(null);
   const lid = useRef<SVGGElement>(null);
@@ -433,7 +436,7 @@ export function Stage({
         <rect x="58" y={RIM - 10} width="284" height="16" rx="5" fill="#1f4a39" stroke={INK} strokeWidth="5" />
         <rect x="70" y="392" width="260" height="20" rx="4" fill="#1f4a39" stroke={INK} strokeWidth="5" />
         <text x="200" y="408" textAnchor="middle" fontSize="13" fontWeight="900" fill="#f6f3ea" fillOpacity=".5" fontFamily="var(--font-trash-display)" letterSpacing="3">
-          TRASH
+          {binLabel}
         </text>
         {/* wheels */}
         {[104, 296].map((x) => (

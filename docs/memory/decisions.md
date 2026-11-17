@@ -257,8 +257,8 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
 - Excluded from the generic site (Trash pack or Trash-only): Rico, the pig, the song, holiday decor,
   story, movie, storm, Mickey Mouse inquiry, nicknames, hand-written trade crimes (Rafterlore
   generates its own from the most lopsided trades).
-- Game names on Rafterlore: Deep Cut (dive), Rosterdle (wordle), The Lineup. The dive keeps its
-  dumpster art for now. Leaderboards are per league in Postgres (`game_scores`).
+- Game names on Rafterlore: Dumpster Dive (dive; was "Deep Cut" until 2026-11-17, owner renamed it to match the
+  dumpster art; the bin reads DUMPSTER, Trash's reads TRASH), Rosterdle (wordle), The Lineup. Leaderboards are per league in Postgres (`game_scores`).
 
 ## 2026-11-15: Verified league removal
 - A Sleeper username is public, so it can't authorize removal. Removal and restore now need a

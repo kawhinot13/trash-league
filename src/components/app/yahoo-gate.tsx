@@ -79,7 +79,7 @@ function brandOf(id: string, d: Dataset): BrandConfig {
     avatars: Object.fromEntries(d.league.managers.map((m) => [m.id, null])),
     headshots: "badge",
     badges: Object.fromEntries(Object.entries(d.extras.players).map(([pid, p]) => [pid, [initialsOf(p[0]), p[1]?.[0] ?? ""] as [string, string]])),
-    games: { dive: "Deep Cut", wordle: "Rosterdle", lineup: "The Lineup" },
+    games: { dive: "Dumpster Dive", wordle: "Rosterdle", lineup: "The Lineup" },
     wordleHints: true,
     names: Object.fromEntries(d.league.managers.map((m) => [m.id, m.nick])),
     short: Object.fromEntries(d.league.seasons.map((s) => [s.code, `’${s.years.slice(2, 4)}`])),
