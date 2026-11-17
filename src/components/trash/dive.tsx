@@ -1,5 +1,6 @@
 "use client";
 
+import confetti from "canvas-confetti";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
@@ -36,6 +37,21 @@ const store = {
       localStorage.setItem(k, JSON.stringify(v));
     } catch {}
   },
+};
+
+/** Rank thresholds, lowest first, for the report's "next rank" meter. */
+const RANKS: [number, string][] = [
+  [0, "Read the group chat sometimes"],
+  [100, "Casual"],
+  [200, "Knows ball"],
+  [300, "Deep diver"],
+  [400, "Lives in the dumpster"],
+];
+/** Deep cuts (60+) in a row, ending at index `end` (inclusive). */
+const heatAt = (picks: Pick[], end: number) => {
+  let n = 0;
+  for (let k = end; k >= 0 && (picks[k]?.score ?? -1) >= 60; k--) n++;
+  return n;
 };
 
 const rankOf = (total: number) =>
@@ -164,6 +180,9 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
   const total = useRef<HTMLSpanElement>(null);
   const nextBtn = useRef<HTMLButtonElement>(null);
   const shown = useRef(0);
+  const reportNum = useRef<HTMLSpanElement>(null);
+  const [fresh, setFresh] = useState(false); // finished just now (not a revisit): the report plays its full show
+  const [best, setBest] = useState<{ prev: number | null; now: number } | null>(null);
 
   useEffect(() => {
     const d = todayET();
@@ -171,6 +190,8 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     setDay(d);
     setMuted(sfx.isMuted());
     setStreak(store.get<{ last: string; n: number }>(brand.key("dive:streak"))?.n ?? 0);
+    const b = store.get<number>(brand.key("dive:best"));
+    if (b !== null) setBest({ prev: b, now: b });
     const saved = store.get<Saved>(brand.key(`dive3:${d}`));
     if (saved?.picks?.length === ROUNDS) {
       setPicks(saved.picks);
@@ -187,6 +208,8 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
   useEffect(() => {
     if (!settled && phase === "play") return;
     const o = { v: shown.current };
+    if (sum > shown.current && total.current && !reduce)
+      gsap.fromTo(total.current, { scale: 1.35 }, { scale: 1, duration: 0.6, delay: 0.5, ease: "elastic.out(1, 0.5)" });
     gsap.to(o, {
       v: sum,
       duration: reduce ? 0 : 0.8,
@@ -207,7 +230,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     const hit = pid ? q.answers.find(([p]) => p === pid) : undefined;
     const score = hit ? hit[1] : null;
     setPicks((x) => [...x.slice(0, i), { pid, typed, score }]);
-    await stage.current?.drop(pid, score);
+    await stage.current?.drop(pid, score, heatAt(picks, i - 1));
     setSettled(true);
   };
   const next = () => {
@@ -215,8 +238,12 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     setBoard(false);
     if (i + 1 < qs.length) return setI(i + 1);
     setPhase("done");
+    setFresh(true);
     sfx.fanfare();
     if (!day) return;
+    const prevBest = store.get<number>(brand.key("dive:best"));
+    store.set(brand.key("dive:best"), Math.max(prevBest ?? 0, sum));
+    setBest({ prev: prevBest, now: Math.max(prevBest ?? 0, sum) });
     store.set(brand.key(`dive3:${day}`), { picks } satisfies Saved);
     const st = store.get<{ last: string; n: number }>(brand.key("dive:streak"));
     const y = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
@@ -224,6 +251,43 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     store.set(brand.key("dive:streak"), { last: day, n });
     setStreak(n);
   };
+  // The report: the total counts up (with ticks), and a big night gets confetti.
+  const newBest = fresh && best !== null && best.prev !== null && sum > best.prev;
+  useEffect(() => {
+    if (phase !== "done" || !reportNum.current) return;
+    const el = reportNum.current;
+    if (!fresh || reduce) {
+      el.textContent = String(sum);
+      return;
+    }
+    const o = { v: 0 };
+    let last = 0;
+    const tw = gsap.to(o, {
+      v: sum,
+      duration: 1.4,
+      delay: 0.25,
+      ease: "power3.out",
+      onUpdate: () => {
+        const v = Math.round(o.v);
+        el.textContent = String(v);
+        if (Math.floor(v / 25) !== Math.floor(last / 25)) sfx.tick();
+        last = v;
+      },
+      onComplete: () => {
+        if (newBest) sfx.record();
+        if (sum >= 300 || newBest) {
+          const colors = ["#e9c46a", "#c98a4b", "#f6f3ea", "#7fd49a"];
+          void confetti({ particleCount: 120, spread: 100, startVelocity: 40, origin: { y: 0.55 }, colors, disableForReducedMotion: true });
+        }
+      },
+    });
+    return () => {
+      tw.kill();
+    };
+  }, [phase, fresh, sum, reduce, newBest]);
+  const nextRank = RANKS.find(([t]) => t > sum);
+  const floor = [...RANKS].reverse().find(([t]) => t <= sum)?.[0] ?? 0;
+
   const share = async () => {
     const sq = picks.map((p) => (p.score === null ? "⬛" : p.score >= 90 ? "🟫" : p.score >= 60 ? "🟩" : p.score >= 25 ? "🟨" : "🟥"));
     const text = `${brand.games.dive} #${edition} ${sq.join("")} ${sum}/${ROUNDS * 100}\n${location.origin}${brand.base || "/"}#dive`;
@@ -243,6 +307,26 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
           <span className="text-sm text-[var(--muted)]">{edition ? `No. ${edition}` : ""}</span>
         </div>
         <div className="flex items-center gap-3">
+          <AnimatePresence>
+            {(() => {
+              const h = phase === "play" && settled ? heatAt(picks, i) : 0;
+              return h >= 2 ? (
+                <motion.span
+                  key={h}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.8, rotate: -12 }}
+                  animate={{ opacity: 1, scale: 1, rotate: -3 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0.5 }}
+                  className="font-display inline-flex items-center gap-1 rounded-full bg-[var(--wood)] px-3 py-1 text-lg font-black text-[#10141a]"
+                >
+                  <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
+                    <path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-3 3 1 5 4 5 7a7 7 0 0 1-14 0c0-6 6-8 7-13z" />
+                  </svg>
+                  {h} deep in a row
+                </motion.span>
+              ) : null;
+            })()}
+          </AnimatePresence>
           <div className="flex gap-1" aria-label="Round results">
             {Array.from({ length: ROUNDS }, (_, k) => {
               const p = picks[k];
@@ -436,8 +520,18 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
               <div className="grid gap-8 md:grid-cols-[1fr_1fr] md:items-center">
                 <div className="text-center md:text-left">
                   <p className="text-sm text-[var(--muted)]">Dive report</p>
+                  {newBest ? (
+                    <motion.p
+                      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ type: "spring", duration: 0.5, bounce: 0.4, delay: 1.7 }}
+                      className="font-display mt-1 inline-block rounded-full bg-[var(--wood)] px-3 py-0.5 text-lg font-black text-[#10141a]"
+                    >
+                      New personal best
+                    </motion.p>
+                  ) : null}
                   <p className="font-display text-[clamp(4.5rem,15vw,8rem)] leading-none font-black tabular-nums">
-                    {sum}
+                    <span ref={reportNum}>{sum}</span>
                     <span className="text-[0.35em] text-[var(--muted)]">/{ROUNDS * 100}</span>
                   </p>
                   <motion.p
@@ -448,21 +542,46 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
                   >
                     {rankOf(sum)}
                   </motion.p>
-                  {streak > 1 ? <p className="mt-3 text-sm text-[var(--muted)]">{streak}-day streak</p> : null}
+                  {nextRank ? (
+                    <div className="mx-auto mt-5 max-w-sm md:mx-0">
+                      <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                        <motion.div
+                          className="h-full origin-left rounded-full bg-[var(--wood)]"
+                          initial={{ scaleX: fresh && !reduce ? 0 : (sum - floor) / (nextRank[0] - floor) }}
+                          animate={{ scaleX: (sum - floor) / (nextRank[0] - floor) }}
+                          transition={{ duration: 1.1, delay: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                        />
+                      </div>
+                      <p className="mt-1.5 text-sm text-[var(--muted)]">
+                        {nextRank[0] - sum} more for <span className="font-semibold text-[var(--paper)]">{nextRank[1]}</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm font-semibold text-[var(--wood)]">Top rank. Nothing deeper exists.</p>
+                  )}
+                  <p className="mt-3 text-sm text-[var(--muted)]">
+                    {streak > 1 ? `${streak}-day streak` : null}
+                    {streak > 1 && best ? " · " : null}
+                    {best ? `Personal best ${best.now}` : null}
+                  </p>
                 </div>
                 {/* the hand: five cards fanned out */}
-                <div className="flex justify-center py-6">
+                <div className="flex justify-center py-6 [perspective:900px]">
                   {picks.map((p, k) => {
                     const t = tierOf(p.score);
                     const rot = (k - 2) * 8;
                     return (
                       <motion.div
                         key={k}
-                        initial={reduce ? false : { y: 80, opacity: 0, rotate: 0 }}
-                        animate={{ y: Math.abs(k - 2) * 8, opacity: 1, rotate: rot }}
-                        transition={{ type: "spring", duration: 0.7, bounce: 0.3, delay: 0.15 + k * 0.08 }}
-                        className="-mx-2 w-[22%] max-w-[96px] overflow-hidden rounded-xl border-[3px] bg-[#0d241a] shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
-                        style={{ borderColor: t.hex, transformOrigin: "50% 120%" }}
+                        initial={reduce ? false : { y: 80, opacity: 0, rotate: 0, rotateY: 100 }}
+                        animate={{ y: Math.abs(k - 2) * 8, opacity: 1, rotate: rot, rotateY: 0 }}
+                        transition={{ type: "spring", duration: 0.8, bounce: 0.3, delay: 0.15 + k * 0.11 }}
+                        className="-mx-2 w-[22%] max-w-[96px] overflow-hidden rounded-xl border-[3px] bg-[#0d241a]"
+                        style={{
+                          borderColor: t.hex,
+                          transformOrigin: "50% 120%",
+                          boxShadow: (p.score ?? 0) >= 90 ? "0 0 28px rgba(233,196,106,0.75), 0 12px 30px rgba(0,0,0,0.5)" : "0 12px 30px rgba(0,0,0,0.5)",
+                        }}
                       >
                         <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle_at_50%_30%,#2a5a45,#0d241a)]">
                           {p.pid ? <Face pid={p.pid} players={players} size={56} /> : <span className="font-display text-3xl font-black text-[var(--ticket)]">×</span>}

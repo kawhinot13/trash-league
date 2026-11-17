@@ -4,6 +4,15 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Deep Cut rewards escalate with depth
+- Owner asked for cooler, more rewarding animations. Reveals now scale with the score (stage.tsx): under 25 flops in
+  with a "meh" (no shake); 60+ adds a shockwave ring and the bin glowing in the tier color; 90+ is a takeover (light
+  rays turning behind the bin, flash, card punch, side confetti cannons, bass drop); 100 says "Deepest in the bin".
+  "+N" floats off the card; the HUD total pulses. Deep cuts in a row show "N deep in a row" and raise the chime.
+- Report: total counts up with ticks, cards flip in, 90+ cards glow gold, rank meter to the next rank, personal best
+  (`dive:best`, browser only) with a "New personal best" stamp; confetti for 300+ or a new best.
+- Scoring unchanged (standings stay comparable). Reduced motion: no movement, effects shown without motion.
+
 ## 2026-11-17: Team names on Rafterlore daily-game standings; no emails
 - Owner asked for "your email" and "your team" on the standings. Team names (public Sleeper data) now show beside
   each manager (`teams` in `/api/l/[id]/scores`, from `newestSeason`), hidden when they just repeat the name.

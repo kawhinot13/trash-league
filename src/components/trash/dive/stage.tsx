@@ -28,7 +28,8 @@ export const tierOf = (s: number | null) =>
 
 export type StageApi = {
   open: () => void;
-  drop: (pid: string | null, score: number | null) => Promise<void>;
+  /** `heat`: deep cuts (60+) in a row before this one, for the escalating reveal. */
+  drop: (pid: string | null, score: number | null, heat?: number) => Promise<void>;
   reset: () => void;
 };
 
@@ -93,6 +94,12 @@ export function Stage({
   const shine = useRef<HTMLSpanElement>(null);
   const bits = useRef<HTMLDivElement>(null);
   const fx = useRef<HTMLCanvasElement>(null);
+  const rays = useRef<HTMLDivElement>(null);
+  const ring = useRef<HTMLDivElement>(null);
+  const glow = useRef<HTMLDivElement>(null);
+  const flash = useRef<HTMLDivElement>(null);
+  const pop = useRef<HTMLSpanElement>(null);
+  const spin = useRef<gsap.core.Tween | null>(null);
   const [shown, setShown] = useState<{ pid: string | null; score: number | null } | null>(null);
   const reduce = useRef(false);
 
@@ -102,6 +109,9 @@ export function Stage({
       gsap.set(card.current, { xPercent: -50, yPercent: -50, opacity: 0 });
       gsap.set(banner.current, { xPercent: -50, opacity: 0 });
       gsap.set(lid.current, { svgOrigin: "338 112", rotation: 0 });
+      gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current], { opacity: 0 });
+      gsap.set(ring.current, { xPercent: -50, yPercent: -50 });
+      gsap.set(pop.current, { xPercent: -50 });
     },
     { scope: root },
   );
@@ -179,6 +189,55 @@ export function Stage({
     gsap.fromTo(shine.current, { xPercent: -120 }, { xPercent: 220, duration: 0.9, delay: 0.3, ease: "power2.inOut" });
   };
 
+  /** Deep cuts: a shockwave ring from the impact and the bin glowing in the tier's color. */
+  const shockwave = (hex: string, strength: number) => {
+    if (reduce.current) return;
+    gsap.set(ring.current, { borderColor: hex });
+    gsap.fromTo(ring.current, { scale: 0.35, opacity: 0.95 }, { scale: 1.6 + strength * 0.5, opacity: 0, duration: 0.75, ease: "power3.out" });
+    gsap.set(glow.current, { background: `radial-gradient(closest-side, ${hex}88, transparent)` });
+    gsap.fromTo(glow.current, { opacity: 0 }, { keyframes: [{ opacity: 0.55 + strength * 0.25, duration: 0.18 }, { opacity: 0.18 + strength * 0.1, duration: 0.9 }], ease: "power2.out" });
+  };
+
+  /** The score floats up off the card. */
+  const floatScore = (score: number, hex: string, topPx: number) => {
+    const el = pop.current;
+    if (!el) return;
+    el.textContent = `+${score}`;
+    el.style.color = hex;
+    if (reduce.current) {
+      gsap.set(el, { top: topPx - 40, opacity: 1 });
+      gsap.to(el, { opacity: 0, delay: 1.2, duration: 0.3 });
+      return;
+    }
+    gsap.fromTo(el, { top: topPx - 10, opacity: 0, scale: 0.8 }, { top: topPx - 70, opacity: 1, scale: 1, duration: 0.5, ease: "power3.out" });
+    gsap.to(el, { opacity: 0, top: topPx - 100, duration: 0.4, delay: 1.1, ease: "power2.in" });
+  };
+
+  /** 90+: the takeover. Light rays behind the bin, a flash, the card punches toward you, side cannons. */
+  const takeover = (heat: number) => {
+    if (reduce.current) {
+      gsap.to(rays.current, { opacity: 0.6, duration: 0.3 });
+      return;
+    }
+    sfx.boom();
+    gsap.fromTo(flash.current, { opacity: 0.7 }, { opacity: 0, duration: 0.5, ease: "power2.out" });
+    gsap.fromTo(rays.current, { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.6, ease: "power3.out" });
+    spin.current?.kill();
+    spin.current = gsap.fromTo(rays.current, { rotation: 0 }, { rotation: 360, duration: 24, ease: "none", repeat: -1 });
+    gsap.timeline()
+      .to(card.current, { scale: 1.5, duration: 0.22, ease: "back.out(2.5)" })
+      .to(card.current, { scale: 1, duration: 0.7, ease: "elastic.out(1, 0.45)" });
+    if (fx.current) {
+      const shoot = confetti.create(fx.current, { resize: true, useWorker: true });
+      const colors = ["#e9c46a", "#c98a4b", "#f6f3ea", "#7fd49a"];
+      const n = 40 + Math.min(heat, 4) * 15;
+      setTimeout(() => {
+        void shoot({ particleCount: n, angle: 60, spread: 55, startVelocity: 45, origin: { x: 0.1, y: 0.75 }, colors, scalar: 0.8 });
+        void shoot({ particleCount: n, angle: 120, spread: 55, startVelocity: 45, origin: { x: 0.9, y: 0.75 }, colors, scalar: 0.8 });
+      }, 250);
+    }
+  };
+
   const celebrate = () => {
     if (reduce.current || !fx.current) return;
     const shoot = confetti.create(fx.current, { resize: true, useWorker: true });
@@ -187,7 +246,15 @@ export function Stage({
     setTimeout(() => void shoot({ particleCount: 50, spread: 120, startVelocity: 28, origin: { x: 0.5, y: RIM / H }, colors, scalar: 0.7 }), 180);
   };
 
+  const clearFx = () => {
+    spin.current?.kill();
+    spin.current = null;
+    gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current], { opacity: 0 });
+    gsap.set(card.current, { scale: 1 });
+  };
+
   const open = () => {
+    clearFx();
     setShown(null);
     gsap.set(card.current, { opacity: 0 });
     gsap.set(banner.current, { opacity: 0 });
@@ -206,13 +273,14 @@ export function Stage({
   useImperativeHandle(apiRef, () => ({
     open,
     reset: contextSafe(() => {
+      clearFx();
       setShown(null);
       gsap.set(card.current, { opacity: 0 });
       gsap.set(banner.current, { opacity: 0 });
       gsap.set(needle.current, { y: 0 });
       gsap.to(lid.current, { rotation: 0, duration: 0.3 });
     }),
-    drop: contextSafe((pid: string | null, score: number | null) => {
+    drop: contextSafe((pid: string | null, score: number | null, heat = 0) => {
       setShown({ pid, score });
       const el = card.current!;
       const h = root.current!.clientHeight;
@@ -223,7 +291,11 @@ export function Stage({
           gsap.set(needle.current, { y: score === null ? 0 : depthY(score) - depthY(0) });
           slamBanner();
           if (score === null) sfx.buzz();
-          else sfx.chime(score);
+          else {
+            sfx.chime(score, heat);
+            floatScore(score, tierOf(score).hex, px(depthY(score)));
+            if (score >= 90) takeover(heat);
+          }
           done();
           return;
         }
@@ -245,12 +317,34 @@ export function Stage({
         }
         const target = px(depthY(score));
         tl.to(el, { top: px(RIM + 10), duration: 0.37, ease: "power2.in" }, 0.38);
-        tl.call(() => { sfx.thud(score); burst(score); shake(3 + score / 25); gsap.to(".dd-prop", { y: "+=5", duration: 0.12, yoyo: true, repeat: 1, stagger: 0.03 }); }, [], 0.75);
+        const tier = tierOf(score);
+        tl.call(() => {
+          sfx.thud(score);
+          if (score < 25) {
+            // the obvious answer: it just flops in
+            sfx.meh();
+            return;
+          }
+          burst(score);
+          shake(3 + score / 25);
+          gsap.to(".dd-prop", { y: "+=5", duration: 0.12, yoyo: true, repeat: 1, stagger: 0.03 });
+          if (score >= 60) shockwave(tier.hex, Math.min(1, (score - 60) / 40 + heat * 0.2));
+        }, [], 0.75);
         // sinking through the trash, then a little settle
         tl.to(el, { top: target + px(10), rotation: 360 + (score % 2 ? 7 : -7), scale: 1, duration: 0.55 + score / 160, ease: "power2.in" }, 0.75);
         tl.to(el, { top: target, rotation: 360 + (score % 2 ? -3 : 3), duration: 0.6, ease: "elastic.out(1, 0.45)" });
         tl.call(() => countTo(score, 0.9), [], 0.8);
-        tl.call(() => { slamBanner(); sfx.chime(score); if (score >= 90) { celebrate(); shake(10); gsap.fromTo(lid.current, { rotation: -118 }, { rotation: -100, yoyo: true, repeat: 3, duration: 0.09 }); } }, [], "-=0.35");
+        tl.call(() => {
+          slamBanner();
+          sfx.chime(score, heat);
+          floatScore(score, tier.hex, target);
+          if (score >= 90) {
+            celebrate();
+            takeover(heat);
+            shake(10);
+            gsap.fromTo(lid.current, { rotation: -118 }, { rotation: -100, yoyo: true, repeat: 3, duration: 0.09 });
+          }
+        }, [], "-=0.35");
       });
     }),
   }));
@@ -258,6 +352,17 @@ export function Stage({
   const t = shown ? tierOf(shown.score) : null;
   return (
     <div ref={root} className="relative mx-auto aspect-[400/440] w-full select-none" aria-hidden>
+      {/* light rays for the deepest cuts (90+), turning slowly behind the bin */}
+      <div
+        ref={rays}
+        className="pointer-events-none absolute inset-[-30%] will-change-transform"
+        style={{
+          opacity: 0,
+          background: "repeating-conic-gradient(from 0deg at 50% 50%, rgba(233,196,106,0.30) 0deg 6deg, transparent 6deg 20deg)",
+          WebkitMaskImage: "radial-gradient(closest-side, #000 25%, transparent 72%)",
+          maskImage: "radial-gradient(closest-side, #000 25%, transparent 72%)",
+        }}
+      />
       {/* spotlight */}
       <div className="absolute inset-[-10%] rounded-full bg-[radial-gradient(closest-side,rgba(201,138,75,0.22),transparent)]" />
 
@@ -290,6 +395,9 @@ export function Stage({
           </g>
         </g>
       </svg>
+
+      {/* the bin lights up in the tier's color on deep cuts */}
+      <div ref={glow} className="pointer-events-none absolute top-[30%] left-[12%] h-[62%] w-[76%]" style={{ opacity: 0 }} />
 
       {/* the card */}
       <div ref={card} className="absolute top-0 left-1/2 w-[20%] will-change-transform">
@@ -350,6 +458,13 @@ export function Stage({
         </g>
       </svg>
 
+      {/* shockwave from the impact at the rim */}
+      <div ref={ring} className="pointer-events-none absolute left-1/2 aspect-square w-[60%] rounded-full border-[6px]" style={{ top: `${(RIM / H) * 100}%`, opacity: 0 }} />
+      {/* the flash on a 90+ */}
+      <div ref={flash} className="pointer-events-none absolute inset-[-10%] rounded-[40px] bg-[#fff6dc]" style={{ opacity: 0 }} />
+      {/* "+87" floating off the card */}
+      <span ref={pop} className="font-display pointer-events-none absolute left-1/2 z-20 text-4xl font-black tabular-nums drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)]" style={{ opacity: 0 }} />
+
       {/* debris + confetti */}
       <div ref={bits} className="pointer-events-none absolute inset-0" />
       <canvas ref={fx} className="pointer-events-none absolute inset-[-20%] h-[140%] w-[140%]" />
@@ -364,7 +479,7 @@ export function Stage({
 
       {/* tier banner */}
       <div ref={banner} className="absolute top-[34%] left-1/2 overflow-hidden rounded-lg border-[3px] px-4 py-1.5 whitespace-nowrap shadow-[0_10px_30px_rgba(0,0,0,0.5)]" style={{ borderColor: INK, background: t?.hex ?? "#f6f3ea" }}>
-        <span className="font-display relative z-10 text-2xl font-black text-[#10141a] sm:text-3xl">{t?.label ?? ""}</span>
+        <span className="font-display relative z-10 text-2xl font-black text-[#10141a] sm:text-3xl">{shown?.score === 100 ? "Deepest in the bin" : (t?.label ?? "")}</span>
         <span ref={shine} className="absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-white/50" />
       </div>
     </div>

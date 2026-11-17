@@ -79,9 +79,9 @@ export const sfx = {
     noise(0.18, 400, 180, 0.12);
   },
   tick: () => tone(1400, 0.035, "square", 0.025),
-  /** Tier reveal: brighter chords for deeper cuts. */
-  chime: (score: number) => {
-    const base = score >= 90 ? 523 : score >= 60 ? 440 : score >= 25 ? 392 : 330;
+  /** Tier reveal: brighter chords for deeper cuts, a step higher for each deep cut in a row. */
+  chime: (score: number, heat = 0) => {
+    const base = (score >= 90 ? 523 : score >= 60 ? 440 : score >= 25 ? 392 : 330) * 2 ** (Math.min(heat, 4) * 2 / 12);
     const steps = score >= 90 ? [0, 4, 7, 12, 16] : score >= 60 ? [0, 4, 7] : [0, 5];
     steps.forEach((s, i) => tone(base * 2 ** (s / 12), 0.5, "triangle", 0.12, i * 0.07));
   },
@@ -91,6 +91,18 @@ export const sfx = {
     noise(0.12, 900, 200, 0.18);
   },
   buzz: () => tone(110, 0.45, "sawtooth", 0.09, 0.08, 90),
+  /** The obvious answer: a deflating two-note shrug. */
+  meh: () => {
+    tone(330, 0.18, "triangle", 0.08);
+    tone(262, 0.32, "triangle", 0.08, 0.16, 240);
+  },
+  /** The deepest cuts: a bass drop under the chord. */
+  boom: () => {
+    tone(90, 0.7, "sine", 0.38, 0, 34);
+    noise(0.5, 300, 60, 0.16);
+  },
+  /** Personal best on the report. */
+  record: () => [0, 4, 7, 12, 16, 19].forEach((s, i) => tone(523 * 2 ** (s / 12), 0.45, "triangle", 0.1, i * 0.06)),
   /** Final report fanfare. */
   fanfare: () => [0, 4, 7, 12].forEach((s, i) => tone(392 * 2 ** (s / 12), 0.6, "triangle", 0.12, i * 0.11)),
 };
