@@ -6,11 +6,13 @@ import { divePool } from "@/lib/dive";
 const pool = divePool();
 
 describe("Dumpster Dive", () => {
-  it("every prompt has answers, deepest first, scored 0-100", () => {
+  it("every prompt has answers, deepest first, scored 1-100 (only a miss scores 0)", () => {
     expect(pool.length).toBeGreaterThan(20);
     for (const q of pool) {
       expect(q.answers.length).toBeGreaterThan(0);
-      for (const [, s] of q.answers) expect(s >= 0 && s <= 100).toBe(true);
+      for (const [, s] of q.answers) expect(s >= 1 && s <= 100).toBe(true);
+      expect(q.answers[q.answers.length - 1][1]).toBe(1);
+      expect(q.answers[0][1]).toBe(100);
       for (let i = 1; i < q.answers.length; i++) expect(q.answers[i - 1][1]).toBeGreaterThanOrEqual(q.answers[i][1]);
       expect(new Set(q.answers.map(([pid]) => pid)).size).toBe(q.answers.length);
     }

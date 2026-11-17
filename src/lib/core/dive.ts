@@ -10,7 +10,7 @@ import type { Dataset } from "@/lib/core/types";
  *    early he has ever been drafted in Trash (30%) and weeks on Trash rosters (20%).
  *  - The prompt's own signal, e.g. for "taken in the first round" an earlier pick is more
  *    obvious; for "started for Rico" more starts for Rico is more obvious.
- * Answers are ranked by that mix: the most obvious scores 0, the deepest cut 100.
+ * Answers are ranked by that mix: the most obvious scores 1, the deepest cut 100 (a miss scores 0).
  */
 export type Prompt = {
   kind: string;
@@ -86,12 +86,13 @@ export function divePool(d: Dataset): Prompt[] {
     const ids = [...signal.keys()].filter((p) => players[p]?.[0]);
     const local = pct(new Map(ids.map((p) => [p, signal.get(p)!])));
     const obvious = ids.map((p) => [p, weight * local.get(p)! + (1 - weight) * (fame.get(p) ?? 0)] as const);
-    // Rank from most obvious (0) to deepest (100). Ties break by league fame, then id, so every
+    // Rank from most obvious (1) to deepest (100). Ties break by league fame, then id, so every
     // prompt has exactly one 100-point answer and one 0.
     const order = [...obvious].sort(([pa, a], [pb, b]) => b - a || (fame.get(pb) ?? 0) - (fame.get(pa) ?? 0) || (pa < pb ? -1 : pa > pb ? 1 : 0));
     const n = order.length;
     return order
-      .map(([p], i) => [p, i === n - 1 ? 100 : Math.min(99, Math.round((100 * i) / Math.max(1, n - 1)))] as [string, number])
+      // A right answer always scores something: the most obvious one is 1, never 0 (0 means a miss).
+      .map(([p], i) => [p, i === n - 1 ? 100 : Math.max(1, Math.min(99, Math.round((100 * i) / Math.max(1, n - 1))))] as [string, number])
       .sort((a, b) => b[1] - a[1]);
   }
 

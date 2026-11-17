@@ -4,6 +4,10 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive: a right answer scores at least 1
+- Owner: the most obvious right answer scored 0, same as a miss. Now right answers score 1-100; only a miss is 0.
+  Scores already saved keep their values.
+
 ## 2026-11-17: Daily games: high scores, resume, live standings, 5-letter Rosterdle, prompt variety
 - High scores: `/api/l/[id]/scores` returns `best` (each manager's top single day, date, label); the standings get a
   "High scores" tab (Rafterlore; Trash's Redis board unchanged).
