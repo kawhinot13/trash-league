@@ -90,6 +90,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
     const all: Record<string, { points: number; played: number; wins: number }> = {};
     // Each manager's best single day ever in this game (high score), with the date.
     const best: Record<string, { score: number; day: string; label: string }> = {};
+    // ...and the best before the asked-for day, so a game can tell whether today set a new personal best.
+    const bestBefore: Record<string, number> = {};
     const topOfDay = new Map<string, number>();
     for (const r of rows) {
       const d = r.day.toISOString().slice(0, 10);
@@ -106,6 +108,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
       {
         const b = best[r.manager];
         if (!b || r.score > b.score) best[r.manager] = { score: r.score, day: d, label: r.label };
+        if (d < day) bestBefore[r.manager] = Math.max(bestBefore[r.manager] ?? 0, r.score);
       }
       const a = (all[r.manager] ??= { points: 0, played: 0, wins: 0 });
       a.points += r.score;
@@ -121,7 +124,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
       const t = season?.teams.get(m);
       if (t) teams[m] = t;
     }
-    return Response.json({ enabled: true, today, week, all, best, teams, viewer }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ enabled: true, today, week, all, best, bestBefore, teams, viewer }, { headers: { "cache-control": "no-store" } });
   } catch (e) {
     logError(`scores ${leagueId}`, e);
     return Response.json({ enabled: false });

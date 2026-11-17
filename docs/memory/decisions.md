@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Personal best = your high score
+- Owner: the report's "Personal best" (browser-only) disagreed with the standings' high score. On Rafterlore with a
+  linked account it now comes from the standings (`best` + new `bestBefore` in /api/l/[id]/scores, passed up from the
+  Leaderboard via `onMine`); "New personal best" compares with your best before today. Browser record is the fallback
+  (Trash site, signed out).
+
 ## 2026-11-17: Tooling audit and cleanup
 - Audit (owner asked): Playwright is already used (scripts/qa-mobile.mjs + mobile-qa agent, the sandbox's global
   install); GSAP and Motion already installed; design skills already cover "taste". Left out: Lottie, Three.js/R3F,

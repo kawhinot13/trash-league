@@ -184,7 +184,9 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
   const reportNum = useRef<HTMLSpanElement>(null);
   const [fresh, setFresh] = useState(false);
   const [savedQs, setSavedQs] = useState<string[] | null>(null);
-  const [slate, setSlate] = useState<number | null>(null); // finished just now (not a revisit): the report plays its full show
+  const [slate, setSlate] = useState<number | null>(null);
+  // Signed in on Rafterlore: the standings' high score is the personal best (this browser's record is only a fallback).
+  const [account, setAccount] = useState<{ best: number | null; before: number | null } | null>(null); // finished just now (not a revisit): the report plays its full show
   const [best, setBest] = useState<{ prev: number | null; now: number } | null>(null);
 
   useEffect(() => {
@@ -298,7 +300,9 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
     setStreak(r.streak);
   };
   // The report: the total counts up (with ticks), and a big night gets confetti.
-  const newBest = fresh && best !== null && best.prev !== null && sum > best.prev;
+  const prevBest = account ? account.before : (best?.prev ?? null);
+  const newBest = fresh && prevBest !== null && sum > prevBest;
+  const shownBest = Math.max(best?.now ?? 0, account?.best ?? 0, fresh ? sum : 0) || null;
   useEffect(() => {
     if (phase !== "done" || !reportNum.current) return;
     const el = reportNum.current;
@@ -661,8 +665,8 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                   )}
                   <p className="mt-3 text-sm text-[var(--muted)]">
                     {streak > 1 ? `${streak}-day streak` : null}
-                    {streak > 1 && best ? " · " : null}
-                    {best ? `Personal best ${best.now}` : null}
+                    {streak > 1 && shownBest ? " · " : null}
+                    {shownBest ? `Personal best ${shownBest}` : null}
                   </p>
                 </div>
                 {/* the hand: five cards fanned out */}
@@ -718,6 +722,7 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                 game="dive2"
                 day={day}
                 saveKeys={day ? [`dive3:${day}`] : undefined}
+                onMine={setAccount}
                 people={people}
                 result={picks.length === ROUNDS ? { score: sum, label: picks.map((p) => (p.score === null ? "×" : p.score)).join(" · ") } : null}
               />

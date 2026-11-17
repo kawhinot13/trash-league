@@ -28,6 +28,7 @@ type Board = {
   all?: Record<string, { points: number; played: number; wins: number }>;
   /** Rafterlore: each manager's all-time high score in this game. */
   best?: Record<string, { score: number; day: string; label: string }>;
+  bestBefore?: Record<string, number>;
   /** Rafterlore: each player's Sleeper team name this season. */
   teams?: Record<string, string>;
   /** Rafterlore: who's looking. Absent on the Trash site (honor system). */
@@ -61,7 +62,10 @@ export function Leaderboard({
   result,
   people,
   saveKeys,
+  onMine,
 }: {
+  /** Rafterlore: tells the game this player's all-time high score (and the best before today) from the standings. */
+  onMine?: (b: { best: number | null; before: number | null }) => void;
   /** Rafterlore: the game's saved progress (storage names without the league prefix), posted with the
    * result so the player's other devices show this same finished game. */
   saveKeys?: string[];
@@ -107,6 +111,12 @@ export function Leaderboard({
   const viewer = board?.viewer?.configured ? board.viewer : null;
   // Standings mode: you are your account's linked Sleeper user, if they're in this league.
   const me = viewer ? viewer.manager : localMe;
+  const mineBest = viewer && me ? (board?.best?.[me]?.score ?? null) : undefined;
+  const mineBefore = viewer && me ? (board?.bestBefore?.[me] ?? null) : undefined;
+  useEffect(() => {
+    if (mineBest !== undefined && mineBefore !== undefined) onMine?.({ best: mineBest, before: mineBefore });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mineBest, mineBefore]);
 
   // Load the board, then post the result once we know who you are. Keyed on the result's values,
   // not the object, so a re-render never posts or fetches again.
