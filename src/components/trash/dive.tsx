@@ -458,7 +458,17 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
 
       <div className="p-5 md:p-8">
         <AnimatePresence mode="wait">
-          {phase === "intro" ? (
+          {/* A league that hasn't drafted yet has nothing to dig through. */}
+          {phase === "intro" && !pool.length ? (
+            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-6 text-center md:py-10">
+              <p className="font-display text-[clamp(2.2rem,6vw,3.6rem)] leading-[0.95] font-black">The bin is empty. For now.</p>
+              <p className="mx-auto mt-4 max-w-[46ch] text-[var(--paper)]/80">
+                {brand.games.dive} opens after your league&apos;s draft. Once players are drafted, started, traded and dropped, the questions
+                write themselves, and they get better every week.
+              </p>
+            </motion.div>
+          ) : null}
+          {phase === "intro" && pool.length ? (
             <motion.div
               key="intro"
               initial={{ opacity: 0 }}

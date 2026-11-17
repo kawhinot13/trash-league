@@ -209,6 +209,31 @@ export function divePool(d: Dataset): Prompt[] {
     }
     add("Waiver wire", `Name a player picked up off waivers in ${years[s.code]}.`, season, 0.5, { ...v3, t: "waivers-season" });
   }
+  // Cut list: players a manager let go (on his roster one week, gone the next, not traded away). Works from
+  // the first weeks of a brand-new league. Obvious = held longer before the cut.
+  const dropped = new Map<string, Map<string, number>>();
+  for (const s of raw.seasons) {
+    if (!s.rosters) continue;
+    const gave = new Set(
+      s.trades.flatMap((t) => Object.keys(t.sides).flatMap((m) => Object.entries(t.sides).filter(([k]) => k !== m).flatMap(([, ps]) => ps.map((p) => `${m}|${p}`)))),
+    );
+    const weeks = Object.keys(s.rosters).map(Number).sort((a, b) => a - b);
+    for (let k = 0; k + 1 < weeks.length; k++) {
+      const now = s.rosters[String(weeks[k])];
+      const next = s.rosters[String(weeks[k + 1])];
+      for (const [m, ps] of Object.entries(now)) {
+        const after = new Set(next[m] ?? []);
+        if (!next[m]) continue;
+        for (const p of ps) {
+          if (after.has(p) || gave.has(`${m}|${p}`) || p.startsWith("pick:")) continue;
+          const mine = dropped.get(m) ?? dropped.set(m, new Map()).get(m)!;
+          mine.set(p, (mine.get(p) ?? 0) + (s.guys[m]?.[p]?.[0] ?? 1));
+        }
+      }
+    }
+  }
+  for (const m of active) add("Cut list", `Name a player ${nick(m)} has dropped.`, dropped.get(m) ?? new Map(), 0.55, { ...v3, who: m, t: "mgr-dropped" });
+
   for (const m of active) {
     const kept = new Map<string, number>();
     for (const [k, w] of pickedBy.get(m) ?? []) sum(kept, k.split("|")[1], w);

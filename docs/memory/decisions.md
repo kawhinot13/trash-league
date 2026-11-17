@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive for new leagues: "Cut list" + empty state
+- Checked new leagues: an undrafted league had 0 prompts (blank game after Start); a first-season league ~47 prompts
+  in 7 categories. Added "Cut list" (v3, shape mgr-dropped): "Name a player <manager> has dropped" (on his roster one
+  week, gone the next, not traded away; obvious = held longer), which fills quickly in new leagues. Undrafted leagues
+  now show "The bin is empty. For now." instead of the game. Rejected "first three rounds" (only 3 answers each; a
+  prompt needs 8).
+- Questions are the same for everyone in a league (and across devices); each league's are its own.
+
 ## 2026-11-17: Personal best = your high score
 - Owner: the report's "Personal best" (browser-only) disagreed with the standings' high score. On Rafterlore with a
   linked account it now comes from the standings (`best` + new `bestBefore` in /api/l/[id]/scores, passed up from the
