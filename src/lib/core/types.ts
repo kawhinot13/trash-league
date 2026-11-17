@@ -104,4 +104,12 @@ export type Players = Record<string, [string, string[], string, number, number, 
 export type ExtrasData = { asOf: string; seasons: RawSeason[]; players: Players };
 
 /** Everything the shared features need about one league. `name` is how copy refers to it ("Trash"). */
-export type Dataset = { name: string; league: LeagueData; extras: ExtrasData; /** Basketball when unset (Trash). */ sport?: "nba" | "nfl" };
+export type Dataset = {
+  name: string;
+  league: LeagueData;
+  extras: ExtrasData;
+  /** Basketball when unset (Trash). */
+  sport?: "nba" | "nfl";
+  /** Dumpster Dive's written calendar (day -> prompts); days already played never change. */
+  diveCalendar?: Record<string, string[]>;
+};

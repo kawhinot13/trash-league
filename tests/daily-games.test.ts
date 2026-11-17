@@ -138,3 +138,31 @@ describe("Dumpster Dive variety", () => {
     }
   });
 });
+
+describe("Dumpster Dive written calendar", () => {
+  it("days already written never change when the data adds questions", async () => {
+    const { extendCalendar } = await import("@/lib/core/dive");
+    const cal = extendCalendar(pool, {}, "2026-11-20");
+    expect(Object.keys(cal)).toContain("2026-11-18");
+    // New data: a few brand-new questions appear.
+    const extra = [0, 1, 2].map((k) => ({ ...pool[k], prompt: `${pool[k].prompt} (new ${k})` }));
+    const bigger = [...extra, ...pool];
+    const next = extendCalendar(bigger, cal, "2026-11-20");
+    for (const d of ["2026-11-18", "2026-11-19", "2026-11-20"]) {
+      expect(next[d]).toEqual(cal[d]);
+      expect(dailyPrompts(bigger, d, next).map((q) => q.prompt)).toEqual(cal[d]);
+    }
+    // ...and the game shows the written day, even though planning from scratch could now differ.
+    expect(Object.keys(next).length).toBeGreaterThan(30);
+  });
+
+  it("a written day keeps the rules: five categories", async () => {
+    const { extendCalendar } = await import("@/lib/core/dive");
+    const cal = extendCalendar(pool, {}, "2026-11-18");
+    for (const [d, texts] of Object.entries(cal)) {
+      const qs = dailyPrompts(pool, d, cal);
+      expect(qs.map((q) => q.prompt)).toEqual(texts);
+      expect(new Set(qs.map((q) => q.kind)).size).toBe(5);
+    }
+  });
+});

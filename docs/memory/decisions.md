@@ -4,6 +4,15 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive written calendar
+- Problem: each day's prompts were re-dealt from the whole pool on every page load, so a data update (5:13 AM) that
+  added a question could change a day already in play. Fix: a written calendar; days up to today never change, the
+  next 30 are (re)planned from the new data. Trash: src/data/dive-calendar.json via `npm run calendar` in the daily
+  scheduled task (which now also stops if a locked day would change, and runs `npm run build` with tests).
+  Rafterlore: `Dataset.diveCalendar`, extended from the previous dataset in grade(). Saved games also keep `qs`.
+- Rejected: storing a first-seen date per question (needs the same storage anyway); running the update before
+  midnight (still changes the day in progress).
+
 ## 2026-11-17: "This season" roster questions; Rico pinned for 11-18
 - New v3 shape `roster-now` (Locker room): "Name a player who has been on <manager>'s roster this season (<years>)",
   for in-progress seasons; answers grow as the season goes (rebuilt from the daily data). Owner swapped 11-18's

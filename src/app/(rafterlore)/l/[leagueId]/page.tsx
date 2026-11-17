@@ -202,7 +202,7 @@ function Home({ p }: { p: LeaguePage }) {
             </SectionHead>
             <div className="mx-auto max-w-5xl px-5 md:px-10">
               <PlayGate game={p.brand.games.dive} anchor="dive" primary>
-                <DumpsterDive pool={divePool(d)} players={gamePlayers} people={people} />
+                <DumpsterDive pool={divePool(d)} calendar={d.diveCalendar} players={gamePlayers} people={people} />
               </PlayGate>
             </div>
           </section>

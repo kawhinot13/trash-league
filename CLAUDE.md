@@ -14,6 +14,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   day, from `src/data/daily-pool.json` (append-only; `scripts/build-daily-pool.py`; `core/daily-pool.ts`, The Lineup
   walks its own order). Each league keeps its own history clues ("never" when nobody there rostered him). The
   daily extras build refreshes pool teams with `--refresh-only`. Never reorder or remove pool entries.
+- Dumpster Dive has a written calendar (`Calendar` in `core/dive.ts`, `extendCalendar`): days already written never
+  change; the next 30 are planned from the data. Trash: `src/data/dive-calendar.json`, extended by `npm run calendar`
+  in the daily refresh. Rafterlore: `Dataset.diveCalendar`, extended in the grade step (jobs.ts). Saved games keep
+  their questions (`qs`). Never edit a past or current day; hand-picked days go in `PINNED` before they're written.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)

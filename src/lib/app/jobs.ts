@@ -1,15 +1,16 @@
 import "server-only";
+import { extendCalendar, divePool } from "@/lib/core/dive";
 import { verifiedWeeks } from "@/lib/core/official";
-import { db, hasDb } from "@/lib/app/db";
+import { db, hasDb, todayET } from "@/lib/app/db";
 import type { SeasonBundle } from "@/lib/app/family";
 import { analyse, seasonWeeks } from "@/lib/app/analysis";
 import { buildDataset } from "@/lib/app/dataset";
-import { invalidateFamily } from "@/lib/app/store";
+import { datasetOf, invalidateFamily } from "@/lib/app/store";
 import { REPLAY_VERSION, replayFootballWeek, replayWeek, type WeekData } from "@/lib/app/replay";
 import { consensusMatchups, sportState, sleeper, type STransaction } from "@/lib/app/sleeper";
 import { sportOf, type Sport } from "@/lib/core/sport";
 import { playerDirectory, weekStats, type PlayerDir } from "@/lib/app/sleeper-cache";
-import { safeMessage } from "@/lib/app/safe";
+import { logError, safeMessage } from "@/lib/app/safe";
 
 /**
  * Background jobs in Postgres: no extra service. A job is a list of small steps with its progress
@@ -209,6 +210,13 @@ async function grade(familyId: string) {
     if (!p.startsWith("pick:") && !a.players[p]) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];
   // The full dataset (Trash's league.json + extras.json shapes) that the league's pages are built from.
   const ds = buildDataset(bs[bs.length - 1]?.league.name ?? "League", inputs, a, exact, dir);
+  // Dumpster Dive: keep every day already written (played or in play), plan the next 30 from the new data.
+  try {
+    const prev = await datasetOf(familyId).catch(() => null);
+    ds.diveCalendar = extendCalendar(divePool(ds), prev?.diveCalendar ?? {}, todayET());
+  } catch (e) {
+    logError(`dive calendar ${familyId}`, e);
+  }
   // First results: show them right away. A regrade or catch-up: rebuild pages in the background.
   const [had] = await sql<{ n: number }[]>`select count(*)::int as n from analyses where family_id = ${familyId} and kind = 'dataset'`;
   await sql.begin(async (tx) => {

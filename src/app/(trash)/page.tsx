@@ -8,7 +8,7 @@ import { Hero } from "@/components/trash/hero";
 import { LiveHero, LiveTicker } from "@/components/trash/live-blocks";
 import { StatStrip } from "@/components/trash/polish";
 import { SectionHead } from "@/components/trash/sections";
-import { divePool } from "@/lib/dive";
+import { diveCalendar, divePool } from "@/lib/dive";
 import { trashle } from "@/lib/trashle";
 import { lineup } from "@/lib/lineup";
 import { lockIn, players } from "@/lib/extras";
@@ -116,7 +116,7 @@ export default function Home() {
           your pick, the more it scores. Same prompts for everyone, so the group chat can compare.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
-          <DumpsterDive pool={divePool()} players={GAME_PLAYERS} people={PEOPLE} />
+          <DumpsterDive pool={divePool()} calendar={diveCalendar} players={GAME_PLAYERS} people={PEOPLE} />
         </div>
       </section>
 

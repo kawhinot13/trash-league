@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import type { Players } from "@/lib/extras";
-import { dailyPrompts, kindText, promptText, type Prompt } from "@/lib/core/dive";
+import { dailyPrompts, kindText, promptText, type Calendar, type Prompt } from "@/lib/core/dive";
 import { Face, pname } from "./player";
 import { AnswerBoard } from "./dive/answers";
 import { sfx } from "./dive/sfx";
@@ -18,7 +18,7 @@ const LAUNCH = Date.UTC(2026, 10, 14);
 
 type Pick = { pid: string | null; typed: string; score: number | null };
 /** Today's progress, saved after every answer (so leaving mid-game resumes, never restarts); `done` once the report shows. */
-type Saved = { picks: Pick[]; done?: boolean };
+type Saved = { picks: Pick[]; done?: boolean; qs?: string[] };
 
 const todayET = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -164,7 +164,7 @@ function AnswerBox({ players, onPick }: { players: Players; onPick: (pid: string
   );
 }
 
-export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; players: Players; people: Person[] }) {
+export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt[]; players: Players; people: Person[]; calendar?: Calendar }) {
   const brand = useBrand();
   const reduce = useReducedMotion();
   const [day, setDay] = useState<string | null>(null);
@@ -182,7 +182,8 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
   const nextBtn = useRef<HTMLButtonElement>(null);
   const shown = useRef(0);
   const reportNum = useRef<HTMLSpanElement>(null);
-  const [fresh, setFresh] = useState(false); // finished just now (not a revisit): the report plays its full show
+  const [fresh, setFresh] = useState(false);
+  const [savedQs, setSavedQs] = useState<string[] | null>(null); // finished just now (not a revisit): the report plays its full show
   const [best, setBest] = useState<{ prev: number | null; now: number } | null>(null);
 
   useEffect(() => {
@@ -195,12 +196,13 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     if (b !== null) setBest({ prev: b, now: b });
     const saved = store.get<Saved>(brand.key(`dive3:${d}`));
     const got = saved?.picks ?? [];
+    if (saved?.qs?.length) setSavedQs(saved.qs);
     if (got.length >= ROUNDS) {
       setPicks(got.slice(0, ROUNDS));
       setPhase("done");
       // Finished but left before the report: count it now (best and streak), once.
       if (!saved?.done) {
-        const r = record(d, got.slice(0, ROUNDS));
+        const r = record(d, got.slice(0, ROUNDS), saved?.qs ?? []);
         setBest({ prev: r.prevBest, now: r.best });
         setStreak(r.streak);
       }
@@ -213,19 +215,26 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brand]);
   /** Finish the day: personal best, streak, and mark the saved game done. */
-  function record(d: string, ps: Pick[]) {
+  function record(d: string, ps: Pick[], asked: string[]) {
     const total = ps.reduce((t, p) => t + (p.score ?? 0), 0);
     const prevBest = store.get<number>(brand.key("dive:best"));
     const best = Math.max(prevBest ?? 0, total);
     store.set(brand.key("dive:best"), best);
-    store.set(brand.key(`dive3:${d}`), { picks: ps, done: true } satisfies Saved);
+    store.set(brand.key(`dive3:${d}`), { picks: ps, done: true, qs: asked } satisfies Saved);
     const st = store.get<{ last: string; n: number }>(brand.key("dive:streak"));
     const y = new Date(Date.parse(d) - 86400000).toISOString().slice(0, 10);
     const n = st?.last === y ? st.n + 1 : st?.last === d ? st.n : 1;
     store.set(brand.key("dive:streak"), { last: d, n });
     return { prevBest, best, streak: n };
   }
-  const qs = useMemo(() => (day ? dailyPrompts(pool, day) : []), [pool, day]);
+  // Today's prompts: the ones this player already answered (saved with their game) win; otherwise the
+  // league's written calendar, so a data update can never change a day that has started.
+  const qs = useMemo(() => {
+    if (!day) return [];
+    const fromSave = savedQs?.map((t) => pool.find((q) => q.prompt === t)).filter((q): q is Prompt => !!q);
+    if (fromSave && fromSave.length === savedQs!.length && fromSave.length) return fromSave;
+    return dailyPrompts(pool, day, calendar);
+  }, [pool, day, calendar, savedQs]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : null;
   const q = qs[i];
   const current = picks[i] ?? null;
@@ -260,7 +269,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     const now = [...picks.slice(0, i), { pid, typed, score }];
     setPicks(now);
     // Saved right away: leaving the page (another tab, the nav) resumes here instead of restarting.
-    if (day) store.set(brand.key(`dive3:${day}`), { picks: now } satisfies Saved);
+    if (day) store.set(brand.key(`dive3:${day}`), { picks: now, qs: qs.map((x) => x.prompt) } satisfies Saved);
     await stage.current?.drop(pid, score, heatAt(picks, i - 1));
     setSettled(true);
   };
@@ -272,7 +281,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     setFresh(true);
     sfx.fanfare();
     if (!day) return;
-    const r = record(day, picks);
+    const r = record(day, picks, qs.map((x) => x.prompt));
     setBest({ prev: r.prevBest, now: r.best });
     setStreak(r.streak);
   };

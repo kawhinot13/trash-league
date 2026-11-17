@@ -274,8 +274,8 @@ const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_40
  * about twice. When fresh prompts run short, a kind is used twice before an old prompt returns,
  * and the longest-rested prompt comes back first.
  */
-export function dailyPrompts(all: Prompt[], day: string) {
-  if (day >= RESTART) return planned(all, day);
+export function dailyPrompts(all: Prompt[], day: string, calendar: Calendar = {}) {
+  if (day >= RESTART) return planned(all, day, calendar);
   // Days before the restart keep exactly the prompts they had (nothing added since).
   const pool = all.filter((q) => q.v !== 3);
   if (day < SCHEDULE_FROM) return legacy(pool, day);
@@ -360,7 +360,19 @@ const PINNED: Record<string, string[]> = {
   ],
 };
 
-function planned(pool: Prompt[], day: string): Prompt[] {
+/** A written calendar: day -> that day's prompt texts. Days in it never change (see extendCalendar). */
+export type Calendar = Record<string, string[]>;
+
+function planned(pool: Prompt[], day: string, fixed: Calendar = {}): Prompt[] {
+  return schedule(pool, day, fixed).get(day) ?? [];
+}
+
+/**
+ * Every day from RESTART through `until`. Days in `fixed` (the written calendar) and PINNED days use
+ * their own prompts (whichever still exist; any gap is filled by the rules); the rest are planned around them.
+ */
+function schedule(pool: Prompt[], until: string, fixed: Calendar = {}): Map<string, Prompt[]> {
+  const out = new Map<string, Prompt[]>();
   const shape = (q: Prompt) => q.t ?? q.kind;
   const shapes = [...new Set(pool.map(shape))].sort();
   // Each shape belongs to one category (the label players see, e.g. "Waiver wire"); a day never repeats one.
@@ -370,19 +382,22 @@ function planned(pool: Prompt[], day: string): Prompt[] {
   const lastShape = new Map<string, number>();
   const lastPrompt = new Map<string, number>();
   const lastWho = new Map<string, number>();
-  let picks: Prompt[] = [];
   let n = 0;
-  for (let d = RESTART; d <= day; d = nextDay(d), n++) {
+  for (let d = RESTART; d <= until; d = nextDay(d), n++) {
     const r = rng(Number(d.replaceAll("-", "")) + 7);
     const chosen: Prompt[] = [];
     const who = new Set<string>();
     const used = new Set<string>();
     const kinds = new Set<string>();
-    const pin = PINNED[d]?.map((t) => pool.find((q) => q.prompt === t));
-    if (pin && pin.every(Boolean))
-      for (const q of pin as Prompt[]) {
+    const set = fixed[d] ?? PINNED[d];
+    const pin = set?.map((t) => pool.find((q) => q.prompt === t)).filter((q): q is Prompt => !!q);
+    // A written day keeps whatever of its prompts still exist; a pinned day needs all of them (Trash only).
+    if (pin && (fixed[d] ? pin.length : pin.length === set!.length))
+      for (const q of pin.slice(0, ROUNDS)) {
         chosen.push(q);
+        used.add(shape(q));
         kinds.add(q.kind);
+        if (q.who) who.add(q.who);
       }
     for (let slot = chosen.length; slot < ROUNDS; slot++) {
       const ranked = shapes
@@ -415,7 +430,22 @@ function planned(pool: Prompt[], day: string): Prompt[] {
       lastPrompt.set(q.prompt, n);
       if (q.who) lastWho.set(q.who, n);
     }
-    picks = chosen;
+    out.set(d, chosen);
   }
-  return picks;
+  return out;
+}
+
+const addDays = (day: string, k: number) => new Date(Date.parse(`${day}T12:00:00Z`) + k * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * Write the calendar ahead: days up to and including `today` that are already written stay exactly as
+ * they are; any other day from RESTART to `ahead` days out is (re)planned around them. Run it whenever
+ * the league's data is rebuilt, so new data can only change days nobody has played yet.
+ */
+export function extendCalendar(pool: Prompt[], cal: Calendar, today: string, ahead = 30): Calendar {
+  const keep: Calendar = Object.fromEntries(Object.entries(cal).filter(([d]) => d <= today));
+  const plan = schedule(pool, addDays(today < RESTART ? RESTART : today, ahead), keep);
+  const out: Calendar = { ...keep };
+  for (const [d, qs] of plan) if (!(d in keep)) out[d] = qs.map((q) => q.prompt);
+  return out;
 }
