@@ -492,7 +492,7 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                   >
                     <p className="text-sm text-[var(--muted)]">You tossed in {current.typed}</p>
                     <p className="font-display mt-1 text-4xl leading-none font-black" style={{ color: tierOf(current.score).color }}>
-                      {current.score === null ? "Not a right answer" : `${current.score} niche points`}
+                      {current.score === null ? "Not a right answer" : `${current.score} ${current.score === 1 ? "point" : "points"}`}
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       {[

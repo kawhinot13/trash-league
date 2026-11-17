@@ -112,7 +112,7 @@ export default function Home() {
 
       <section id="dive" aria-labelledby="dive-title" className="scroll-mt-24 py-14 md:py-32">
         <SectionHead id="dive-title" title="Today's dive">
-          Five prompts a day from four seasons of league history. Any right answer counts, but the more niche
+          Five prompts a day from four seasons of league history. Any right answer counts, but the more obscure
           your pick, the more it scores. Same prompts for everyone, so the group chat can compare.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">

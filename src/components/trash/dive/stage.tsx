@@ -490,7 +490,7 @@ export function Stage({
         <span ref={readout} className="font-display block text-5xl leading-none font-black tabular-nums" style={{ color: t?.color ?? "var(--paper)" }}>
           0
         </span>
-        <span className="text-[11px] text-[var(--muted)]">niche points</span>
+        <span className="text-[11px] text-[var(--muted)]">points</span>
       </div>
 
       {/* tier banner */}

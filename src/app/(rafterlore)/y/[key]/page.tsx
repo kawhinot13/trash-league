@@ -72,7 +72,7 @@ function Home({ d, id }: { d: Dataset; id: string }) {
 
       <section id="dive" aria-labelledby="dive-title" className="scroll-mt-24 py-14 md:py-32">
         <SectionHead id="dive-title" title="Today's dive">
-          Five prompts a day from the league&apos;s history. Any right answer counts, but the more niche your pick, the more it scores.
+          Five prompts a day from the league&apos;s history. Any right answer counts, but the more obscure your pick, the more it scores.
         </SectionHead>
         <div className="mx-auto max-w-5xl px-5 md:px-10">
           <PlayGate game="Dumpster Dive" anchor="dive" primary>

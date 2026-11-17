@@ -285,6 +285,12 @@ export function MatchupOfWeek({
   );
 }
 
+/** Display size for a player's name in a narrow card: smaller when one word is long, so it never breaks mid-word. */
+const nameSize = (name: string) => {
+  const longest = Math.max(0, ...name.split(/\s+/).map((w) => w.length));
+  return longest >= 12 ? "text-[1.3rem]" : longest >= 9 ? "text-2xl" : "text-3xl";
+};
+
 /* ── Advanced waiver wire ─────────────────────────────────────────────── */
 type SortKey =
   | "score"
@@ -392,7 +398,8 @@ export function WaiverWire({
                   />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-display break-words text-3xl leading-none font-black">
+                  {/* Long surnames (Mamukelashvili) shrink to fit whole instead of breaking mid-word. */}
+                  <p className={`font-display leading-none font-black break-words ${nameSize((p as Pickup).name)}`}>
                     {(p as Pickup).name}
                   </p>
                   <p className="mt-1 text-sm text-[var(--muted)]">
