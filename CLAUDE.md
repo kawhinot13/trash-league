@@ -30,7 +30,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Exception (owner's call 2026-11-17): Trash's own league on Rafterlore (pack "trash") shows Sleeper headshots; never
   other leagues, never use it as Rafterlore's public demo, and switch it back to badges if Rafterlore ever earns money. Pages live in
   `src/app/(rafterlore)/` with their own shell; the Trash site lives in `src/app/(trash)/`. Rafterlore never imports Trash
-  data or chrome. League pages: overview, this week (live, per Sleeper), waivers, rivals, managers + profiles, remove.
+  data or chrome. League pages: overview, this week (live, per Sleeper), waivers, rivals, managers + profiles.
 - Shared features: `src/lib/core/` holds every league feature as pure functions over a `Dataset` (Trash's
   league.json + extras.json shape) or a `LiveSource`. Trash's `src/lib/*.ts` are thin wrappers passing Trash's data;
   Rafterlore builds each league's dataset in the grade step (`src/lib/app/dataset.ts`, stored in `analyses`).
@@ -39,7 +39,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   the same (verify by diffing prerendered pages before/after).
 - Rafterlore code: `src/lib/app/` (Sleeper client + throttle, caches, discovery, replay, grading, store, jobs, live
   features, rate limits, validation, redaction). League pages under `src/app/(rafterlore)/l/[leagueId]/`: home
-  (games), live, waivers, managers (+ profiles), rivals, history, stats, front-office, remove. `gate.tsx` loads a league, handles not
+  (games), live, waivers, managers (+ profiles), rivals, history, stats, front-office. `gate.tsx` loads a league, handles not
   found / limited / removed / error and wraps pages in the league's brand.
 - Logo: the ribbon R (owner's design), one traced path in `components/app/mark-path.ts` (`RMark`, `RLoader` in
   `mark.tsx`; green #013825). Assets in `public/brand/` (adaptive tab SVG, PNG tiles, .ico, webmanifest);
@@ -98,9 +98,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   shared feature run unchanged. `/y/*` pages are MEMBERS ONLY, rendered per request (`YahooGate`: signed in + Yahoo
   linked + guid in league members, else notFound), noindex, never cached for others. Brand `source: "Yahoo"` makes shared
   copy say Yahoo (`<Src />`). Head-to-head points leagues only; no Live/Front office for Yahoo (those use Sleeper live data).
-- Removal: a manager of the newest season proves it with a one-time code in their own Sleeper team name
-  (`removal.ts`; a username alone proves nothing), then can remove at `/l/[id]/remove`. Hidden at once, deleted
-  after 7 days by the nightly job, ids kept so it isn't re-imported; restorable the same way until then.
+- No league removal (owner's call, 2026-11-17): there is no remove page or API; privacy/terms say leagues stay once
+  brought in and Rafterlore may remove one at its discretion (by hand, in the database). Leagues removed before that
+  stay hidden and are purged by the nightly job as before. `removal.ts` remains only for the old team-name code proof.
 - Background jobs: `jobs` table, started after an import, by the page's progress poll, `/api/jobs/tick` and the
   nightly cron. Grading output is versioned (`ANALYSIS_VERSION`); older results regrade on the next visit.
 - Nightly cron (`vercel.json`, 10:17 UTC, needs `CRON_SECRET`): housekeeping and purges, refresh every league, save

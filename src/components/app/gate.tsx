@@ -50,18 +50,7 @@ export async function LeagueGate({
   if (r.status === "removed")
     return (
       <Notice title="This league was removed">
-        Its managers asked for it to be taken off Rafterlore, so nothing is shown and nothing new is saved.
-        {r.purgeAfter ? (
-          <>
-            {" "}
-            Its stored data is deleted on {new Date(r.purgeAfter).toLocaleDateString("en-US", { month: "long", day: "numeric" })}. Changed
-            your mind?{" "}
-            <Link href={`/l/${leagueId}/remove`} className="font-semibold text-[var(--paper)] underline underline-offset-4">
-              Restore it
-            </Link>
-            .
-          </>
-        ) : null}
+        It was taken off Rafterlore, so nothing is shown and nothing new is saved.
       </Notice>
     );
   if (r.status === "error")

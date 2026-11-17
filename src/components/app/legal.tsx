@@ -26,6 +26,6 @@ export function Contact() {
       </a>
     </>
   ) : (
-    <>use the &ldquo;Remove it from Rafterlore&rdquo; link at the bottom of your league&apos;s page</>
+    <>reach out to the site&apos;s owner</>
   );
 }

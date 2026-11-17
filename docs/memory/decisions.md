@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: League removal taken out
+- Owner: nobody should be able to remove a league. Asked with the trade-off stated (privacy/terms promised a manager
+  opt-out for leagues shown without their members signing up; recommended "only the owner, on request"); owner chose
+  "remove it completely". Deleted /l/[id]/remove, /api/l/[id]/remove and the remove form; dropped the link on league
+  pages and the restore link on the removed notice; privacy loses "Removing a league", terms now say leagues stay and
+  Rafterlore may remove one. Yahoo leagues (private, members-only) keep their own removal.
+
 ## 2026-11-17: Dumpster Dive game feel pass
 - Owner: the game felt basic. Added: a round slate ("ROUND 2 · TRADE LOG") that wipes across with a drum hit, then the
   question drops in word by word; a wind-up before the throw and a three-ghost motion trail; impact dust and a camera

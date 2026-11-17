@@ -68,7 +68,7 @@ export default function Privacy() {
           their Yahoo account. We store its league data (teams, every manager&apos;s Yahoo nickname and Yahoo account id number, records,
           rosters, lineups, drafts and trades), including for managers who never use Rafterlore, and show it to that league&apos;s
           managers only. Disconnecting Yahoo deletes your access key; deleting your Rafterlore account deletes it
-          too. Any manager in the league&apos;s current season can remove it from Rafterlore, which deletes its stored data.
+          too.
         </p>
       </section>
       <section>
@@ -88,17 +88,7 @@ export default function Privacy() {
           (like any website) to keep the service running.
         </p>
       </section>
-      <section>
-        <h2>Removing a league</h2>
-        <p>
-          Any manager in a league can remove it from Rafterlore: <Contact />. To prove the request is theirs, they put a
-          one-time code in their own Sleeper team name, which only they or their commissioner can change; Rafterlore
-          keeps the code and their public Sleeper user id for at most a day. The league&apos;s pages disappear right
-          away, nothing more is saved, and the stored data is deleted for good after seven days. The league won&apos;t be
-          imported again.
-        </p>
-      </section>
-      <section>
+            <section>
         <h2>Sleeper</h2>
         <p>
           Rafterlore works with Sleeper leagues. It is not affiliated with or endorsed by Sleeper. Sleeper&apos;s own privacy

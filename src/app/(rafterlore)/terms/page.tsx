@@ -70,7 +70,6 @@ export default function Terms() {
         <ul>
           <li>Don&apos;t try to overload the site or Sleeper, or get around the limits on importing leagues.</li>
           <li>Don&apos;t scrape Rafterlore in bulk.</li>
-          <li>Only remove a league you manage.</li>
           <li>Don&apos;t use Rafterlore for sports wagering or to settle bets.</li>
         </ul>
         <p>We may limit or block access that breaks these rules.</p>
@@ -78,8 +77,8 @@ export default function Terms() {
       <section>
         <h2>Your league</h2>
         <p>
-          Any manager can remove their league from Rafterlore: <Contact />. We may also remove a league or change or stop
-          the service at any time.
+          Leagues stay on Rafterlore once they&apos;re brought in. We may remove a league, or change or stop the service, at any
+          time. Questions: <Contact />.
         </p>
       </section>
       <section>

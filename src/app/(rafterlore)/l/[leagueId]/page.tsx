@@ -262,15 +262,6 @@ function Home({ p }: { p: LeaguePage }) {
         </Section>
       ) : null}
 
-      {p.db ? (
-        <p className="mx-auto max-w-6xl px-5 pb-14 text-sm text-[var(--muted)] md:px-10">
-          Manage this league?{" "}
-          <Link href={`/l/${leagueId}/remove`} className="font-semibold text-[var(--paper)] underline underline-offset-4">
-            Remove it from Rafterlore
-          </Link>
-          .
-        </p>
-      ) : null}
     </main>
   );
 }
