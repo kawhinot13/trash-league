@@ -123,6 +123,11 @@ export function divePool(d: Dataset): Prompt[] {
       const wk = new Map(Object.entries(s.guys[m] ?? {}).map(([pid, [w]]) => [pid, w] as [string, number]));
       add("Locker room", `Name a player who was on ${nick(m)}'s roster in ${years[s.code]}.`, wk, 0.55, { who: m, t: "roster" });
     }
+    // This season so far (v3: only the schedule from the restart uses it). Answers grow as the season goes.
+    for (const s of raw.seasons.filter((x) => x.status !== "complete")) {
+      const wk = new Map(Object.entries(s.guys[m] ?? {}).map(([pid, [w]]) => [pid, w] as [string, number]));
+      add("Locker room", `Name a player who has been on ${nick(m)}'s roster this season (${years[s.code]}).`, wk, 0.55, { v: 3, who: m, t: "roster-now" });
+    }
   }
   for (const s of raw.seasons) {
     // Traded that season: obvious = how much he produced in the league that season.
@@ -351,7 +356,7 @@ const PINNED: Record<string, string[]> = {
     "Name a player picked up off waivers in 2025–26.",
     "Name a player taken in round 8 or later of any Trash draft.",
     "Name a Knicks player who has been on a Trash roster.",
-    "Name a player on Oscar's 2025–26 title team.",
+    "Name a player who has been on Rico's roster this season (2026–27).",
   ],
 };
 
