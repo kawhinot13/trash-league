@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: League-wide open-ended Dumpster Dive questions
+- Owner wanted questions not tied to a manager ("locked in for 60+ in this league"). Per-player weekly scores aren't
+  in the data (only season totals per team), so built from totals: Workhorses (started N+ times), Franchise scorers
+  (N+ points for league teams), Big numbers (averaged N+ per start for a team in a season, 3+ starts), Draft busts
+  (drafted, never started by the drafting team), Waiver gems (pickup started N+ times by the team that grabbed him).
+  Cutoffs adapt: the highest step that leaves 10+ answers, so new leagues get them early. Wording per lineup type via
+  promptText (lock-in "locked in", daily "in the lineup").
+
 ## 2026-11-17: Dumpster Dive for new leagues: "Cut list" + empty state
 - Checked new leagues: an undrafted league had 0 prompts (blank game after Start); a first-season league ~47 prompts
   in 7 categories. Added "Cut list" (v3, shape mgr-dropped): "Name a player <manager> has dropped" (on his roster one

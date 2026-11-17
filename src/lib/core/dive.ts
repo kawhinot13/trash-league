@@ -239,6 +239,52 @@ export function divePool(d: Dataset): Prompt[] {
     for (const [k, w] of pickedBy.get(m) ?? []) sum(kept, k.split("|")[1], w);
     add("Waiver wire", `Name a player ${nick(m)} has picked up off waivers.`, kept, 0.55, { ...v3, who: m, t: "waivers-mgr" });
   }
+  // League-wide, open-ended questions (no manager): the cutoff adapts to the league's history, the highest one
+  // that still leaves at least 10 answers, so brand-new leagues get them too.
+  const cutoff = (vals: Map<string, number>, steps: number[]) => steps.find((t) => [...vals.values()].filter((v) => v >= t).length >= 10);
+  const above = (vals: Map<string, number>, t: number) => new Map([...vals].filter(([, v]) => v >= t));
+  const fmt = (n: number) => n.toLocaleString("en-US");
+  {
+    const starts = new Map<string, number>();
+    const pts = new Map<string, number>();
+    const avg = new Map<string, number>();
+    for (const s of raw.seasons)
+      for (const ps of Object.values(s.guys))
+        for (const [pid, [, st, p]] of Object.entries(ps)) {
+          sum(starts, pid, st);
+          sum(pts, pid, p);
+          if (st >= 3) avg.set(pid, Math.max(avg.get(pid) ?? 0, p / st));
+        }
+    const st = cutoff(starts, [50, 40, 30, 25, 20, 15, 10, 6, 4, 3, 2]);
+    if (st) add("Workhorses", `Name a player who has been started ${st}+ times in ${d.name}.`, above(starts, st), 0.5, { ...v3, t: "legend-starts" });
+    const pt = cutoff(pts, [3000, 2500, 2000, 1500, 1000, 750, 500, 300, 200, 100]);
+    if (pt) add("Franchise scorers", `Name a player who has scored ${fmt(pt)}+ points for ${d.name} teams.`, above(pts, pt), 0.5, { ...v3, t: "legend-points" });
+    const av = cutoff(avg, [80, 70, 65, 60, 55, 50, 45, 40, 30, 20, 15]);
+    if (av) add("Big numbers", `Name a player who averaged ${av}+ per start for a ${d.name} team in a season.`, above(avg, av), 0.5, { ...v3, t: "legend-avg" });
+  }
+  {
+    // Draft busts: drafted, then never started by the team that drafted him that season. Obvious = picked earlier.
+    const busts = new Map<string, number>();
+    for (const s of raw.seasons) {
+      if (s.status !== "complete" && s.status !== "in_season") continue;
+      for (const x of s.draft) if ((s.guys[x.by]?.[x.pid]?.[1] ?? 0) === 0) busts.set(x.pid, Math.max(busts.get(x.pid) ?? 0, 200 - x.no));
+    }
+    add("Draft busts", `Name a player who was drafted in ${d.name} but never started for the team that drafted him.`, busts, 0.5, { ...v3, t: "busts" });
+  }
+  {
+    // Waiver gems: picked up off waivers, then started a lot by the team that grabbed him.
+    const gems = new Map<string, number>();
+    for (const s of raw.seasons)
+      for (const [m, kept] of pickedBy)
+        for (const k of kept.keys()) {
+          const [code, p] = k.split("|");
+          if (code !== s.code) continue;
+          gems.set(p, Math.max(gems.get(p) ?? 0, s.guys[m]?.[p]?.[1] ?? 0));
+        }
+    const gt = cutoff(gems, [15, 12, 10, 8, 6, 4, 3, 2]);
+    if (gt) add("Waiver gems", `Name a waiver pickup who was started ${gt}+ times by the team that grabbed him.`, above(gems, gt), 0.5, { ...v3, t: "waiver-gems" });
+  }
+
   // NBA teams: players on that team now who have been on a league roster (basketball leagues).
   if (d.sport !== "nfl") {
     const weeksIn = new Map<string, number>();
@@ -357,6 +403,10 @@ export function promptText(prompt: string, lineup: "lock-in" | "daily" | "weekly
   if (lineup === "weekly") return prompt;
   const lock = lineup !== "daily";
   return prompt
+    .replace(/has been started (\d+)\+ times/, (_, n: string) => (lock ? `has been locked in ${n}+ times` : `has been in a lineup ${n}+ weeks`))
+    .replace(/per start for/, lock ? "per lock-in for" : "per week in the lineup for")
+    .replace(/but never started for the team/, lock ? "but was never locked in by the team" : "but never made the lineup for the team")
+    .replace(/was started (\d+)\+ times by/, (_, n: string) => (lock ? `was locked in ${n}+ times by` : `was in the lineup ${n}+ weeks for`))
     .replace(/^Name a player (.+) has started\.$/, (_, who: string) => (lock ? `Name a player ${who} has locked in.` : `Name a player ${who} has had in the lineup.`))
     .replace(/^Name a player who started a playoff game in (.+)\.$/, (_, yrs: string) =>
       lock ? `Name a player who was locked in for a playoff game in ${yrs}.` : `Name a player who was in a playoff lineup in ${yrs}.`,
