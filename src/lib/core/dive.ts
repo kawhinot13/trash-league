@@ -349,7 +349,7 @@ const PINNED: Record<string, string[]> = {
   "2026-11-18": [
     "Name a player who has been on at least three different Trash rosters.",
     "Name a player picked up off waivers in 2025–26.",
-    "Name a player Junkyard Dog has picked up off waivers.",
+    "Name a player taken in round 8 or later of any Trash draft.",
     "Name a Knicks player who has been on a Trash roster.",
     "Name a player on Oscar's 2025–26 title team.",
   ],
@@ -358,6 +358,8 @@ const PINNED: Record<string, string[]> = {
 function planned(pool: Prompt[], day: string): Prompt[] {
   const shape = (q: Prompt) => q.t ?? q.kind;
   const shapes = [...new Set(pool.map(shape))].sort();
+  // Each shape belongs to one category (the label players see, e.g. "Waiver wire"); a day never repeats one.
+  const kindOf = new Map(pool.map((q) => [shape(q), q.kind]));
   // The exact same question waits at least 10 days (less if the pool is small).
   const cool = Math.max(1, Math.min(10, Math.floor(pool.length / ROUNDS) - 2));
   const lastShape = new Map<string, number>();
@@ -370,11 +372,16 @@ function planned(pool: Prompt[], day: string): Prompt[] {
     const chosen: Prompt[] = [];
     const who = new Set<string>();
     const used = new Set<string>();
+    const kinds = new Set<string>();
     const pin = PINNED[d]?.map((t) => pool.find((q) => q.prompt === t));
-    if (pin && pin.every(Boolean)) for (const q of pin as Prompt[]) chosen.push(q);
+    if (pin && pin.every(Boolean))
+      for (const q of pin as Prompt[]) {
+        chosen.push(q);
+        kinds.add(q.kind);
+      }
     for (let slot = chosen.length; slot < ROUNDS; slot++) {
       const ranked = shapes
-        .filter((t) => !used.has(t))
+        .filter((t) => !used.has(t) && !kinds.has(kindOf.get(t)!))
         .map((t) => {
           const all = pool.filter((q) => shape(q) === t && !chosen.includes(q) && !(q.who && who.has(q.who)));
           const fresh = all.filter((q) => n - (lastPrompt.get(q.prompt) ?? -1000) > cool);
@@ -395,6 +402,7 @@ function planned(pool: Prompt[], day: string): Prompt[] {
       const q = scored.reduce((a, b) => (b.s > a.s ? b : a)).q;
       chosen.push(q);
       used.add(shape(q));
+      kinds.add(q.kind);
       if (q.who) who.add(q.who);
     }
     for (const q of chosen) {

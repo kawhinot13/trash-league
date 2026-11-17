@@ -127,6 +127,8 @@ describe("Dumpster Dive variety", () => {
       const qs = dailyPrompts(pool, day);
       expect(qs).toHaveLength(5);
       expect(new Set(qs.map(shape)).size).toBe(5);
+      // ...and never two of the same category (what players see, e.g. "Waiver wire").
+      expect(new Set(qs.map((q) => q.kind)).size).toBe(5);
       expect(new Set(qs.filter((q) => q.who).map((q) => q.who)).size).toBe(qs.filter((q) => q.who).length);
       for (const q of qs) {
         const l = last.get(q.prompt);
