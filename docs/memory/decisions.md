@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive suspense: nothing gives the score away before the reveal
+- Owner: the impact ring was too much and killed suspense; streak badge reads "N deep dives in a row". Removed the
+  ring; the landing (thud, dust, small shake, debris) is now identical for every right answer; the tier glow, camera
+  punch, bigger shake, chime or "meh" all wait for the reveal; the card border, motion trail and score readout stay
+  neutral until then (`revealed` in stage.tsx, set by slamBanner). The depth labels popping during the count are the
+  intended build-up.
+
 ## 2026-11-17: League removal taken out
 - Owner: nobody should be able to remove a league. Asked with the trade-off stated (privacy/terms promised a manager
   opt-out for leagues shown without their members signing up; recommended "only the owner, on request"); owner chose

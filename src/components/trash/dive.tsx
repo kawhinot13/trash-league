@@ -405,7 +405,7 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                   <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
                     <path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-3 3 1 5 4 5 7a7 7 0 0 1-14 0c0-6 6-8 7-13z" />
                   </svg>
-                  {h} deep in a row
+                  {h} deep dives in a row
                 </motion.span>
               ) : null;
             })()}

@@ -114,7 +114,6 @@ export function Stage({
   const bits = useRef<HTMLDivElement>(null);
   const fx = useRef<HTMLCanvasElement>(null);
   const rays = useRef<HTMLDivElement>(null);
-  const ring = useRef<HTMLDivElement>(null);
   const glow = useRef<HTMLDivElement>(null);
   const flash = useRef<HTMLDivElement>(null);
   const pop = useRef<HTMLSpanElement>(null);
@@ -122,6 +121,8 @@ export function Stage({
   const ghosts = useRef<(HTMLDivElement | null)[]>([]);
   const levels = useRef<(HTMLDivElement | null)[]>([]);
   const [shown, setShown] = useState<{ pid: string | null; score: number | null } | null>(null);
+  // The tier's colors stay hidden until the score is revealed (suspense).
+  const [revealed, setRevealed] = useState(false);
   const reduce = useRef(false);
 
   const { contextSafe } = useGSAP(
@@ -130,9 +131,8 @@ export function Stage({
       gsap.set(card.current, { xPercent: -50, yPercent: -50, opacity: 0 });
       gsap.set(banner.current, { xPercent: -50, opacity: 0 });
       gsap.set(lid.current, { svgOrigin: "338 112", rotation: 0 });
-      gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current, ...ghosts.current, ...levels.current], { opacity: 0 });
+      gsap.set([rays.current, glow.current, flash.current, pop.current, ...ghosts.current, ...levels.current], { opacity: 0 });
       gsap.set(ghosts.current, { xPercent: -50, yPercent: -50 });
-      gsap.set(ring.current, { xPercent: -50, yPercent: -50 });
       gsap.set(pop.current, { xPercent: -50 });
     },
     { scope: root },
@@ -207,6 +207,7 @@ export function Stage({
   };
 
   const slamBanner = () => {
+    setRevealed(true);
     const b = banner.current;
     if (!b) return;
     if (reduce.current) {
@@ -217,11 +218,9 @@ export function Stage({
     gsap.fromTo(shine.current, { xPercent: -120 }, { xPercent: 220, duration: 0.9, delay: 0.3, ease: "power2.inOut" });
   };
 
-  /** Deep cuts: a shockwave ring from the impact and the bin glowing in the tier's color. */
+  /** Deep cuts: the bin glows in the tier's color (no ring: it gave the result away too early). */
   const shockwave = (hex: string, strength: number) => {
     if (reduce.current) return;
-    gsap.set(ring.current, { borderColor: hex });
-    gsap.fromTo(ring.current, { scale: 0.35, opacity: 0.95 }, { scale: 1.6 + strength * 0.5, opacity: 0, duration: 0.75, ease: "power3.out" });
     gsap.set(glow.current, { background: `radial-gradient(closest-side, ${hex}88, transparent)` });
     gsap.fromTo(glow.current, { opacity: 0 }, { keyframes: [{ opacity: 0.55 + strength * 0.25, duration: 0.18 }, { opacity: 0.18 + strength * 0.1, duration: 0.9 }], ease: "power2.out" });
   };
@@ -312,7 +311,7 @@ export function Stage({
   const clearFx = () => {
     spin.current?.kill();
     spin.current = null;
-    gsap.set([rays.current, ring.current, glow.current, flash.current, pop.current, ...ghosts.current, ...levels.current], { opacity: 0 });
+    gsap.set([rays.current, glow.current, flash.current, pop.current, ...ghosts.current, ...levels.current], { opacity: 0 });
     gsap.set(card.current, { scale: 1 });
   };
 
@@ -345,6 +344,7 @@ export function Stage({
     }),
     drop: contextSafe((pid: string | null, score: number | null, heat = 0) => {
       setShown({ pid, score });
+      setRevealed(false);
       const el = card.current!;
       const h = root.current!.clientHeight;
       return new Promise<void>((done) => {
@@ -378,7 +378,7 @@ export function Stage({
         ghosts.current.forEach((g, k) => {
           if (!g) return;
           const lag = 0.045 * (k + 1);
-          tl.set(g, { opacity: 0.32 - k * 0.09, left: "9%", top: -h * 0.06, rotation: -48, scale: 0.66, borderColor: tierOf(score).hex }, `throw+=${lag}`);
+          tl.set(g, { opacity: 0.32 - k * 0.09, left: "9%", top: -h * 0.06, rotation: -48, scale: 0.66, borderColor: "#f6f3ea" }, `throw+=${lag}`);
           tl.to(g, { left: "50%", duration: 0.62, ease: "power1.out" }, `throw+=${lag}`);
           tl.to(g, { top: px(40), duration: 0.32, ease: "power2.out" }, `throw+=${lag}`);
           tl.to(g, { rotation: 220, scale: 0.92, duration: 0.62, ease: "power1.inOut" }, `throw+=${lag}`);
@@ -397,18 +397,12 @@ export function Stage({
         tl.to(el, { top: px(RIM + 10), duration: 0.3, ease: "power2.in" }, "throw+=0.32");
         const tier = tierOf(score);
         tl.call(() => {
-          sfx.thud(score);
-          if (score < 25) {
-            // the obvious answer: it just flops in
-            sfx.meh();
-            return;
-          }
-          burst(score);
+          sfx.thud(40);
+          // The landing is the same for every right answer, so it gives nothing away; the payoff waits for the reveal.
+          burst(40);
           dust(px(RIM + 12));
-          shake(3 + score / 25);
-          if (score >= 60) punch(0.02 + (score - 60) / 2000);
+          shake(4);
           gsap.to(".dd-prop", { y: "+=5", duration: 0.12, yoyo: true, repeat: 1, stagger: 0.03 });
-          if (score >= 60) shockwave(tier.hex, Math.min(1, (score - 60) / 40 + heat * 0.2));
         }, [], "throw+=0.62");
         // sinking through the trash, then a little settle
         tl.to(el, { top: target + px(10), rotation: 360 + (score % 2 ? 7 : -7), scale: 1, duration: 0.55 + score / 160, ease: "power2.in" }, "throw+=0.62");
@@ -417,8 +411,15 @@ export function Stage({
         tl.call(() => countTo(score, 0.75 + score / 220), [], "throw+=0.67");
         tl.call(() => {
           slamBanner();
-          sfx.chime(score, heat);
+          // the obvious answer gets a shrug; everything else a chime that rises with depth
+          if (score < 25) sfx.meh();
+          else sfx.chime(score, heat);
           floatScore(score, tier.hex, target);
+          if (score >= 60) {
+            shockwave(tier.hex, Math.min(1, (score - 60) / 40 + heat * 0.2));
+            punch(0.02 + (score - 60) / 2000);
+            shake(3 + score / 25);
+          }
           if (score >= 90) {
             celebrate();
             takeover(heat, score === 100);
@@ -430,7 +431,7 @@ export function Stage({
     }),
   }));
 
-  const t = shown ? tierOf(shown.score) : null;
+  const t = shown && revealed ? tierOf(shown.score) : null;
   return (
     <div ref={root} className="relative mx-auto aspect-[400/440] w-full select-none" aria-hidden>
       {/* light rays for the deepest cuts (90+), turning slowly behind the bin */}
@@ -563,9 +564,6 @@ export function Stage({
           {name}
         </div>
       ))}
-
-      {/* shockwave from the impact at the rim */}
-      <div ref={ring} className="pointer-events-none absolute left-1/2 aspect-square w-[60%] rounded-full border-[6px]" style={{ top: `${(RIM / H) * 100}%`, opacity: 0 }} />
       {/* the flash on a 90+ */}
       <div ref={flash} className="pointer-events-none absolute inset-[-10%] rounded-[40px] bg-[#fff6dc]" style={{ opacity: 0 }} />
       {/* "+87" floating off the card */}
