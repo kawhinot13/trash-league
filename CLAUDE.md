@@ -167,8 +167,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Sister skills installed alongside: design, design-system, ui-styling, brand, banner-design, slides.
 - **21st.dev**: research components at `https://21st.dev/s/<category>` (navbar, background, text, number...).
   Installing from 21st.dev needs an API key; most popular items originate from Magic UI / Aceternity /
-  React Bits, so install those originals via the registries below. The Magic MCP is configured in
-  `.mcp.json` and activates in a new session once `TWENTY_FIRST_API_KEY` is set.
+  React Bits, so install those originals via the registries below. The 21st.dev Magic MCP was removed
+  from `.mcp.json` (no API key, it failed every session); add it back only once `TWENTY_FIRST_API_KEY` is set.
 - **SVGL** (real brand logos): `curl "https://api.svgl.app?search=<brand>"`, then download the `route` SVG.
   No Sleeper or NBA logos exist there; never fake brand marks.
 - **Visual reference: frax.com** (inspiration only, never copy): cinematic full-bleed hero, rim-lit

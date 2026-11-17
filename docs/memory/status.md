@@ -19,8 +19,7 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
   throttle, caches, rate limits, redacted logging. League pages are pre-built (ISR) and served from the cache.
 - Claude Code setup: secret guard and TypeScript stop hooks, mobile-qa (Haiku) and rules-reviewer
   (Sonnet) agents, `scripts/qa-mobile.mjs`, this memory folder, environment setup script, Sonnet default.
-- Design tools kept: UI UX Pro Max and the other design skills, shadcn MCP, 21st.dev Magic MCP
-  (inactive until `TWENTY_FIRST_API_KEY` is set).
+- Design tools kept: UI UX Pro Max and the other design skills, shadcn MCP (21st.dev Magic MCP removed: no key).
 
 - Deploys: Vercel reports each `main` commit's status on GitHub. Check it after pushing:
   `curl -s https://api.github.com/repos/kawhinot13/trash-league/commits/<sha>/status` (public repo).

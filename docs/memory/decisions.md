@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Tooling audit and cleanup
+- Audit (owner asked): Playwright is already used (scripts/qa-mobile.mjs + mobile-qa agent, the sandbox's global
+  install); GSAP and Motion already installed; design skills already cover "taste". Left out: Lottie, Three.js/R3F,
+  extra design skills, Playwright MCP (token-heavy). Not yet approved: saved e2e tests, Context7 (its host is blocked
+  by this environment's network).
+- Cleanup (approved): removed the 13 Remotion skills from this repo (they belong to ../mdv-video and were listed
+  every session), the 21st.dev Magic MCP (no key, failed every session), and unused packages lenis + lucide-react.
+
 ## 2026-11-17: Dumpster Dive suspense: nothing gives the score away before the reveal
 - Owner: the impact ring was too much and killed suspense; streak badge reads "N deep dives in a row". Removed the
   ring; the landing (thud, dust, small shake, debris) is now identical for every right answer; the tier glow, camera
