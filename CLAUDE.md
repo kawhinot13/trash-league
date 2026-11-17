@@ -60,7 +60,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   `PlayGate` shows the league's managers to pick, claimed ones greyed out; typing stays as a fallback). Before a
   game starts, `PlayGate` (uses `/api/l/[id]/scores?who=1`) asks "Who are you?" once (first game only), and in leagues
   that manager isn't in it shows "You're not in this league" instead of the game. First account to claim a manager keeps them. One try a day on any device: the finished game (answers) is saved with the score (`game_scores.state`) and
-  `PlayGate` restores it before the game mounts; older scores without it show "You already played today". Today / This week / All time (scores kept ~a year). With sign-in
+  `PlayGate` restores it before the game mounts; older scores without it show "You already played today". Today / This week / All time / High scores (scores kept ~a year; boards refresh every 20 s while visible). With sign-in
   on, Rafterlore's daily games require signing in (`PlayGate` in components/app/play-gate.tsx; client-side, pages stay
   pre-built; without the auth env everyone plays). Trash keeps its honor-system board (no `viewer` in its API).
 - Recreational use: Rafterlore is a history/analytics/entertainment site with no link to betting. First import of a

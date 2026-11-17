@@ -88,10 +88,12 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
     const today: Record<string, { score: number; label: string }> = {};
     const week: Record<string, { points: number; played: number }> = {};
     const all: Record<string, { points: number; played: number; wins: number }> = {};
-    const best = new Map<string, number>();
+    // Each manager's best single day ever in this game (high score), with the date.
+    const best: Record<string, { score: number; day: string; label: string }> = {};
+    const topOfDay = new Map<string, number>();
     for (const r of rows) {
       const d = r.day.toISOString().slice(0, 10);
-      best.set(d, Math.max(best.get(d) ?? -1, r.score));
+      topOfDay.set(d, Math.max(topOfDay.get(d) ?? -1, r.score));
     }
     for (const r of rows) {
       const d = r.day.toISOString().slice(0, 10);
@@ -101,10 +103,14 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
         t.points += r.score;
         t.played += 1;
       }
+      {
+        const b = best[r.manager];
+        if (!b || r.score > b.score) best[r.manager] = { score: r.score, day: d, label: r.label };
+      }
       const a = (all[r.manager] ??= { points: 0, played: 0, wins: 0 });
       a.points += r.score;
       a.played += 1;
-      if (r.score === best.get(d)) a.wins += 1;
+      if (r.score === topOfDay.get(d)) a.wins += 1;
     }
     const { accountId: _account, ...viewer } = await viewerOf(req, fid);
     void _account;
@@ -115,7 +121,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
       const t = season?.teams.get(m);
       if (t) teams[m] = t;
     }
-    return Response.json({ enabled: true, today, week, all, teams, viewer }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ enabled: true, today, week, all, best, teams, viewer }, { headers: { "cache-control": "no-store" } });
   } catch (e) {
     logError(`scores ${leagueId}`, e);
     return Response.json({ enabled: false });

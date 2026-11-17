@@ -26,12 +26,14 @@ type Board = {
   week?: Record<string, { points: number; played: number }>;
   /** Rafterlore: every day on record (a year). */
   all?: Record<string, { points: number; played: number; wins: number }>;
+  /** Rafterlore: each manager's all-time high score in this game. */
+  best?: Record<string, { score: number; day: string; label: string }>;
   /** Rafterlore: each player's Sleeper team name this season. */
   teams?: Record<string, string>;
   /** Rafterlore: who's looking. Absent on the Trash site (honor system). */
   viewer?: { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; suggest?: string | null };
 };
-type Tab = "today" | "week" | "all";
+type Tab = "today" | "week" | "all" | "best";
 /** A team name that just repeats the manager's name or username ("Kawhinot13" for KawhiNot) isn't shown twice. */
 const squash = (x: string) => x.toLowerCase().replace(/[^a-z]/g, "");
 const sameName = (team: string, ...names: (string | undefined)[]) =>
@@ -122,6 +124,21 @@ export function Leaderboard({
     };
   }, [game, day, brand.scores, reload]);
 
+  // Live: while the page is open and visible, check for new scores every 20 seconds, and right away
+  // when you come back to the tab, so everyone sees a finished game without reloading.
+  useEffect(() => {
+    if (!day) return;
+    const tick = () => {
+      if (document.visibilityState === "visible") setReload((n) => n + 1);
+    };
+    const t = setInterval(tick, 20_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [day]);
+
   const ready = board !== null;
   useEffect(() => {
     if (!day || !ready) return;
@@ -185,7 +202,8 @@ export function Leaderboard({
       })
       .finally(() => setChecking(false));
   };
-  const tabs: Tab[] = board.all ? ["today", "week", "all"] : ["today", "week"];
+  const tabs: Tab[] = board.all ? ["today", "week", "all", ...(board.best ? (["best"] as Tab[]) : [])] : ["today", "week"];
+  const dateOf = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const choices = ACTIVE;
   // Only rendered after the board loads in the browser, so window is there.
   const signIn = () => `/api/auth/google?next=${encodeURIComponent(`${window.location.pathname}#${SECTION[game]}`)}`;
@@ -198,7 +216,11 @@ export function Leaderboard({
         ? Object.entries(board.week ?? {})
             .map(([id, v]) => ({ id, main: v.points, sub: `${v.played} day${v.played === 1 ? "" : "s"} played` }))
             .sort((a, b) => b.main - a.main)
-        : Object.entries(board.all ?? {})
+        : tab === "best"
+          ? Object.entries(board.best ?? {})
+              .map(([id, v]) => ({ id, main: v.score, sub: `High score, ${dateOf(v.day)}${v.label ? ` · ${v.label}` : ""}` }))
+              .sort((a, b) => b.main - a.main)
+          : Object.entries(board.all ?? {})
             .map(([id, v]) => ({
               id,
               main: v.points,
@@ -219,7 +241,7 @@ export function Leaderboard({
               aria-pressed={tab === t}
               className={`cursor-pointer rounded-full px-3 py-1 font-semibold ${tab === t ? "bg-[var(--paper)] text-[var(--bin)]" : "text-[var(--paper)]/75"}`}
             >
-              {t === "today" ? "Today" : t === "week" ? "This week" : "All time"}
+              {t === "today" ? "Today" : t === "week" ? "This week" : t === "best" ? "High scores" : "All time"}
             </button>
           ))}
         </div>

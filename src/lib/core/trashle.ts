@@ -68,3 +68,16 @@ export function trashle(d: Dataset): { answers: TrashleWord[]; valid: string[]; 
   }
   return { answers, valid: [...valid].sort(), shared };
 }
+
+/** From this day the daily player's last name is always 5-7 letters (it was 4-7). Earlier days keep theirs. */
+export const FIVE_FROM = "2026-11-18";
+
+/** The shared daily player for day number `n` of the shared schedule (`day` is the date). */
+export function sharedPick(shared: TrashleWord[], n: number, day: string): TrashleWord | null {
+  if (!shared.length) return null;
+  if (day >= FIVE_FROM) {
+    const five = shared.filter((w) => w.word.length >= 5);
+    if (five.length) return five[n % five.length];
+  }
+  return shared[n % shared.length];
+}

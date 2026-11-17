@@ -2,6 +2,7 @@
 
 import { AFC, EAST } from "@/lib/core/lineup";
 import { sharedDay } from "@/lib/core/daily-pool";
+import { sharedPick } from "@/lib/core/trashle";
 import confetti from "canvas-confetti";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -119,7 +120,7 @@ export function Trashle({
   const target = useMemo(() => {
     if (!day) return null;
     const n = sharedDay(day);
-    if (n !== null && shared?.length) return shared[n % shared.length];
+    if (n !== null && shared?.length) return sharedPick(shared, n, day);
     // Before the shared schedule: each league's own bank, spread without repeats for a long while.
     const idx = (edition * 37 + 11) % answers.length;
     return answers[idx];

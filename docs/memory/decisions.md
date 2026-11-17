@@ -4,6 +4,21 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Daily games: high scores, resume, live standings, 5-letter Rosterdle, prompt variety
+- High scores: `/api/l/[id]/scores` returns `best` (each manager's top single day, date, label); the standings get a
+  "High scores" tab (Rafterlore; Trash's Redis board unchanged).
+- Dumpster Dive saves after every answer (`dive3:<day>` with `done` once the report shows) and resumes mid-game
+  after leaving the tab; finishing while away still records best/streak once. Also blocks redoing an answer.
+- Standings refresh every 20 s while visible and on returning to the tab, so finished scores appear for everyone.
+- Rosterdle: from 2026-11-18 (`FIVE_FROM`) the shared daily player's last name is 5-7 letters (was 4-7);
+  `sharedPick` skips shorter ones; earlier days unchanged. Pool stays append-only.
+- Variety (owner: "don't let it feel repetitive"): prompts carry a shape (`t`: roster, started, mgr-drafted,
+  traded-for/away, season-draft, season-traded, playoffs, champs, first, late, journey). `planned()` (from RESTART):
+  no shape twice a day, yesterday's shapes wait, longest-rested shape first, exact question waits 10+ days, managers
+  asked about yesterday wait. Before: roster prompts were 27% of days' questions and 93/140 back-to-back shape
+  repeats; now 54/140 and no exact repeat within 11 days (94 prompts, 5 a day: more shapes would help further).
+  Rejected 14-day cooldown: forced more back-to-back shapes and still repeated within 4 days.
+
 ## 2026-11-17: Dumpster Dive prompts were different per browser; schedule restarts 2026-11-18
 - Found while answering "what are today's questions": Node and Chrome planned different prompts for the same day.
   Cause: `legacy()` shuffled with `.sort(() => r() - 0.5)`; engines (and V8 versions; Safari/Firefox use other

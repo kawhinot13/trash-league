@@ -21,6 +21,8 @@ export type Prompt = {
   who?: string;
   /** Added with the no-repeat schedule (2026-11-16); older days are picked without these. */
   v?: 2;
+  /** The question's shape ("roster", "traded-for"...), so a day never asks the same kind of thing twice. */
+  t?: string;
 };
 
 type Raw = {
@@ -98,7 +100,7 @@ export function divePool(d: Dataset): Prompt[] {
   const years = Object.fromEntries(league.seasons.map((s) => [s.code, s.years]));
   const active = league.seasons.find((s) => s.code === lastCode(d))!.standings.map((r) => r.manager);
   const out: Prompt[] = [];
-  const add = (kind: string, prompt: string, signal: Map<string, number>, weight: number, extra: Pick<Prompt, "who" | "v"> = {}) => {
+  const add = (kind: string, prompt: string, signal: Map<string, number>, weight: number, extra: Pick<Prompt, "who" | "v" | "t"> = {}) => {
     const answers = score(signal, fame, weight);
     if (answers.length >= 8) out.push({ kind, prompt, answers, ...extra });
   };
@@ -111,11 +113,11 @@ export function divePool(d: Dataset): Prompt[] {
       for (const [pid, [, st]] of Object.entries(s.guys[m] ?? {})) if (st > 0) sum(starts, pid, st);
       for (const d of s.draft.filter((x) => x.by === m)) picks.set(d.pid, Math.max(picks.get(d.pid) ?? 0, 200 - d.no));
     }
-    add("Starters", `Name a player ${nick(m)} has started.`, starts, 0.55, { who: m });
-    add("Draft night", `Name a player ${nick(m)} has drafted.`, picks, 0.6, { who: m });
+    add("Starters", `Name a player ${nick(m)} has started.`, starts, 0.55, { who: m, t: "started" });
+    add("Draft night", `Name a player ${nick(m)} has drafted.`, picks, 0.6, { who: m, t: "mgr-drafted" });
     for (const s of raw.seasons.filter((x) => x.status === "complete")) {
       const wk = new Map(Object.entries(s.guys[m] ?? {}).map(([pid, [w]]) => [pid, w] as [string, number]));
-      add("Locker room", `Name a player who was on ${nick(m)}'s roster in ${years[s.code]}.`, wk, 0.55, { who: m });
+      add("Locker room", `Name a player who was on ${nick(m)}'s roster in ${years[s.code]}.`, wk, 0.55, { who: m, t: "roster" });
     }
   }
   for (const s of raw.seasons) {
@@ -125,11 +127,11 @@ export function divePool(d: Dataset): Prompt[] {
     const traded = new Map<string, number>();
     for (const t of s.trades)
       for (const p of Object.values(t.sides).flat()) if (!p.startsWith("pick:")) traded.set(p, prodSeason.get(p) ?? 0);
-    add("Trade log", `Name a player who was traded in ${years[s.code]}.`, traded, 0.5);
+    add("Trade log", `Name a player who was traded in ${years[s.code]}.`, traded, 0.5, { t: "season-traded" });
     if (s.playoffs.length) {
       const ps = new Map<string, number>();
       for (const g of s.playoffs) for (const [p, pts] of g.starters) sum(ps, p, 1 + pts / 100);
-      add("Playoffs", `Name a player who started a playoff game in ${years[s.code]}.`, ps, 0.5);
+      add("Playoffs", `Name a player who started a playoff game in ${years[s.code]}.`, ps, 0.5, { t: "playoffs" });
     }
   }
   // Journeymen: more league teams is the obvious end of this one.
@@ -142,11 +144,12 @@ export function divePool(d: Dataset): Prompt[] {
     `Name a player who has been on at least three different ${d.name} rosters.`,
     new Map([...teams].filter(([, ms]) => ms.size >= 3).map(([p, ms]) => [p, ms.size])),
     0.35,
+    { t: "journey" },
   );
   // First round: the earlier the pick, the more obvious. A #1 overall pick is the most obvious answer.
   const firsts = new Map<string, number>();
   for (const s of raw.seasons) for (const d of s.draft.filter((x) => x.round === 1)) firsts.set(d.pid, Math.max(firsts.get(d.pid) ?? 0, 13 - d.no));
-  add("First round", `Name a player taken in the first round of any ${d.name} draft.`, firsts, 0.65);
+  add("First round", `Name a player taken in the first round of any ${d.name} draft.`, firsts, 0.65, { t: "first" });
 
   // More prompts (v2): champions' rosters, each manager's trades, each season's draft, late rounds.
   const v2 = { v: 2 } as const;
@@ -154,10 +157,10 @@ export function divePool(d: Dataset): Prompt[] {
     const champ = league.seasons.find((x) => x.code === s.code)?.champion;
     if (champ) {
       const wk = new Map(Object.entries(s.guys[champ] ?? {}).map(([pid, [w]]) => [pid, w] as [string, number]));
-      add("Champions", `Name a player on ${nick(champ)}'s ${years[s.code]} title team.`, wk, 0.55, { ...v2, who: champ });
+      add("Champions", `Name a player on ${nick(champ)}'s ${years[s.code]} title team.`, wk, 0.55, { ...v2, who: champ, t: "champs" });
     }
     const picks = new Map(s.draft.map((x) => [x.pid, 200 - x.no] as [string, number]));
-    add("Draft night", `Name a player drafted in the ${years[s.code]} ${d.name} draft.`, picks, 0.6, v2);
+    add("Draft night", `Name a player drafted in the ${years[s.code]} ${d.name} draft.`, picks, 0.6, { ...v2, t: "season-draft" });
   }
   for (const m of active) {
     const got = new Map<string, number>();
@@ -169,12 +172,12 @@ export function divePool(d: Dataset): Prompt[] {
         for (const [k, ps] of Object.entries(t.sides))
           if (k !== m) for (const p of ps) if (!p.startsWith("pick:")) sum(gave, p, 1 + (s.guys[k]?.[p]?.[2] ?? 0) / 100);
       }
-    add("Trade log", `Name a player ${nick(m)} has traded for.`, got, 0.5, { ...v2, who: m });
-    add("Trade log", `Name a player ${nick(m)} has traded away.`, gave, 0.5, { ...v2, who: m });
+    add("Trade log", `Name a player ${nick(m)} has traded for.`, got, 0.5, { ...v2, who: m, t: "traded-for" });
+    add("Trade log", `Name a player ${nick(m)} has traded away.`, gave, 0.5, { ...v2, who: m, t: "traded-away" });
   }
   const late = new Map<string, number>();
   for (const s of raw.seasons) for (const x of s.draft.filter((y) => y.round >= 8)) late.set(x.pid, Math.max(late.get(x.pid) ?? 0, s.guys[x.by]?.[x.pid]?.[2] ?? 0));
-  add("Late rounds", `Name a player taken in round 8 or later of any ${d.name} draft.`, late, 0.5, v2);
+  add("Late rounds", `Name a player taken in round 8 or later of any ${d.name} draft.`, late, 0.5, { ...v2, t: "late" });
   return out;
 }
 
@@ -217,7 +220,8 @@ const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_40
  */
 export function dailyPrompts(pool: Prompt[], day: string) {
   if (day < SCHEDULE_FROM) return legacy(pool, day);
-  const restart = day >= RESTART;
+  if (day >= RESTART) return planned(pool, day);
+  const restart = false;
   const from = restart ? RESTART : SCHEDULE_FROM;
   const cooldown = Math.max(1, Math.min(14, Math.floor(pool.length / ROUNDS) - 1));
   const lastUsed = new Map<string, number>();
@@ -279,3 +283,59 @@ export function promptText(prompt: string, lineup: "lock-in" | "daily" | "weekly
 /** The prompt's category label in this league ("Starters" reads "Lock-ins" in lock-in leagues). */
 export const kindText = (kind: string, lineup: "lock-in" | "daily" | "weekly" | null | undefined) =>
   kind === "Starters" ? (lineup === "weekly" ? "Starters" : lineup === "daily" ? "Lineups" : "Lock-ins") : kind;
+
+/**
+ * The schedule from RESTART on, built for variety. Each prompt has a shape ("roster", "traded-for",
+ * "playoffs"...). A day never repeats a shape, never reuses yesterday's shapes when others are left,
+ * and takes the longest-rested shapes first; within a shape, the prompt asked longest ago (or never)
+ * goes first, and managers asked about yesterday wait a day. Engine-independent: seeded numbers only.
+ */
+function planned(pool: Prompt[], day: string): Prompt[] {
+  const shape = (q: Prompt) => q.t ?? q.kind;
+  const shapes = [...new Set(pool.map(shape))].sort();
+  // The exact same question waits at least 10 days (less if the pool is small).
+  const cool = Math.max(1, Math.min(10, Math.floor(pool.length / ROUNDS) - 2));
+  const lastShape = new Map<string, number>();
+  const lastPrompt = new Map<string, number>();
+  const lastWho = new Map<string, number>();
+  let picks: Prompt[] = [];
+  let n = 0;
+  for (let d = RESTART; d <= day; d = nextDay(d), n++) {
+    const r = rng(Number(d.replaceAll("-", "")) + 7);
+    const chosen: Prompt[] = [];
+    const who = new Set<string>();
+    const used = new Set<string>();
+    for (let slot = 0; slot < ROUNDS; slot++) {
+      const ranked = shapes
+        .filter((t) => !used.has(t))
+        .map((t) => {
+          const all = pool.filter((q) => shape(q) === t && !chosen.includes(q) && !(q.who && who.has(q.who)));
+          const fresh = all.filter((q) => n - (lastPrompt.get(q.prompt) ?? -1000) > cool);
+          const rest = Math.min(30, n - (lastShape.get(t) ?? -30));
+          // Empty shapes last; shapes with only recently asked questions next to last; yesterday's
+          // shapes after the rest; then longest rested; random among equals.
+          const key = (all.length ? 0 : 1000) + (fresh.length ? 0 : 500) + (rest <= 1 ? 100 : 0) - rest + r() * 0.9;
+          return { of: fresh.length ? fresh : all, key };
+        })
+        .sort((a, b) => a.key - b.key);
+      const of = ranked[0]?.of ?? [];
+      if (!of.length) break;
+      const scored = of.map((q) => {
+        const since = lastPrompt.has(q.prompt) ? n - lastPrompt.get(q.prompt)! : 1000;
+        const fresh = q.who && lastWho.get(q.who) === n - 1 ? -60 : 0;
+        return { q, s: since + fresh + r() * 0.9 };
+      });
+      const q = scored.reduce((a, b) => (b.s > a.s ? b : a)).q;
+      chosen.push(q);
+      used.add(shape(q));
+      if (q.who) who.add(q.who);
+    }
+    for (const q of chosen) {
+      lastShape.set(shape(q), n);
+      lastPrompt.set(q.prompt, n);
+      if (q.who) lastWho.set(q.who, n);
+    }
+    picks = chosen;
+  }
+  return picks;
+}

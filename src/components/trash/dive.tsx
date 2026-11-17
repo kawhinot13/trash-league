@@ -17,7 +17,8 @@ const ROUNDS = 5;
 const LAUNCH = Date.UTC(2026, 10, 14);
 
 type Pick = { pid: string | null; typed: string; score: number | null };
-type Saved = { picks: Pick[] };
+/** Today's progress, saved after every answer (so leaving mid-game resumes, never restarts); `done` once the report shows. */
+type Saved = { picks: Pick[]; done?: boolean };
 
 const todayET = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -193,11 +194,37 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     const b = store.get<number>(brand.key("dive:best"));
     if (b !== null) setBest({ prev: b, now: b });
     const saved = store.get<Saved>(brand.key(`dive3:${d}`));
-    if (saved?.picks?.length === ROUNDS) {
-      setPicks(saved.picks);
+    const got = saved?.picks ?? [];
+    if (got.length >= ROUNDS) {
+      setPicks(got.slice(0, ROUNDS));
       setPhase("done");
+      // Finished but left before the report: count it now (best and streak), once.
+      if (!saved?.done) {
+        const r = record(d, got.slice(0, ROUNDS));
+        setBest({ prev: r.prevBest, now: r.best });
+        setStreak(r.streak);
+      }
+    } else if (got.length) {
+      // Mid-game: pick up at the next prompt.
+      setPicks(got);
+      setI(got.length);
+      setPhase("play");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brand]);
+  /** Finish the day: personal best, streak, and mark the saved game done. */
+  function record(d: string, ps: Pick[]) {
+    const total = ps.reduce((t, p) => t + (p.score ?? 0), 0);
+    const prevBest = store.get<number>(brand.key("dive:best"));
+    const best = Math.max(prevBest ?? 0, total);
+    store.set(brand.key("dive:best"), best);
+    store.set(brand.key(`dive3:${d}`), { picks: ps, done: true } satisfies Saved);
+    const st = store.get<{ last: string; n: number }>(brand.key("dive:streak"));
+    const y = new Date(Date.parse(d) - 86400000).toISOString().slice(0, 10);
+    const n = st?.last === y ? st.n + 1 : st?.last === d ? st.n : 1;
+    store.set(brand.key("dive:streak"), { last: d, n });
+    return { prevBest, best, streak: n };
+  }
   const qs = useMemo(() => (day ? dailyPrompts(pool, day) : []), [pool, day]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : null;
   const q = qs[i];
@@ -206,7 +233,8 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
 
   // Running total counts up instead of jumping.
   useEffect(() => {
-    if (!settled && phase === "play") return;
+    // While an answer is still sinking, wait; otherwise (including a resumed game) show the total.
+    if (phase === "play" && !settled && picks.length > i) return;
     const o = { v: shown.current };
     if (sum > shown.current && total.current && !reduce)
       gsap.fromTo(total.current, { scale: 1.35 }, { scale: 1, duration: 0.6, delay: 0.5, ease: "elastic.out(1, 0.5)" });
@@ -219,7 +247,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
       },
     });
     shown.current = sum;
-  }, [sum, settled, phase, reduce]);
+  }, [sum, settled, phase, reduce, picks.length, i]);
 
   useEffect(() => {
     if (settled) nextBtn.current?.focus();
@@ -229,7 +257,10 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     if (!q || current) return;
     const hit = pid ? q.answers.find(([p]) => p === pid) : undefined;
     const score = hit ? hit[1] : null;
-    setPicks((x) => [...x.slice(0, i), { pid, typed, score }]);
+    const now = [...picks.slice(0, i), { pid, typed, score }];
+    setPicks(now);
+    // Saved right away: leaving the page (another tab, the nav) resumes here instead of restarting.
+    if (day) store.set(brand.key(`dive3:${day}`), { picks: now } satisfies Saved);
     await stage.current?.drop(pid, score, heatAt(picks, i - 1));
     setSettled(true);
   };
@@ -241,15 +272,9 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
     setFresh(true);
     sfx.fanfare();
     if (!day) return;
-    const prevBest = store.get<number>(brand.key("dive:best"));
-    store.set(brand.key("dive:best"), Math.max(prevBest ?? 0, sum));
-    setBest({ prev: prevBest, now: Math.max(prevBest ?? 0, sum) });
-    store.set(brand.key(`dive3:${day}`), { picks } satisfies Saved);
-    const st = store.get<{ last: string; n: number }>(brand.key("dive:streak"));
-    const y = new Date(Date.parse(day) - 86400000).toISOString().slice(0, 10);
-    const n = st?.last === y ? st.n + 1 : st?.last === day ? st.n : 1;
-    store.set(brand.key("dive:streak"), { last: day, n });
-    setStreak(n);
+    const r = record(day, picks);
+    setBest({ prev: r.prevBest, now: r.best });
+    setStreak(r.streak);
   };
   // The report: the total counts up (with ticks), and a big night gets confetti.
   const newBest = fresh && best !== null && best.prev !== null && sum > best.prev;

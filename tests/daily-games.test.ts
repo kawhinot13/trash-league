@@ -26,8 +26,9 @@ describe("Dumpster Dive", () => {
   });
 
   it("back-to-back days don't repeat a prompt", () => {
-    let prev = new Set(dailyPrompts(pool, "2026-11-16").map((q) => q.prompt));
-    for (const day of ["2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"]) {
+    // From the restart (Nov 18), when every device agrees; earlier days depended on the browser.
+    let prev = new Set(dailyPrompts(pool, "2026-11-18").map((q) => q.prompt));
+    for (const day of ["2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22"]) {
       const cur = dailyPrompts(pool, day).map((q) => q.prompt);
       for (const p of cur) expect(prev.has(p)).toBe(false);
       prev = new Set(cur);
@@ -94,6 +95,42 @@ describe("Dumpster Dive: the same prompts on every device", () => {
       expect(other).toEqual(normal);
     } finally {
       Array.prototype.sort = orig;
+    }
+  });
+});
+
+describe("Rosterdle names", () => {
+  it("from Nov 18 the daily player's last name is always 5-7 letters; earlier days keep theirs", async () => {
+    const { trashle } = await import("@/lib/trashle");
+    const { sharedPick, FIVE_FROM } = await import("@/lib/core/trashle");
+    const { sharedDay } = await import("@/lib/core/daily-pool");
+    const { shared } = trashle();
+    expect(shared.some((w) => w.word.length === 4)).toBe(true);
+    for (let k = 0; k < 400; k++) {
+      const day = new Date(Date.parse(`${FIVE_FROM}T12:00:00Z`) + k * 86_400_000).toISOString().slice(0, 10);
+      const w = sharedPick(shared, sharedDay(day)!, day)!;
+      expect(w.word.length).toBeGreaterThanOrEqual(5);
+      expect(w.word.length).toBeLessThanOrEqual(7);
+    }
+    for (const day of ["2026-11-16", "2026-11-17"]) expect(sharedPick(shared, sharedDay(day)!, day)).toBe(shared[sharedDay(day)! % shared.length]);
+  });
+});
+
+describe("Dumpster Dive variety", () => {
+  const shape = (p: { t?: string; kind: string }) => p.t ?? p.kind;
+  it("never asks the same kind of question twice in a day, or the same question within 10 days", () => {
+    const last = new Map<string, number>();
+    for (let k = 0; k < 90; k++) {
+      const day = new Date(Date.parse("2026-11-18T12:00:00Z") + k * 864e5).toISOString().slice(0, 10);
+      const qs = dailyPrompts(pool, day);
+      expect(qs).toHaveLength(5);
+      expect(new Set(qs.map(shape)).size).toBe(5);
+      expect(new Set(qs.filter((q) => q.who).map((q) => q.who)).size).toBe(qs.filter((q) => q.who).length);
+      for (const q of qs) {
+        const l = last.get(q.prompt);
+        if (l !== undefined) expect(k - l).toBeGreaterThan(10);
+        last.set(q.prompt, k);
+      }
     }
   });
 });
