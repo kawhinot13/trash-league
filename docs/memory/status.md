@@ -54,5 +54,5 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 - The environment setup script was tested by hand but only runs in a fresh session.
 
 ## How to verify changes
-`npx tsc --noEmit`, `npx eslint <files>`, `NODE_USE_ENV_PROXY=1 npx next build`, then the
+`npm test` (Vitest, ~10 s; also runs first in `npm run build`, so failures block deploys), `npx tsc --noEmit`, `npx eslint <files>`, `NODE_USE_ENV_PROXY=1 npx next build`, then the
 mobile-qa agent (or `node scripts/qa-mobile.mjs <url> <paths>`). Local Postgres: see CLAUDE.md.

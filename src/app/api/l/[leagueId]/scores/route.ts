@@ -6,6 +6,7 @@ import { logError } from "@/lib/app/safe";
 import { verifyChallenge } from "@/lib/app/removal";
 import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
+import { cleanState } from "@/lib/core/game-state";
 
 /**
  * Daily-game standings for one Rafterlore league, in Postgres:
@@ -17,15 +18,6 @@ import { isSleeperId } from "@/lib/app/validate";
  */
 // "dive2": the dive leaderboard since the no-repeat schedule and the 2026-11-15 reset.
 const GAMES = new Set(["dive", "dive2", "trashle", "lineup"]);
-/** A finished game's saved progress: { "dive3:2026-11-17": {...} }, only these names, small. */
-const STATE_NAME = /^(dive3|trashle|trashle-hints|lineup):\d{4}-\d{2}-\d{2}$/;
-function cleanState(x: unknown): Record<string, unknown> | null {
-  if (!x || typeof x !== "object" || Array.isArray(x)) return null;
-  const entries = Object.entries(x as Record<string, unknown>).filter(([k]) => STATE_NAME.test(k));
-  if (!entries.length || entries.length > 4) return null;
-  const out = Object.fromEntries(entries);
-  return JSON.stringify(out).length <= 16_000 ? out : null;
-}
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**

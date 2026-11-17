@@ -4,6 +4,15 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Automated tests (Vitest), and they gate deploys
+- 26 tests in `tests/` for the math: official weekly scores (incl. the Junkyard Dog case), lineupTotal == bestLineup,
+  trade finder rules (and agreement with evaluateTrade), Full strength / Health, Trapezoid window + no-peeking,
+  Dumpster Dive pool and daily schedule, saved daily-game state. Seeded made-up leagues plus Trash's real data.
+- `build` = `vitest run && next build`, so Vercel won't deploy a commit that breaks them (daily data pushes too).
+  Checked by reintroducing the Junkyard bug: its test failed by name.
+- `cleanState`/`STATE_NAME` moved to `core/game-state.ts` so they can be tested. Rejected: Jest (slower setup with
+  TS + path aliases); browser end-to-end tests in CI (slow, flaky; Playwright stays a manual check).
+
 ## 2026-11-17: Daily games remember you across devices (Rafterlore)
 - Bug: signing in on a phone let you replay a game already played on another device (finished state lived only in
   localStorage). The server already kept only the first score, but a replay showed a different report.

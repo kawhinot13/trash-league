@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { useMe } from "@/components/app/account";
 import { useBrand } from "@/components/trash/brand";
+import { STATE_NAME } from "@/lib/core/game-state";
 
 /**
  * Daily games, Rafterlore. Before you play: signed in, and the game knows which manager you are.
@@ -19,7 +20,6 @@ type Who = { enabled: boolean; viewer?: Viewer; played?: Played } | null;
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 /** The game ids behind each section. */
 const GAME_OF: Record<string, string> = { dive: "dive2", trashle: "trashle", lineup: "lineup" };
-const STATE_NAME = /^(dive3|trashle|trashle-hints|lineup):\d{4}-\d{2}-\d{2}$/;
 
 /** Put today's finished games from the account into this browser before the games mount, so a
  * second device opens on the same result instead of a fresh game. The account's copy wins. */

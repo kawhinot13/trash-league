@@ -116,6 +116,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   per Sleeper (weekly) and compared only with per-Sleeper regular weeks. Never move the window to fit champions.
 - Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.
   Never put league-specific features in the generic components.
+- Tests (`tests/*.test.ts`, Vitest, `npm test`): the math behind the numbers (official weekly scores, lineup and
+  trade finder, team analyzer, Trapezoid, Dumpster Dive prompts, saved daily games). `npm run build` runs them first,
+  so a failing test stops the Vercel deploy. Add a test with every math change or bug fix; pure functions only.
 - Local testing: Postgres binaries in `/usr/lib/postgresql/16/bin`; run `DATABASE_URL=... NODE_USE_ENV_PROXY=1 next dev`.
 
 ## Workflow (memory, agents, hooks)
