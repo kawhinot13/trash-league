@@ -200,6 +200,12 @@ function legacy(pool: Prompt[], day: string) {
 const SCHEDULE_FROM = "2026-11-15";
 /** Days that used the original pick: launch day and the replaced first day. */
 const LEGACY_DAYS = ["2026-11-14", "2026-11-15"];
+/**
+ * From this day the schedule restarts from scratch, without the original pick's history. That pick
+ * shuffled with a random-comparison sort, which JavaScript engines don't agree on, so Chrome, Safari
+ * and Node could plan different prompts for the same day. Every step from here is engine-independent.
+ */
+export const RESTART = "2026-11-18";
 const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 /**
@@ -211,17 +217,19 @@ const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_40
  */
 export function dailyPrompts(pool: Prompt[], day: string) {
   if (day < SCHEDULE_FROM) return legacy(pool, day);
+  const restart = day >= RESTART;
+  const from = restart ? RESTART : SCHEDULE_FROM;
   const cooldown = Math.max(1, Math.min(14, Math.floor(pool.length / ROUNDS) - 1));
   const lastUsed = new Map<string, number>();
   const kinds = [...new Set(pool.map((q) => q.kind))].sort();
   let picks: Prompt[] = [];
   let yesterday = new Set<string>();
   // Days before the schedule (including the set it replaced on its first day) count as used.
-  const before = LEGACY_DAYS.map((d) => legacy(pool, d));
+  const before = restart ? [] : LEGACY_DAYS.map((d) => legacy(pool, d));
   before.forEach((qs, i) => qs.forEach((q) => lastUsed.set(q.prompt, i - before.length)));
   if (before.length) yesterday = new Set(before[before.length - 1].map((q) => q.kind));
   let n = 0;
-  for (let d = SCHEDULE_FROM; d <= day; d = nextDay(d), n++) {
+  for (let d = from; d <= day; d = nextDay(d), n++) {
     const r = rng(Number(d.replaceAll("-", "")));
     const fresh = (q: Prompt) => n - (lastUsed.get(q.prompt) ?? -Infinity) > cooldown;
     const chosen: Prompt[] = [];

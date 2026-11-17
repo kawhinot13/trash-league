@@ -67,3 +67,35 @@ describe("Dumpster Dive wording follows the league's lineups", () => {
     for (const q of pool) expect(promptText(q.prompt, "lock-in")).not.toMatch(/started/);
   });
 });
+
+describe("Dumpster Dive: the same prompts on every device", () => {
+  // Engines may sort differently (that's how Chrome and Node disagreed). A different, still valid
+  // stable sort must give exactly the same days from the restart on.
+  const insertionSort = function <T>(this: T[], cmp?: (a: T, b: T) => number) {
+    const c = cmp ?? ((a: T, b: T) => (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0));
+    for (let i = 1; i < this.length; i++) {
+      const x = this[i];
+      let j = i - 1;
+      while (j >= 0 && c(this[j], x) > 0) {
+        this[j + 1] = this[j];
+        j--;
+      }
+      this[j + 1] = x;
+    }
+    return this;
+  };
+  it("doesn't depend on how the engine sorts", () => {
+    const days = ["2026-11-18", "2026-11-19", "2026-11-25", "2026-12-25", "2027-02-01"];
+    const normal = days.map((d) => dailyPrompts(pool, d).map((q) => q.prompt));
+    const orig = Array.prototype.sort;
+    try {
+      // eslint-disable-next-line no-extend-native
+      Array.prototype.sort = insertionSort as typeof orig;
+      const other = days.map((d) => dailyPrompts(pool, d).map((q) => q.prompt));
+      expect(other).toEqual(normal);
+    } finally {
+      // eslint-disable-next-line no-extend-native
+      Array.prototype.sort = orig;
+    }
+  });
+});

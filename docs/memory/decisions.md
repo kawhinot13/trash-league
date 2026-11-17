@@ -4,6 +4,15 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive prompts were different per browser; schedule restarts 2026-11-18
+- Found while answering "what are today's questions": Node and Chrome planned different prompts for the same day.
+  Cause: `legacy()` shuffled with `.sort(() => r() - 0.5)`; engines (and V8 versions; Safari/Firefox use other
+  algorithms) disagree on random-comparator sorts, and the schedule carried that history forward every day.
+- Fix: from `RESTART` (2026-11-18) the schedule starts fresh without the legacy history; everything after is
+  engine-independent (seeded rng, numeric keys, stable sorts). Test swaps Array.prototype.sort for insertion
+  sort and requires identical days. Days before the restart are left as they were (can't be made consistent;
+  changing today would break saved reports). Applies to Trash and every Rafterlore league.
+
 ## 2026-11-17: Dumpster Dive says "locked in" in lock-in leagues
 - Owner asked what "started" means (it's the week's starting lineup = the lock-in). `promptText`/`kindText` in
   core/dive.ts reword for display only: lock-in "locked in" / "Lock-ins", daily "in the lineup" / "Lineups",
