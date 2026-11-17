@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Team names on Rafterlore daily-game standings; no emails
+- Owner asked for "your email" and "your team" on the standings. Team names (public Sleeper data) now show beside
+  each manager (`teams` in `/api/l/[id]/scores`, from `newestSeason`), hidden when they just repeat the name.
+- Emails are NOT shown: accounts never store an email (privacy promise, `/privacy`), and the boards are public, so
+  everyone's address would be visible to anyone. The manager name already says who played.
+
 ## 2026-11-16: Front office Trade finder
 - Owner asked for "best trades that would upgrade your lineup, but realistic". New tab (`tradeFinder` in fo-analysis):
   1-for-1, 2-for-1, 1-for-2 with every team; kept only if your best lineup gains >= 5 a week, theirs loses at most 3

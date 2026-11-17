@@ -87,7 +87,14 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
     }
     const { accountId: _account, ...viewer } = await viewerOf(req, fid);
     void _account;
-    return Response.json({ enabled: true, today, week, all, viewer }, { headers: { "cache-control": "no-store" } });
+    // Each player's Sleeper team name this season (public league data), for managers on the board.
+    const season = await newestSeason(fid).catch(() => null);
+    const teams: Record<string, string> = {};
+    for (const m of Object.keys(all)) {
+      const t = season?.teams.get(m);
+      if (t) teams[m] = t;
+    }
+    return Response.json({ enabled: true, today, week, all, teams, viewer }, { headers: { "cache-control": "no-store" } });
   } catch (e) {
     logError(`scores ${leagueId}`, e);
     return Response.json({ enabled: false });

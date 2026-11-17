@@ -257,7 +257,7 @@ export async function housekeeping() {
 /** The family's newest season: where a manager proves who they are (their current team name). */
 export async function newestSeason(
   familyId: string,
-): Promise<{ leagueId: string; name: string; season: string; users: Set<string>; names: Map<string, string> } | null> {
+): Promise<{ leagueId: string; name: string; season: string; users: Set<string>; names: Map<string, string>; teams: Map<string, string> } | null> {
   const f = await readFamily(familyId);
   const s = f?.seasons[f.seasons.length - 1];
   return s
@@ -268,6 +268,8 @@ export async function newestSeason(
         users: new Set(s.users.map((u) => u.user_id)),
         // Sleeper user id -> username (display name), to match an account's saved Sleeper username.
         names: new Map(s.users.map((u) => [u.user_id, u.display_name])),
+        // Sleeper user id -> this season's team name (public on Sleeper), when they set one.
+        teams: new Map(s.users.flatMap((u) => (u.metadata?.team_name ? [[u.user_id, String(u.metadata.team_name)] as [string, string]] : []))),
       }
     : null;
 }

@@ -26,10 +26,16 @@ type Board = {
   week?: Record<string, { points: number; played: number }>;
   /** Rafterlore: every day on record (a year). */
   all?: Record<string, { points: number; played: number; wins: number }>;
+  /** Rafterlore: each player's Sleeper team name this season. */
+  teams?: Record<string, string>;
   /** Rafterlore: who's looking. Absent on the Trash site (honor system). */
   viewer?: { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; suggest?: string | null };
 };
 type Tab = "today" | "week" | "all";
+/** A team name that just repeats the manager's name or username ("Kawhinot13" for KawhiNot) isn't shown twice. */
+const squash = (x: string) => x.toLowerCase().replace(/[^a-z]/g, "");
+const sameName = (team: string, ...names: (string | undefined)[]) =>
+  names.some((n) => n && squash(n).length >= 3 && squash(team).length >= 3 && (squash(team) === squash(n) || squash(team).startsWith(squash(n)) || squash(n).startsWith(squash(team))));
 /** A one-time code waiting to show up in the manager's Sleeper team name (kept across app switches). */
 type Pending = { challenge: string; code: string; manager: string; expiresAt: string };
 const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup" };
@@ -336,7 +342,12 @@ export function Leaderboard({
               <span className="font-display w-6 text-xl font-black text-[var(--muted)] tabular-nums">{i + 1}</span>
               <MgrPhoto id={r.id} alt="" width={30} height={30} className="size-[30px] rounded-full object-cover" />
               <span className="min-w-0 flex-1">
-                <span className="block break-words font-semibold">{nick(r.id)}</span>
+                <span className="block break-words font-semibold">
+                  {nick(r.id)}
+                  {board.teams?.[r.id] && !sameName(board.teams[r.id], nick(r.id), brand.names?.[r.id]) ? (
+                    <span className="font-normal text-[var(--paper)]/70"> · {board.teams[r.id]}</span>
+                  ) : null}
+                </span>
                 <span className="block break-words text-xs text-[var(--muted)]">{r.sub}</span>
               </span>
               <span className="font-display text-2xl font-black tabular-nums">{r.main}</span>
