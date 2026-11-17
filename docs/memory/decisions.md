@@ -4,6 +4,11 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive: a perfect 100 has its own holographic tier
+- Owner: 100 is the "one in a krillion" answer and should feel unique. New tier "Deepest in the bin" (`tierOf(100)`):
+  `bg` = HOLO foil gradient (cyan, violet, pink, gold) with a shimmer (`.dd-holo`, still under reduced motion), violet
+  accent, rainbow light rays and confetti in the takeover, 💎 in the share text. 90-99 keep the gold "Dumpster diver".
+
 ## 2026-11-17: Player photos for Trash's league on Rafterlore only
 - Owner's call: Trash's league (pack "trash", `packIdFor`) gets `headshots: "sleeper"`; all other leagues keep badges.
   Conditions agreed: Trash only; not used as the public demo or in Rafterlore promotion; back to badges if Rafterlore

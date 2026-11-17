@@ -323,7 +323,7 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
   const floor = [...RANKS].reverse().find(([t]) => t <= sum)?.[0] ?? 0;
 
   const share = async () => {
-    const sq = picks.map((p) => (p.score === null ? "⬛" : p.score >= 90 ? "🟫" : p.score >= 60 ? "🟩" : p.score >= 25 ? "🟨" : "🟥"));
+    const sq = picks.map((p) => (p.score === null ? "⬛" : p.score >= 100 ? "💎" : p.score >= 90 ? "🟫" : p.score >= 60 ? "🟩" : p.score >= 25 ? "🟨" : "🟥"));
     const text = `${brand.games.dive} #${edition} ${sq.join("")} ${sum}/${ROUNDS * 100}\n${location.origin}${brand.base || "/"}#dive`;
     try {
       await navigator.clipboard.writeText(text);
@@ -372,8 +372,8 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                   initial={t && !reduce ? { scale: 0.3, rotate: -20 } : false}
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ type: "spring", duration: 0.45, bounce: 0.55 }}
-                  className={`flex h-9 w-7 items-center justify-center rounded-md border text-[11px] font-black tabular-nums ${live ? "border-[var(--paper)]" : "border-white/15"}`}
-                  style={{ background: t ? t.hex : "rgba(0,0,0,0.25)", color: t ? "#10141a" : undefined }}
+                  className={`flex h-9 w-7 items-center justify-center rounded-md border text-[11px] font-black tabular-nums ${live ? "border-[var(--paper)]" : "border-white/15"} ${t?.holo ? "dd-holo" : ""}`}
+                  style={{ background: t ? t.bg : "rgba(0,0,0,0.25)", color: t ? "#10141a" : undefined }}
                 >
                   {t ? (p!.score ?? "×") : k + 1}
                 </motion.span>
@@ -614,13 +614,18 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                         style={{
                           borderColor: t.hex,
                           transformOrigin: "50% 120%",
-                          boxShadow: (p.score ?? 0) >= 90 ? "0 0 28px rgba(233,196,106,0.75), 0 12px 30px rgba(0,0,0,0.5)" : "0 12px 30px rgba(0,0,0,0.5)",
+                          boxShadow:
+                            (p.score ?? 0) >= 100
+                              ? "0 0 30px rgba(125,249,255,0.6), 0 0 52px rgba(255,138,216,0.5), 0 12px 30px rgba(0,0,0,0.5)"
+                              : (p.score ?? 0) >= 90
+                                ? "0 0 28px rgba(233,196,106,0.75), 0 12px 30px rgba(0,0,0,0.5)"
+                                : "0 12px 30px rgba(0,0,0,0.5)",
                         }}
                       >
                         <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle_at_50%_30%,#2a5a45,#0d241a)]">
                           {p.pid ? <Face pid={p.pid} players={players} size={56} /> : <span className="font-display text-3xl font-black text-[var(--ticket)]">×</span>}
                         </div>
-                        <p className="py-1 text-center text-sm font-black tabular-nums" style={{ background: t.hex, color: "#10141a" }}>
+                        <p className={`py-1 text-center text-sm font-black tabular-nums ${t.holo ? "dd-holo" : ""}`} style={{ background: t.bg, color: "#10141a" }}>
                           {p.score ?? "miss"}
                         </p>
                       </motion.div>
@@ -664,7 +669,7 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
                         aria-expanded={open}
                         className="flex w-full cursor-pointer items-center gap-3 p-4 text-left"
                       >
-                        <span className="rounded-md px-2 py-0.5 text-sm font-black tabular-nums" style={{ background: tierOf(p?.score ?? null).hex, color: "#10141a" }}>
+                        <span className={`rounded-md px-2 py-0.5 text-sm font-black tabular-nums ${tierOf(p?.score ?? null).holo ? "dd-holo" : ""}`} style={{ background: tierOf(p?.score ?? null).bg, color: "#10141a" }}>
                           {p?.score ?? "×"}
                         </span>
                         <span className="min-w-0 flex-1">

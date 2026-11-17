@@ -478,3 +478,8 @@ body {
     padding-bottom: calc(68px + env(safe-area-inset-bottom));
   }
 }
+
+/* Dumpster Dive: the holographic foil of a perfect 100 (shimmers; still when motion is reduced). */
+.dd-holo { background-size: 250% 100% !important; animation: dd-holo 3.2s linear infinite; }
+@keyframes dd-holo { to { background-position: 250% 0; } }
+@media (prefers-reduced-motion: reduce) { .dd-holo { animation: none; } }

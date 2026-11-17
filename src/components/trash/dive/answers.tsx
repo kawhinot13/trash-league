@@ -39,8 +39,8 @@ export function AnswerBoard({
                 {me ? <span className="ml-1.5 text-xs text-[var(--muted)]">your pick</span> : null}
               </span>
               <span
-                className="rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums"
-                style={{ background: t.hex, color: "#10141a" }}
+                className={`rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums ${t.holo ? "dd-holo" : ""}`}
+                style={{ background: t.bg, color: "#10141a" }}
                 title={t.label}
               >
                 {s}

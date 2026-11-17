@@ -15,16 +15,24 @@ const H = 440;
 const RIM = 118;
 const depthY = (s: number) => 168 + s * 1.78;
 
-export const tierOf = (s: number | null) =>
+/** The holographic foil of a perfect 100: the deepest answer in the bin. */
+export const HOLO = "linear-gradient(115deg, #7df9ff 0%, #c792ff 28%, #ff8ad8 52%, #ffd36e 76%, #7df9ff 100%)";
+
+type Tier = { label: string; short: string; color: string; hex: string; bg: string; holo?: boolean };
+const tier = (t: Omit<Tier, "bg"> & { bg?: string }): Tier => ({ bg: t.hex, ...t });
+/** `hex` for borders and text accents, `bg` for fills (the 100's is the foil gradient; add class dd-holo to shimmer). */
+export const tierOf = (s: number | null): Tier =>
   s === null
-    ? { label: "Not in the bin", short: "Miss", color: "var(--ticket)", hex: "#d6342c" }
-    : s >= 90
-      ? { label: "Dumpster diver", short: "Diver", color: "var(--wood)", hex: "#c98a4b" }
-      : s >= 60
-        ? { label: "Deep cut", short: "Deep", color: "#7fd49a", hex: "#7fd49a" }
-        : s >= 25
-          ? { label: "Solid pull", short: "Solid", color: "var(--paper)", hex: "#f6f3ea" }
-          : { label: "Everybody said that", short: "Obvious", color: "var(--muted)", hex: "#a4b8ab" };
+    ? tier({ label: "Not in the bin", short: "Miss", color: "var(--ticket)", hex: "#d6342c" })
+    : s >= 100
+      ? tier({ label: "Deepest in the bin", short: "Deepest", color: "#d9b8ff", hex: "#c792ff", bg: HOLO, holo: true })
+      : s >= 90
+        ? tier({ label: "Dumpster diver", short: "Diver", color: "var(--wood)", hex: "#c98a4b" })
+        : s >= 60
+          ? tier({ label: "Deep cut", short: "Deep", color: "#7fd49a", hex: "#7fd49a" })
+          : s >= 25
+            ? tier({ label: "Solid pull", short: "Solid", color: "var(--paper)", hex: "#f6f3ea" })
+            : tier({ label: "Everybody said that", short: "Obvious", color: "var(--muted)", hex: "#a4b8ab" });
 
 export type StageApi = {
   open: () => void;
@@ -217,7 +225,12 @@ export function Stage({
   };
 
   /** 90+: the takeover. Light rays behind the bin, a flash, the card punches toward you, side cannons. */
-  const takeover = (heat: number) => {
+  const takeover = (heat: number, perfect = false) => {
+    // A perfect 100 turns the rays into rainbow foil; 90-99 keep the gold.
+    if (rays.current)
+      rays.current.style.background = perfect
+        ? "repeating-conic-gradient(from 0deg at 50% 50%, rgba(125,249,255,0.34) 0deg 5deg, transparent 5deg 10deg, rgba(199,146,255,0.34) 10deg 15deg, transparent 15deg 20deg, rgba(255,138,216,0.34) 20deg 25deg, transparent 25deg 30deg, rgba(255,211,110,0.34) 30deg 35deg, transparent 35deg 40deg)"
+        : "repeating-conic-gradient(from 0deg at 50% 50%, rgba(233,196,106,0.30) 0deg 6deg, transparent 6deg 20deg)";
     if (reduce.current) {
       gsap.to(rays.current, { opacity: 0.6, duration: 0.3 });
       return;
@@ -232,8 +245,8 @@ export function Stage({
       .to(card.current, { scale: 1, duration: 0.7, ease: "elastic.out(1, 0.45)" });
     if (fx.current) {
       const shoot = confetti.create(fx.current, { resize: true, useWorker: true });
-      const colors = ["#e9c46a", "#c98a4b", "#f6f3ea", "#7fd49a"];
-      const n = 40 + Math.min(heat, 4) * 15;
+      const colors = perfect ? ["#7df9ff", "#c792ff", "#ff8ad8", "#ffd36e", "#f6f3ea"] : ["#e9c46a", "#c98a4b", "#f6f3ea", "#7fd49a"];
+      const n = (perfect ? 70 : 40) + Math.min(heat, 4) * 15;
       setTimeout(() => {
         void shoot({ particleCount: n, angle: 60, spread: 55, startVelocity: 45, origin: { x: 0.1, y: 0.75 }, colors, scalar: 0.8 });
         void shoot({ particleCount: n, angle: 120, spread: 55, startVelocity: 45, origin: { x: 0.9, y: 0.75 }, colors, scalar: 0.8 });
@@ -297,7 +310,7 @@ export function Stage({
           else {
             sfx.chime(score, heat);
             floatScore(score, tierOf(score).hex, px(depthY(score)));
-            if (score >= 90) takeover(heat);
+            if (score >= 90) takeover(heat, score === 100);
           }
           done();
           return;
@@ -343,7 +356,7 @@ export function Stage({
           floatScore(score, tier.hex, target);
           if (score >= 90) {
             celebrate();
-            takeover(heat);
+            takeover(heat, score === 100);
             shake(10);
             gsap.fromTo(lid.current, { rotation: -118 }, { rotation: -100, yoyo: true, repeat: 3, duration: 0.09 });
           }
@@ -406,7 +419,7 @@ export function Stage({
       <div ref={card} className="absolute top-0 left-1/2 w-[20%] will-change-transform">
         <div
           className="overflow-hidden rounded-xl border-[3px] bg-[#0d241a] shadow-[0_12px_30px_rgba(0,0,0,0.5)]"
-          style={{ borderColor: t ? t.hex : "#f6f3ea" }}
+          style={{ borderColor: t ? t.hex : "#f6f3ea", boxShadow: t?.holo ? "0 0 26px rgba(125,249,255,0.55), 0 0 44px rgba(255,138,216,0.45)" : undefined }}
         >
           <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle_at_50%_30%,#2a5a45,#0d241a)]">
             {shown?.pid ? <Face pid={shown.pid} players={players} size={72} /> : <span className="font-display text-4xl font-black text-[var(--ticket)]">?</span>}
@@ -481,7 +494,7 @@ export function Stage({
       </div>
 
       {/* tier banner */}
-      <div ref={banner} className="absolute top-[34%] left-1/2 overflow-hidden rounded-lg border-[3px] px-4 py-1.5 whitespace-nowrap shadow-[0_10px_30px_rgba(0,0,0,0.5)]" style={{ borderColor: INK, background: t?.hex ?? "#f6f3ea" }}>
+      <div ref={banner} className={`absolute top-[34%] left-1/2 overflow-hidden rounded-lg border-[3px] px-4 py-1.5 whitespace-nowrap shadow-[0_10px_30px_rgba(0,0,0,0.5)] ${t?.holo ? "dd-holo" : ""}`} style={{ borderColor: INK, background: t?.bg ?? "#f6f3ea" }}>
         <span className="font-display relative z-10 text-2xl font-black text-[#10141a] sm:text-3xl">{shown?.score === 100 ? "Deepest in the bin" : (t?.label ?? "")}</span>
         <span ref={shine} className="absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-white/50" />
       </div>
