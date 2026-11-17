@@ -56,7 +56,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Read only in API routes and the browser (`useMe`), never in page renders, so pages stay pre-built.
 - Daily-game standings (Rafterlore): with sign-in on, only signed-in accounts post (`/api/l/[id]/scores`). Each account
   links to one Sleeper user (`sleeper_links`, unique both ways). No code (owner's call), but an account can only be
-  the manager whose username is saved on it (`accounts.sleeper`, saved on search or typed once in the gate). Before a
+  the manager whose username is saved on it (`accounts.sleeper`, saved on search, or set by tapping your team in the gate: with no saved username,
+  `PlayGate` shows the league's managers to pick, claimed ones greyed out; typing stays as a fallback). Before a
   game starts, `PlayGate` (uses `/api/l/[id]/scores?who=1`) asks "Who are you?" once (first game only), and in leagues
   that manager isn't in it shows "You're not in this league" instead of the game. First account to claim a manager keeps them. One try a day on any device: the finished game (answers) is saved with the score (`game_scores.state`) and
   `PlayGate` restores it before the game mounts; older scores without it show "You already played today". Today / This week / All time (scores kept ~a year). With sign-in

@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Pick your team instead of typing a username
+- Owner: a league-mate had to type his Sleeper username to play. Now, with no saved username, the gate shows the
+  league's current managers (photo + name) to tap, then "I'm <name>"; managers another account already plays as are
+  greyed out ("taken"). Picking saves that username on the account, so the rest of the rules hold (one manager per
+  account, first claim keeps them). `?who=1` returns `pick: { current, taken }` (ids only). Typing is a fallback link.
+
 ## 2026-11-17: Automated tests (Vitest), and they gate deploys
 - 26 tests in `tests/` for the math: official weekly scores (incl. the Junkyard Dog case), lineupTotal == bestLineup,
   trade finder rules (and agreement with evaluateTrade), Full strength / Health, Trapezoid window + no-peeking,

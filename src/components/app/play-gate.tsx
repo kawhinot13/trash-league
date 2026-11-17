@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { useMe } from "@/components/app/account";
-import { useBrand } from "@/components/trash/brand";
+import { MgrPhoto, useBrand } from "@/components/trash/brand";
 import { STATE_NAME } from "@/lib/core/game-state";
 
 /**
@@ -15,7 +15,7 @@ import { STATE_NAME } from "@/lib/core/game-state";
  */
 type Viewer = { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; suggest?: string | null };
 type Played = Record<string, { score: number; label: string; state: Record<string, unknown> | null }>;
-type Who = { enabled: boolean; viewer?: Viewer; played?: Played } | null;
+type Who = { enabled: boolean; viewer?: Viewer; played?: Played; pick?: { current: string[]; taken: string[] } | null } | null;
 
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 /** The game ids behind each section. */
@@ -89,6 +89,8 @@ export function PlayGate({ game, anchor, children, primary }: { game: string; an
   const [name, setName] = useState(me?.account?.sleeper ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [typing, setTyping] = useState(false);
 
   if (me === null) return <div aria-busy className="min-h-[18rem] rounded-[28px] border border-white/10 bg-black/20" />;
   if (!me.configured) return <>{children}</>;
@@ -190,6 +192,37 @@ export function PlayGate({ game, anchor, children, primary }: { game: string; an
           <Link href="/l" className={`mt-6 ${btn}`}>
             Go to your leagues
           </Link>
+        </>
+      ) : who.pick?.current.length && !typing ? (
+        <>
+          <p className="mt-3 text-[var(--muted)]">Tap your team. You&apos;ll play as them in {brand.name}, and only as them.</p>
+          <ul className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {who.pick.current.map((id) => {
+              const taken = who.pick!.taken.includes(id);
+              const on = chosen === id;
+              return (
+                <li key={id}>
+                  <button
+                    type="button"
+                    disabled={taken || busy}
+                    aria-pressed={on}
+                    onClick={() => setChosen(id)}
+                    className={`flex w-full cursor-pointer flex-col items-center gap-1.5 rounded-2xl p-2 transition-[background-color,transform] duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-35 ${on ? "bg-[var(--paper)]/15 ring-2 ring-[var(--paper)]" : "bg-black/20 hover:bg-black/35"}`}
+                  >
+                    <MgrPhoto id={id} alt="" width={56} height={56} className="size-14 rounded-full object-cover" />
+                    <span className="text-xs leading-tight font-semibold break-words">{brand.names?.[id] ?? "Manager"}</span>
+                    {taken ? <span className="text-[10px] text-[var(--muted)]">taken</span> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button type="button" disabled={!chosen || busy} onClick={() => chosen && void claim({ manager: chosen })} className={`mt-5 ${btn}`}>
+            {busy ? "One sec…" : chosen ? `I'm ${brand.names?.[chosen] ?? "this manager"}` : "Pick your team"}
+          </button>
+          <button type="button" onClick={() => setTyping(true)} className="mt-3 block w-full cursor-pointer text-xs text-[var(--muted)] underline-offset-4 hover:underline">
+            Type your Sleeper username instead
+          </button>
         </>
       ) : (
         <form

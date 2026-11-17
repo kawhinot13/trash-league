@@ -62,7 +62,19 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
         select game, score, label, state from game_scores where family_id = ${fid} and manager = ${viewer.manager} and day = ${day}::date`;
       played = Object.fromEntries(rows.map((r) => [r.game, { score: r.score, label: r.label, state: r.state }]));
     }
-    return Response.json({ enabled: true, viewer, played }, { headers: { "cache-control": "no-store" } });
+    // Not linked yet and no saved username to go on: the league's managers to pick from (ids only), and
+    // which of them another account already plays as.
+    let pick: { current: string[]; taken: string[] } | null = null;
+    if (viewer.signedIn && !viewer.linked && !viewer.suggest) {
+      const season = await newestSeason(fid);
+      const current = [...(season?.users ?? [])];
+      if (current.length) {
+        const sql = await db();
+        const rows = await sql<{ sleeper_user: string }[]>`select sleeper_user from sleeper_links where sleeper_user in ${sql(current)}`;
+        pick = { current, taken: rows.map((r) => r.sleeper_user) };
+      }
+    }
+    return Response.json({ enabled: true, viewer, played, pick }, { headers: { "cache-control": "no-store" } });
   }
   if (!GAMES.has(game) || !DAY.test(day)) return Response.json({ error: "bad request" }, { status: 400 });
   try {
