@@ -356,7 +356,7 @@ const PINNED: Record<string, string[]> = {
     "Name a player picked up off waivers in 2025–26.",
     "Name a player taken in round 8 or later of any Trash draft.",
     "Name a Knicks player who has been on a Trash roster.",
-    "Name a player who has been on Rico's roster this season (2026–27).",
+    "Name a player Rico has traded for.",
   ],
 };
 
