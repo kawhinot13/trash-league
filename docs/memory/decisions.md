@@ -4,6 +4,11 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Dumpster Dive says "locked in" in lock-in leagues
+- Owner asked what "started" means (it's the week's starting lineup = the lock-in). `promptText`/`kindText` in
+  core/dive.ts reword for display only: lock-in "locked in" / "Lock-ins", daily "in the lineup" / "Lineups",
+  football keeps "started". Stored prompt text is unchanged because the daily schedule keys on it (no reshuffle).
+
 ## 2026-11-17: Pick your team instead of typing a username
 - Owner: a league-mate had to type his Sleeper username to play. Now, with no saved username, the gate shows the
   league's current managers (photo + name) to tap, then "I'm <name>"; managers another account already plays as are

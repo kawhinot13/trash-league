@@ -252,3 +252,22 @@ export function dailyPrompts(pool: Prompt[], day: string) {
   }
   return picks;
 }
+
+/**
+ * How a prompt reads in this league. Prompts are stored (and scheduled) with "started"; lock-in
+ * leagues say "locked in" and daily-lineup leagues "in the lineup" (see lineup-terms.ts). Football
+ * keeps "started". Display only: the stored text, and so the daily schedule, never changes.
+ */
+export function promptText(prompt: string, lineup: "lock-in" | "daily" | "weekly" | null | undefined) {
+  if (lineup === "weekly") return prompt;
+  const lock = lineup !== "daily";
+  return prompt
+    .replace(/^Name a player (.+) has started\.$/, (_, who: string) => (lock ? `Name a player ${who} has locked in.` : `Name a player ${who} has had in the lineup.`))
+    .replace(/^Name a player who started a playoff game in (.+)\.$/, (_, yrs: string) =>
+      lock ? `Name a player who was locked in for a playoff game in ${yrs}.` : `Name a player who was in a playoff lineup in ${yrs}.`,
+    );
+}
+
+/** The prompt's category label in this league ("Starters" reads "Lock-ins" in lock-in leagues). */
+export const kindText = (kind: string, lineup: "lock-in" | "daily" | "weekly" | null | undefined) =>
+  kind === "Starters" ? (lineup === "weekly" ? "Starters" : lineup === "daily" ? "Lineups" : "Lock-ins") : kind;

@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import type { Players } from "@/lib/extras";
-import { dailyPrompts, type Prompt } from "@/lib/core/dive";
+import { dailyPrompts, kindText, promptText, type Prompt } from "@/lib/core/dive";
 import { Face, pname } from "./player";
 import { AnswerBoard } from "./dive/answers";
 import { sfx } from "./dive/sfx";
@@ -433,10 +433,10 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
                   className="[grid-area:p]"
                 >
                   <p className="inline-flex rounded-full bg-[var(--wood)]/20 px-3 py-1 text-xs font-bold text-[var(--wood)]">
-                    {q.kind}, prompt {i + 1} of {qs.length}
+                    {kindText(q.kind, brand.lineup)}, prompt {i + 1} of {qs.length}
                   </p>
                   <h3 className="font-display mt-3 max-w-[20ch] text-[clamp(2rem,4.8vw,3.3rem)] leading-[0.96] font-black">
-                    {q.prompt}
+                    {promptText(q.prompt, brand.lineup)}
                   </h3>
                   <p className="mt-2 text-sm text-[var(--muted)]">{q.answers.length} right answers are in the bin.</p>
                 </motion.div>
@@ -634,7 +634,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
                           {p?.score ?? "×"}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block font-semibold">{pq.prompt}</span>
+                          <span className="block font-semibold">{promptText(pq.prompt, brand.lineup)}</span>
                           <span className="block text-sm text-[var(--muted)]">
                             You said {p?.typed ?? "nothing"}. Deepest: {pname(players, pq.answers[0][0])}.
                           </span>

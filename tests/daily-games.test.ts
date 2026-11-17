@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dailyPrompts } from "@/lib/core/dive";
+import { dailyPrompts, promptText } from "@/lib/core/dive";
 import { cleanState, STATE_NAME } from "@/lib/core/game-state";
 import { divePool } from "@/lib/dive";
 
@@ -48,5 +48,22 @@ describe("saved daily games (one try a day on every device)", () => {
     expect(cleanState([1, 2])).toBeNull();
     expect(cleanState({ "other": 1 })).toBeNull();
     expect(cleanState({ "dive3:2026-11-17": "x".repeat(20_000) })).toBeNull();
+  });
+});
+
+describe("Dumpster Dive wording follows the league's lineups", () => {
+  it("lock-in leagues (Trash) say locked in; daily say lineup; football keeps started", () => {
+    const p = "Name a player who started a playoff game in 2024–25.";
+    const m = "Name a player Green Bean has started.";
+    expect(promptText(p, undefined)).toBe("Name a player who was locked in for a playoff game in 2024–25.");
+    expect(promptText(m, "lock-in")).toBe("Name a player Green Bean has locked in.");
+    expect(promptText(m, "daily")).toBe("Name a player Green Bean has had in the lineup.");
+    expect(promptText(p, "daily")).toBe("Name a player who was in a playoff lineup in 2024–25.");
+    expect(promptText(p, "weekly")).toBe(p);
+    expect(promptText("Name a player who was traded in 2024–25.", "lock-in")).toBe("Name a player who was traded in 2024–25.");
+  });
+
+  it("every 'started' prompt in Trash's pool gets reworded", () => {
+    for (const q of pool) expect(promptText(q.prompt, "lock-in")).not.toMatch(/started/);
   });
 });
