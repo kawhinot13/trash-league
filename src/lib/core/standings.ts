@@ -57,6 +57,7 @@ export async function liveStandings(
           pf,
           seed: 0,
           streak: r.metadata?.streak,
+          results: rec || undefined,
         } as Standing,
         prevW:
           [...prev].filter((c) => c === "W").length +

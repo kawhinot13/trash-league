@@ -12,6 +12,8 @@ export type Standing = {
   seed: number;
   streak?: string;
   move?: number;
+  /** Week-by-week results, oldest first ("WWLW"), from Sleeper's official record. */
+  results?: string;
 };
 export type Pick = { no: number; pid: string; player: string; by: string };
 export type TradeSide = { pid: string | null; name: string };

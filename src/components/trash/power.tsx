@@ -10,6 +10,7 @@ const PARTS: { key: keyof PowerRow["parts"]; label: string; w: number; color: st
   { key: "scoring", label: "Scoring", w: 25, color: "#c98a4b" },
   { key: "roster", label: "Roster", w: 30, color: "#7fd49a" },
   { key: "form", label: "Form", w: 15, color: "#a4b8ab" },
+  { key: "momentum", label: "Momentum", w: 10, color: "#9fc3ff" },
 ];
 const TIER: Record<string, string> = { Contender: "#7fd49a", "In the hunt": "#f6f3ea", Fringe: "#c98a4b", Lottery: "#ff8a7a" };
 
@@ -104,9 +105,10 @@ export function PowerRankings({ rows, week, weights }: { rows: PowerRow[]; week:
       <Explain>
         <p>
           Each team gets a power score out of 100 from record, official points scored per week and roster strength
-          (the best possible starting nine from the Front Office player values), plus form (last week&apos;s exact
-          score vs the league average) once exact weekly scores are available. Each piece is scaled from the
-          league&apos;s worst to best.
+          (the best possible starting nine from the Front Office player values), momentum (the last three results, with
+          last week counting most) and form (last week&apos;s exact score vs the league average) when exact weekly
+          scores are available; without them form sits out and momentum counts a bit more. Each piece is scaled from
+          the league&apos;s worst to best.
         </p>
         <p>
           Movement compares with the same formula one week earlier. Records and points are Sleeper&apos;s official

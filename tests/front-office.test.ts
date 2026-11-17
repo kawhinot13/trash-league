@@ -92,3 +92,18 @@ describe("team analyzer", () => {
     }
   });
 });
+
+describe("power rankings momentum", () => {
+  it("weights the last three results 3, 2, 1, newest first", async () => {
+    const { momentumOf } = await import("@/lib/core/power");
+    expect(momentumOf(undefined)).toBeNull();
+    expect(momentumOf("")).toBeNull();
+    expect(momentumOf("LLLWWW")).toBe(1);
+    expect(momentumOf("WWWLLL")).toBe(0);
+    expect(momentumOf("LLW")).toBeCloseTo(3 / 6);
+    expect(momentumOf("WWL")).toBeCloseTo(3 / 6);
+    expect(momentumOf("LWW")).toBeCloseTo(5 / 6);
+    expect(momentumOf("W")).toBe(1);
+    expect(momentumOf("WT")).toBeCloseTo((3 * 0.5 + 2) / 5);
+  });
+});

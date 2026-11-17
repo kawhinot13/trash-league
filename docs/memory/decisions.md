@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Power rankings: momentum (recency)
+- Owner wanted recency even when form sits out. Momentum = last three official results (W 1, T 0.5, L 0), weighted
+  3/2/1 newest first (`momentumOf`, core/power.ts; `Standing.results` carries Sleeper's record string). Weights:
+  with exact last-week scores record 25, scoring 25, roster 30, form 10, momentum 10; without: 30/25/30/0/15.
+  Rejected: inventing a weekly score from Sleeper's matchup feed (unreliable for this league).
+
 ## 2026-11-17: Dumpster Dive: a right answer scores at least 1
 - Owner: the most obvious right answer scored 0, same as a miss. Now right answers score 1-100; only a miss is 0.
   Scores already saved keep their values.

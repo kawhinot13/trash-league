@@ -8,6 +8,9 @@ import type { Standing } from "@/lib/core/types";
  *   scoring 25% (official points for, per week played)
  *   roster 30%  (best possible starting nine, from the Front Office player values)
  *   form 15%    (last finished week's score vs the league average)
+ *   momentum    (the last three results, last week counting most: 3, 2, 1). With exact scores the split is
+ *               record 25, scoring 25, roster 30, form 10, momentum 10; without them form sits out and it's
+ *               record 30, scoring 25, roster 30, momentum 15, so recent play always counts.
  * Movement compares with the same formula one week earlier (record and points without the
  * latest week). Blurbs are written from whichever signals stand out for that team.
  */
@@ -24,11 +27,25 @@ export type PowerRow = {
   roster: number;
   last: number | null;
   eff: number | null;
-  parts: { record: number; scoring: number; roster: number; form: number };
+  parts: { record: number; scoring: number; roster: number; form: number; momentum: number };
   blurb: string;
 };
 
 type Lines = Record<string, [number, number, number][]>;
+
+/** Recent results, 0 (lost the last three) to 1 (won them): last week x3, the one before x2, then x1. Null before any. */
+export function momentumOf(results: string | undefined): number | null {
+  const last = (results ?? "").slice(-3).split("").reverse();
+  if (!last.length) return null;
+  const w = [3, 2, 1];
+  let num = 0;
+  let den = 0;
+  last.forEach((c, i) => {
+    num += w[i] * (c === "W" ? 1 : c === "T" ? 0.5 : 0);
+    den += w[i];
+  });
+  return num / den;
+}
 
 /** Scale a set of values to 0..1 (min..max). */
 const scale = (xs: number[]) => {
@@ -54,7 +71,9 @@ export function powerRankings(input: {
   const done = Math.max(0, ...table.map((r) => r.w + r.l + r.t));
   const lastExact = officialWeek(done);
   const prevExact = officialWeek(done - 1);
-  const W = lastExact ? { record: 0.3, scoring: 0.25, roster: 0.3, form: 0.15 } : { record: 0.35, scoring: 0.3, roster: 0.35, form: 0 };
+  const W = lastExact
+    ? { record: 0.25, scoring: 0.25, roster: 0.3, form: 0.1, momentum: 0.1 }
+    : { record: 0.3, scoring: 0.25, roster: 0.3, form: 0, momentum: 0.15 };
 
   const base = table.map((r) => {
     const gp = r.w + r.l + r.t;
@@ -80,22 +99,30 @@ export function powerRankings(input: {
       prevWinPct: prevGp ? (prevW + r.t / 2) / prevGp : 0,
       prevPpw: prevGp ? (r.pf - (lastExact?.get(r.manager) ?? lastPts)) / prevGp : 0,
       prevLast: prevExact?.get(r.manager) ?? null,
+      mom: momentumOf(r.results),
+      prevMom: momentumOf(r.results?.slice(0, -1)),
     };
   });
 
-  const scoreAll = (pick: (b: (typeof base)[number]) => [number, number, number, number | null]) => {
+  const scoreAll = (pick: (b: (typeof base)[number]) => [number, number, number, number | null, number | null]) => {
     const vals = base.map(pick);
     const lastVals = vals.map((v) => v[3]).filter((x): x is number => x !== null);
     const avgLast = lastVals.length ? lastVals.reduce((a, x) => a + x, 0) / lastVals.length : 0;
     const [sw, sp, sr] = [scale(vals.map((v) => v[0])), scale(vals.map((v) => v[1])), scale(vals.map((v) => v[2]))];
     const sf = scale(vals.map((v) => (v[3] ?? avgLast) - avgLast));
+    const moms = vals.map((v) => v[4]).filter((x): x is number => x !== null);
+    const avgMom = moms.length ? moms.reduce((a, x) => a + x, 0) / moms.length : 0.5;
+    const sm = scale(vals.map((v) => v[4] ?? avgMom));
     return vals.map((v) => {
-      const parts = { record: sw(v[0]), scoring: sp(v[1]), roster: sr(v[2]), form: sf((v[3] ?? avgLast) - avgLast) };
-      return { parts, score: 100 * (W.record * parts.record + W.scoring * parts.scoring + W.roster * parts.roster + W.form * parts.form) };
+      const parts = { record: sw(v[0]), scoring: sp(v[1]), roster: sr(v[2]), form: sf((v[3] ?? avgLast) - avgLast), momentum: sm(v[4] ?? avgMom) };
+      return {
+        parts,
+        score: 100 * (W.record * parts.record + W.scoring * parts.scoring + W.roster * parts.roster + W.form * parts.form + W.momentum * parts.momentum),
+      };
     });
   };
-  const now = scoreAll((b) => [b.winPct, b.ppw, b.roster, b.last]);
-  const before = scoreAll((b) => [b.prevWinPct, b.prevPpw, b.roster, b.prevLast]);
+  const now = scoreAll((b) => [b.winPct, b.ppw, b.roster, b.last, b.mom]);
+  const before = scoreAll((b) => [b.prevWinPct, b.prevPpw, b.roster, b.prevLast, b.prevMom]);
   const rankOf = (xs: { score: number }[]) => {
     const order = xs.map((x, i) => [x.score, i] as const).sort((a, b) => b[0] - a[0]);
     const r = new Map<number, number>();
