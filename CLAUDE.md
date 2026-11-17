@@ -26,7 +26,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Product name: Rafterlore (`src/lib/app/brand.ts`). Any Sleeper NBA or NFL head-to-head points league. Sport is
   per league (`src/lib/core/sport.ts`, `FamilyView.sport`, `brand.sport`, `LiveSource.sport`); basketball is the
   default everywhere so Trash is untouched. Football replays weeks from matchup `players_points` (no box scores).
-  No player photos on Rafterlore: designed badges (`brand.headshots = "badge"`, `PlayerBadge`); Trash keeps photos. Pages live in
+  No player photos on Rafterlore: designed badges (`brand.headshots = "badge"`, `PlayerBadge`); Trash keeps photos.
+  Exception (owner's call 2026-11-17): Trash's own league on Rafterlore (pack "trash") shows Sleeper headshots; never
+  other leagues, never use it as Rafterlore's public demo, and switch it back to badges if Rafterlore ever earns money. Pages live in
   `src/app/(rafterlore)/` with their own shell; the Trash site lives in `src/app/(trash)/`. Rafterlore never imports Trash
   data or chrome. League pages: overview, this week (live, per Sleeper), waivers, rivals, managers + profiles, remove.
 - Shared features: `src/lib/core/` holds every league feature as pure functions over a `Dataset` (Trash's

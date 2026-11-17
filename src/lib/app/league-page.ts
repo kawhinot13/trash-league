@@ -90,7 +90,13 @@ export async function loadLeague(leagueId: string, opts: { snapshots?: boolean; 
       pack,
       nameOf,
       dataset: dataset ? withTeams(withNicknames(dataset, pack?.nicknames), view) : null,
-      brand: brandFor(leagueId, view, dataset, view.sport === "nfl" ? "weekly" : scoring === "daily" ? "daily" : scoring === "lock-in" ? "lock-in" : null),
+      brand: brandFor(
+        leagueId,
+        view,
+        dataset,
+        view.sport === "nfl" ? "weekly" : scoring === "daily" ? "daily" : scoring === "lock-in" ? "lock-in" : null,
+        packIdFor(ids) === "trash",
+      ),
     },
   };
 }
@@ -114,6 +120,8 @@ function brandFor(
   view: ReturnType<typeof familyView>,
   d: Dataset | null,
   lineup: BrandConfig["lineup"] | null,
+  /** Owner's call (2026-11-17): Trash's own league shows player photos; every other league keeps badges. */
+  photos = false,
 ): BrandConfig {
   return {
     name: view.name,
@@ -126,8 +134,9 @@ function brandFor(
     storage: `rl:${view.id}:`,
     scores: `/api/l/${leagueId}/scores`,
     avatars: Object.fromEntries(view.careers.map((c) => [c.ownerId, c.avatar])),
-    // No player photos on Rafterlore (licensing): designed badges from initials and position.
-    headshots: "badge",
+    // No player photos on Rafterlore (licensing): designed badges from initials and position. The one
+    // exception is Trash's own league (owner's call), with Sleeper's headshots like the Trash site.
+    headshots: photos ? "sleeper" : "badge",
     badges: Object.fromEntries(
       Object.entries(d?.extras.players ?? {}).map(([pid, p]) => [pid, [initialsOf(p[0]), p[1]?.[0] ?? ""] as [string, string]]),
     ),

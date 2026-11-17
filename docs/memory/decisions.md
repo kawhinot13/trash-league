@@ -4,6 +4,11 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Player photos for Trash's league on Rafterlore only
+- Owner's call: Trash's league (pack "trash", `packIdFor`) gets `headshots: "sleeper"`; all other leagues keep badges.
+  Conditions agreed: Trash only; not used as the public demo or in Rafterlore promotion; back to badges if Rafterlore
+  makes money or anyone asks. Same low-risk footing as the Trash site (private league, non-commercial).
+
 ## 2026-11-17: Dumpster Dive written calendar
 - Problem: each day's prompts were re-dealt from the whole pool on every page load, so a data update (5:13 AM) that
   added a question could change a day already in play. Fix: a written calendar; days up to today never change, the
