@@ -13,28 +13,49 @@ import { useBrand } from "@/components/trash/brand";
  * the page, so this is an invitation, not a lock.)
  */
 type Viewer = { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; suggest?: string | null };
-type Who = { enabled: boolean; viewer?: Viewer } | null;
+type Played = Record<string, { score: number; label: string; state: Record<string, unknown> | null }>;
+type Who = { enabled: boolean; viewer?: Viewer; played?: Played } | null;
+
+const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+/** The game ids behind each section. */
+const GAME_OF: Record<string, string> = { dive: "dive2", trashle: "trashle", lineup: "lineup" };
+const STATE_NAME = /^(dive3|trashle|trashle-hints|lineup):\d{4}-\d{2}-\d{2}$/;
+
+/** Put today's finished games from the account into this browser before the games mount, so a
+ * second device opens on the same result instead of a fresh game. The account's copy wins. */
+function restore(v: Who, prefix: string, day: string) {
+  if (!v?.played || !v.viewer?.manager) return;
+  for (const [game, g] of Object.entries(v.played)) {
+    try {
+      for (const [name, value] of Object.entries(g.state ?? {})) if (STATE_NAME.test(name)) localStorage.setItem(prefix + name, JSON.stringify(value));
+      // Already posted: the board doesn't post again from this device.
+      if (g.state) localStorage.setItem(`${prefix}posted:${game}:${day}`, v.viewer.manager);
+    } catch {}
+  }
+}
 
 // One shared "who are you here" per league, so the three games on a page ask once and agree.
-const store = new Map<string, { v: Who; subs: Set<() => void>; loading: boolean }>();
+const store = new Map<string, { v: Who; subs: Set<() => void>; loading: boolean; prefix: string }>();
 function load(url: string) {
   const e = store.get(url)!;
   if (e.loading) return;
   e.loading = true;
-  void fetch(`${url}?who=1`, { cache: "no-store" })
+  const day = todayET();
+  void fetch(`${url}?who=1&day=${day}`, { cache: "no-store" })
     .then((r) => r.json() as Promise<Who>)
     .catch(() => ({ enabled: false }))
     .then((v) => {
+      restore(v, e.prefix, day);
       e.v = v;
       e.loading = false;
       e.subs.forEach((f) => f());
     });
 }
-function useWho(url: string, on: boolean): Who {
+function useWho(url: string, on: boolean, prefix: string): Who {
   return useSyncExternalStore(
     (f) => {
       if (!on) return () => {};
-      if (!store.has(url)) store.set(url, { v: null, subs: new Set(), loading: false });
+      if (!store.has(url)) store.set(url, { v: null, subs: new Set(), loading: false, prefix });
       const e = store.get(url)!;
       e.subs.add(f);
       if (!e.v) load(url);
@@ -64,7 +85,7 @@ export function PlayGate({ game, anchor, children, primary }: { game: string; an
   const me = useMe();
   const brand = useBrand();
   const signedIn = !!me?.configured && !!me.account;
-  const who = useWho(brand.scores, signedIn);
+  const who = useWho(brand.scores, signedIn, brand.key(""));
   const [name, setName] = useState(me?.account?.sleeper ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -91,7 +112,27 @@ export function PlayGate({ game, anchor, children, primary }: { game: string; an
   const v = who.viewer;
   // Leagues without standings (Yahoo for now): signed-in members just play.
   if (!who.enabled || !v || !v.configured) return <>{children}</>;
-  if (v.linked && v.member) return <>{children}</>;
+  if (v.linked && v.member) {
+    // Finished today on another device before results were saved with the account: don't offer a replay.
+    const done = who.played?.[GAME_OF[anchor] ?? ""];
+    const SAVE: Record<string, string> = { dive: "dive3", trashle: "trashle", lineup: "lineup" };
+    let here = false;
+    try {
+      here = !!localStorage.getItem(brand.key(`${SAVE[anchor]}:${todayET()}`));
+    } catch {}
+    if (done && !done.state && !here)
+      return (
+        <Shell>
+          <p className="font-display text-3xl leading-none font-black md:text-4xl">You already played today</p>
+          <p className="mt-3 text-[var(--muted)]">
+            Your {game} score today: <span className="font-display text-2xl font-black text-[var(--paper)] tabular-nums">{done.score}</span>
+            {done.label ? <span className="block text-sm">{done.label}</span> : null}
+          </p>
+          <p className="mt-3 text-sm text-[var(--muted)]">One try a day, on any device. A new one opens at midnight Eastern.</p>
+        </Shell>
+      );
+    return <>{children}</>;
+  }
   if (v.linked && !v.member)
     return (
       <Shell>

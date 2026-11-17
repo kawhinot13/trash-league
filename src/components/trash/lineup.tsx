@@ -609,6 +609,7 @@ export function Lineup({
             <Leaderboard
               game="lineup"
               day={day}
+              saveKeys={day ? [`lineup:${day}`] : undefined}
               people={people}
               result={{ score: won ? (TRIES + 1 - guesses.length) * 15 : 0, label: won ? `Cracked in ${guesses.length}` : "Got away" }}
             />

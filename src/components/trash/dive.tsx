@@ -612,6 +612,7 @@ export function DumpsterDive({ pool, players, people }: { pool: Prompt[]; player
               <Leaderboard
                 game="dive2"
                 day={day}
+                saveKeys={day ? [`dive3:${day}`] : undefined}
                 people={people}
                 result={picks.length === ROUNDS ? { score: sum, label: picks.map((p) => (p.score === null ? "×" : p.score)).join(" · ") } : null}
               />

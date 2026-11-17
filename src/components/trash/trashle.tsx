@@ -401,6 +401,7 @@ export function Trashle({
             <Leaderboard
               game="trashle"
               day={day}
+              saveKeys={day ? [`trashle:${day}`, `trashle-hints:${day}`] : undefined}
               people={people}
               result={{
                 score: won ? Math.max(10, (TRIES + 1 - guesses.length) * 20 - hints.length * 10) : 0,

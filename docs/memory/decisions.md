@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Daily games remember you across devices (Rafterlore)
+- Bug: signing in on a phone let you replay a game already played on another device (finished state lived only in
+  localStorage). The server already kept only the first score, but a replay showed a different report.
+- Fix: the board posts the game's saved progress with the score (`state` jsonb, whitelisted names, <=16 KB);
+  `?who=1&day=` returns today's finished games; PlayGate writes them into this browser before the game mounts, so
+  every device opens on the same report. Scores saved before this (no state) show "You already played today".
+- Keyed by the account's linked Sleeper manager, not email (accounts store no email). Trash's honor-system board unchanged.
+
 ## 2026-11-17: Deep Cut rewards escalate with depth
 - Owner asked for cooler, more rewarding animations. Reveals now scale with the score (stage.tsx): under 25 flops in
   with a "meh" (no shake); 60+ adds a shockwave ring and the bin glowing in the tier color; 90+ is a takeover (light

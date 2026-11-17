@@ -42,12 +42,27 @@ const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: 
 
 export type Person = { id: string; nick: string };
 
+/** The finished game's saved progress, read from this browser. */
+function savedState(names: string[], key: (k: string) => string) {
+  const out: Record<string, unknown> = {};
+  for (const n of names)
+    try {
+      const v = localStorage.getItem(key(n));
+      if (v) out[n] = JSON.parse(v);
+    } catch {}
+  return out;
+}
+
 export function Leaderboard({
   game,
   day,
   result,
   people,
+  saveKeys,
 }: {
+  /** Rafterlore: the game's saved progress (storage names without the league prefix), posted with the
+   * result so the player's other devices show this same finished game. */
+  saveKeys?: string[];
   /** Current managers, for the "who are you" picker and names. */
   people: Person[];
   game: "dive" | "dive2" | "trashle" | "lineup";
@@ -119,7 +134,7 @@ export function Leaderboard({
       fetch(brand.scores, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ game, day, manager: me, score: rs, label: rl ?? "" }),
+        body: JSON.stringify({ game, day, manager: me, score: rs, label: rl ?? "", ...(viewer && saveKeys ? { state: savedState(saveKeys, brand.key) } : {}) }),
       })
         .then(() => {
           try {
@@ -127,6 +142,7 @@ export function Leaderboard({
           } catch {}
         })
         .finally(() => setReload((n) => n + 1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game, day, me, rs, rl, brand, ready]);
 
   if (!board?.enabled) return null;

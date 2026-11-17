@@ -17,6 +17,15 @@ import { isSleeperId } from "@/lib/app/validate";
  */
 // "dive2": the dive leaderboard since the no-repeat schedule and the 2026-11-15 reset.
 const GAMES = new Set(["dive", "dive2", "trashle", "lineup"]);
+/** A finished game's saved progress: { "dive3:2026-11-17": {...} }, only these names, small. */
+const STATE_NAME = /^(dive3|trashle|trashle-hints|lineup):\d{4}-\d{2}-\d{2}$/;
+function cleanState(x: unknown): Record<string, unknown> | null {
+  if (!x || typeof x !== "object" || Array.isArray(x)) return null;
+  const entries = Object.entries(x as Record<string, unknown>).filter(([k]) => STATE_NAME.test(k));
+  if (!entries.length || entries.length > 4) return null;
+  const out = Object.fromEntries(entries);
+  return JSON.stringify(out).length <= 16_000 ? out : null;
+}
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -53,7 +62,15 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
     if (!fid) return Response.json({ enabled: false });
     const { accountId: _a, ...viewer } = await viewerOf(req, fid);
     void _a;
-    return Response.json({ enabled: true, viewer }, { headers: { "cache-control": "no-store" } });
+    // With ?day: the games this manager already finished that day, so every device shows the same result.
+    let played: Record<string, { score: number; label: string; state: Record<string, unknown> | null }> = {};
+    if (viewer.member && viewer.manager && DAY.test(day)) {
+      const sql = await db();
+      const rows = await sql<{ game: string; score: number; label: string; state: Record<string, unknown> | null }[]>`
+        select game, score, label, state from game_scores where family_id = ${fid} and manager = ${viewer.manager} and day = ${day}::date`;
+      played = Object.fromEntries(rows.map((r) => [r.game, { score: r.score, label: r.label, state: r.state }]));
+    }
+    return Response.json({ enabled: true, viewer, played }, { headers: { "cache-control": "no-store" } });
   }
   if (!GAMES.has(game) || !DAY.test(day)) return Response.json({ error: "bad request" }, { status: 400 });
   try {
@@ -118,6 +135,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
     game?: string;
     day?: string;
     manager?: string;
+    state?: unknown;
     score?: number;
     label?: string;
     claim?: boolean;
@@ -196,8 +214,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
     }
     // First result of the day stands: no replays to improve a score.
     const saved = await sql`
-      insert into game_scores (family_id, game, day, manager, score, label)
-      values (${fid}, ${b.game!}, ${b.day!}, ${b.manager!}, ${Math.round(b.score)}, ${String(b.label ?? "").slice(0, 40)})
+      insert into game_scores (family_id, game, day, manager, score, label, state)
+      values (${fid}, ${b.game!}, ${b.day!}, ${b.manager!}, ${Math.round(b.score)}, ${String(b.label ?? "").slice(0, 40)}, ${cleanState(b.state) ? sql.json(cleanState(b.state) as never) : null})
       on conflict do nothing returning 1`;
     return Response.json({ enabled: true, saved: saved.length > 0 });
   } catch (e) {

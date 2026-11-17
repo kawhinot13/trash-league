@@ -232,6 +232,8 @@ create table if not exists yahoo_leagues (
   created_at timestamptz not null default now()
 );
 alter table families add column if not exists use_ack text;
+-- The finished game itself (what the player answered), so another device shows the same result instead of a replay.
+alter table game_scores add column if not exists state jsonb;
 -- Standings links are proven with the same team-name code; the code remembers which account asked.
 alter table removal_challenges add column if not exists account_id text;
 alter table families add column if not exists use_ack_at timestamptz;
