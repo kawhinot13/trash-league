@@ -361,7 +361,7 @@ export type TradeIdea = {
 };
 
 /**
- * Realistic trades that make your starting lineup better: 1-for-1, 2-for-1 (consolidate) and 1-for-2.
+ * Realistic trades that make your starting lineup better: 1-for-1, 2-for-1 (consolidate), 1-for-2 and 2-for-2.
  * Realistic means the other manager would say yes too: their best lineup stays about the same or gets
  * better (at most 3 a week worse), you never take more than about 15% extra raw value, and you never
  * pay more than half again what you get. Players are valued rest-of-season (`healthy`);
@@ -414,6 +414,29 @@ export function tradeFinder(me: FOTeam, teams: FOTeam[], P: Record<string, FOPla
         .slice(0, 8);
       for (const pr of fits) cands.push([[a], pr]);
     }
+    // 2-for-2: too many to try them all, so rank by a quick estimate (each player's own effect on
+    // both lineups) and check the most promising exactly.
+    const mineP = mineIds.map((id) => P[id]);
+    const theirP = theirIds.map((id) => P[id]);
+    const add = (base: FOPlayer[], baseTotal: number, id: string) => lineupTotal([...base, P[id]], slots, healthy) - baseTotal;
+    const loss = (base: FOPlayer[], baseTotal: number, id: string) => baseTotal - lineupTotal(base.filter((p) => p.pid !== id), slots, healthy);
+    const myAdd = new Map(theirs.map((id) => [id, add(mineP, myBase, id)]));
+    const myLoss = new Map(mine.map((id) => [id, loss(mineP, myBase, id)]));
+    const theirAdd = new Map(mine.map((id) => [id, add(theirP, theirBase, id)]));
+    const theirLoss = new Map(theirs.map((id) => [id, loss(theirP, theirBase, id)]));
+    const twos: { give: string[]; get: string[]; est: number }[] = [];
+    for (const g of pairs(mine))
+      for (const t2 of pairs(theirs)) {
+        const out = sum(g);
+        const inn = sum(t2);
+        if (inn > out * 1.15 || out > inn * 1.15) continue;
+        const meEst = myAdd.get(t2[0])! + myAdd.get(t2[1])! - myLoss.get(g[0])! - myLoss.get(g[1])!;
+        const themEst = theirAdd.get(g[0])! + theirAdd.get(g[1])! - theirLoss.get(t2[0])! - theirLoss.get(t2[1])!;
+        if (meEst >= 4 * k && themEst >= -6 * k) twos.push({ give: g, get: t2, est: meEst + 0.5 * themEst });
+      }
+    twos.sort((a, b) => b.est - a.est);
+    for (const x of twos.slice(0, 30)) cands.push([x.give, x.get]);
+
     for (const [give, get] of cands) {
       const valueOut = sum(give);
       const valueIn = sum(get);

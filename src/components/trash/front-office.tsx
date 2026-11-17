@@ -436,7 +436,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
           <motion.div key={`finder-${me}`} initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">
             <h3 className="font-display text-3xl font-black">Trades worth sending</h3>
             <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-[var(--muted)]">
-              Every 1-for-1, 2-for-1 and 1-for-2 with every team, kept only if your starting {nfl ? "lineup" : "nine"} gets better{" "}
+              1-for-1, 2-for-1, 1-for-2 and 2-for-2 trades with every team, kept only if your starting {nfl ? "lineup" : "nine"} gets better{" "}
               <span className="text-[var(--paper)]">and theirs stays about the same or better</span>, and you don&apos;t take more than about 15% extra
               value. So they have a reason to say yes. Players are valued for the rest of the season; nobody on IR.
             </p>

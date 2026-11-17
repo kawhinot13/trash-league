@@ -9,6 +9,8 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   1-for-1, 2-for-1, 1-for-2 with every team; kept only if your best lineup gains >= 5 a week, theirs loses at most 3
   (usually unchanged or better), you take <= 15% extra raw value and never pay more than 1.5x. Rest-of-season values
   (`healthy`), no IR players. Max 2 ideas per team, each incoming player once, top 8. Opens in the trade analyzer.
+- 2-for-2 added (owner OK'd): ranked by a quick per-player estimate, top 30 per team checked exactly; same rules.
+  Biggest realistic gains (+8 to +14 a week on Trash vs +5 to +6 for 1-for-1). ~0.3 s per search.
 - `lineupTotal`: same total as bestLineup with typed arrays (~5x faster), so a search is ~0.2 s.
 - Rejected: "their lineup can drop up to 8" (the analyzer's "likely") let in lopsided 2-for-1 overpays; requiring them to
   gain left almost nothing. Few ideas for some teams is the honest result.
