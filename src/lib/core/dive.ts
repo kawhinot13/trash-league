@@ -343,6 +343,18 @@ export const kindText = (kind: string, lineup: "lock-in" | "daily" | "weekly" | 
  * and takes the longest-rested shapes first; within a shape, the prompt asked longest ago (or never)
  * goes first, and managers asked about yesterday wait a day. Engine-independent: seeded numbers only.
  */
+/** Days the owner hand-picked. Used only when every prompt exists in the league's pool (so Trash only);
+ * the schedule plans the following days around them. */
+const PINNED: Record<string, string[]> = {
+  "2026-11-18": [
+    "Name a player who has been on at least three different Trash rosters.",
+    "Name a player picked up off waivers in 2025–26.",
+    "Name a player Junkyard Dog has picked up off waivers.",
+    "Name a Knicks player who has been on a Trash roster.",
+    "Name a player on Oscar's 2025–26 title team.",
+  ],
+};
+
 function planned(pool: Prompt[], day: string): Prompt[] {
   const shape = (q: Prompt) => q.t ?? q.kind;
   const shapes = [...new Set(pool.map(shape))].sort();
@@ -358,7 +370,9 @@ function planned(pool: Prompt[], day: string): Prompt[] {
     const chosen: Prompt[] = [];
     const who = new Set<string>();
     const used = new Set<string>();
-    for (let slot = 0; slot < ROUNDS; slot++) {
+    const pin = PINNED[d]?.map((t) => pool.find((q) => q.prompt === t));
+    if (pin && pin.every(Boolean)) for (const q of pin as Prompt[]) chosen.push(q);
+    for (let slot = chosen.length; slot < ROUNDS; slot++) {
       const ranked = shapes
         .filter((t) => !used.has(t))
         .map((t) => {

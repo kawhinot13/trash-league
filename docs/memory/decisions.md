@@ -4,6 +4,11 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-17: Hand-picked days (`PINNED` in core/dive.ts)
+- Owner picked Trash's 2026-11-18 set: keep Journeymen, swap the rest for the new types (two waiver questions, a
+  Knicks question, Oscar's 2025-26 title team). A pinned day applies only when every prompt is in the league's pool;
+  later days plan around it (variety rules still hold).
+
 ## 2026-11-17: New Dumpster Dive questions: waivers and NBA teams (from 2026-11-18)
 - Owner asked for more, not too niche. Three shapes (`v: 3`, only in the schedule from RESTART so earlier days keep
   their prompts): "picked up off waivers in <season>" (obvious = scored more for the team that picked him up),
