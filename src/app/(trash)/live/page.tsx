@@ -10,7 +10,7 @@ import { powerRankings } from "@/lib/power";
 import { PowerRankings } from "@/components/trash/power";
 import { WeeklyRecap } from "@/components/trash/recap";
 
-export const metadata: Metadata = { title: "Live — Trash" };
+export const metadata: Metadata = { title: "Live — Test Trash Fantasy" };
 
 async function Power() {
   const p = await powerRankings();

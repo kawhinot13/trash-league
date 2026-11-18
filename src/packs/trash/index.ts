@@ -14,6 +14,7 @@ export function trashPack(): LoadedPack {
     name: "The Trash pack",
     intro: "Lore that only makes sense in Trash. The full versions live on the league's own site.",
     nicknames: Object.fromEntries(league.managers.map((m) => [m.id, m.nick])),
+    leagueName: "Trash",
     features: [
       { key: "market", title: "The Trash Exchange", line: "Trade shares in every team with Bushy Bucks, Perren Coin and Xan Purple Hoodies.", href: `/l/${ALWAYS_TRACKED[0]}/market` },
       { key: "mickey", title: "The Mickey Mouse ring inquiry", line: "Every playoff game of Oscar's title run, reviewed.", href: "/history#ring" },

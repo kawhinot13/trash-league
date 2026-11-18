@@ -10,7 +10,7 @@ import { league } from "@/lib/league";
 import { mickeyCase, ringRun } from "@/lib/rings";
 import { STORY } from "@/lib/story";
 
-export const metadata: Metadata = { title: "History — Trash" };
+export const metadata: Metadata = { title: "History — Test Trash Fantasy" };
 
 export default function HistoryPage() {
   const oscar = ringRun("s3");

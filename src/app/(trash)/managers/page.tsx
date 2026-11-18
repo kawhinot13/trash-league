@@ -8,7 +8,7 @@ import { SectionHead } from "@/components/trash/sections";
 import { lockIn, myGuys, players, quizManagers } from "@/lib/extras";
 import { league } from "@/lib/league";
 
-export const metadata: Metadata = { title: "Managers — Trash" };
+export const metadata: Metadata = { title: "Managers — Test Trash Fantasy" };
 
 export default function ManagersPage() {
   const lock = lockIn();

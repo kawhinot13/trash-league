@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { Waivers } from "@/components/trash/live-blocks";
 import { PageIntro } from "@/components/trash/page-intro";
 
-export const metadata: Metadata = { title: "Waivers — Trash" };
+export const metadata: Metadata = { title: "Waivers — Test Trash Fantasy" };
 
 export default function WaiversPage() {
   return (

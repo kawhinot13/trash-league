@@ -112,4 +112,6 @@ export type Dataset = {
   sport?: "nba" | "nfl";
   /** Dumpster Dive's written calendar (day -> prompts); days already played never change. */
   diveCalendar?: Record<string, string[]>;
+  /** 2: the calendar is written with the league's custom-pack names (nicknames, short league name). */
+  diveNames?: number;
 };

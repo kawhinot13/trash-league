@@ -6,7 +6,7 @@ import { RivalryMachine } from "@/components/trash/rivalry";
 import { SectionHead } from "@/components/trash/sections";
 import { league } from "@/lib/league";
 
-export const metadata: Metadata = { title: "Rivals — Trash" };
+export const metadata: Metadata = { title: "Rivals — Test Trash Fantasy" };
 
 export default function RivalsPage() {
   const names = league.managers.filter((m) => m.id !== "charlesjames05").map((m) => m.id);

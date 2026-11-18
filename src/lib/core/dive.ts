@@ -433,7 +433,18 @@ const PINNED: Record<string, string[]> = {
     "Name a Knicks player who has been on a Trash roster.",
     "Name a player Rico has traded for.",
   ],
+  // Owner's picks (2026-11-18): question types Rafterlore hadn't asked yet, and an NBA team.
+  "2026-11-19": [
+    "Name a Warriors player who has been on a Trash roster.",
+    "Name a player Rico has dropped.",
+    "Name a player who averaged 80+ per start for a Trash team in a season.",
+    "Name a player who was drafted in Trash but never started for the team that drafted him.",
+    "Name a player who has been started 50+ times in Trash.",
+  ],
 };
+
+/** Hand-picked days (tests check every one can be found in Trash's pool). */
+export const PINNED_DAYS: Readonly<Record<string, readonly string[]>> = PINNED;
 
 /** A written calendar: day -> that day's prompt texts. Days in it never change (see extendCalendar). */
 export type Calendar = Record<string, string[]>;
@@ -517,6 +528,24 @@ const addDays = (day: string, k: number) => new Date(Date.parse(`${day}T12:00:00
  * they are; any other day from RESTART to `ahead` days out is (re)planned around them. Run it whenever
  * the league's data is rebuilt, so new data can only change days nobody has played yet.
  */
+/**
+ * Moving a league's calendar to new names (e.g. "Trash Season 4" -> "Trash", usernames -> nicknames)
+ * without changing what anyone was asked: every day up to `today` becomes exactly what `oldPool`
+ * showed that day, written with `newPool`'s wording. The pools must come from the same data, so
+ * they list the same questions in the same order.
+ */
+export function renameCalendar(oldPool: Prompt[], newPool: Prompt[], cal: Calendar, today: string): Calendar {
+  if (oldPool.length !== newPool.length) return {};
+  const to = new Map(oldPool.map((q, i) => [q.prompt, newPool[i].prompt]));
+  const out: Calendar = {};
+  for (const d of Object.keys(cal).sort()) {
+    if (d > today) continue;
+    const shown = d >= RESTART ? planned(oldPool, d, cal).map((q) => q.prompt) : cal[d];
+    out[d] = shown.map((t) => to.get(t) ?? t);
+  }
+  return out;
+}
+
 export function extendCalendar(pool: Prompt[], cal: Calendar, today: string, ahead = 30): Calendar {
   const keep: Calendar = Object.fromEntries(Object.entries(cal).filter(([d]) => d <= today));
   const plan = schedule(pool, addDays(today < RESTART ? RESTART : today, ahead), keep);

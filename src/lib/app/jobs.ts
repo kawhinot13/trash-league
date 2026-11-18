@@ -1,5 +1,8 @@
 import "server-only";
-import { extendCalendar, divePool } from "@/lib/core/dive";
+import { extendCalendar, divePool, renameCalendar } from "@/lib/core/dive";
+import { loadPack } from "@/packs";
+import { packIdFor } from "@/packs/ids";
+import { packDataset } from "@/packs/view";
 import { verifiedWeeks } from "@/lib/core/official";
 import { db, hasDb, todayET } from "@/lib/app/db";
 import type { SeasonBundle } from "@/lib/app/family";
@@ -213,7 +216,16 @@ async function grade(familyId: string) {
   // Dumpster Dive: keep every day already written (played or in play), plan the next 30 from the new data.
   try {
     const prev = await datasetOf(familyId).catch(() => null);
-    ds.diveCalendar = extendCalendar(divePool(ds), prev?.diveCalendar ?? {}, todayET());
+    const today = todayET();
+    // A league with a custom pack plans its questions in the pack's names (Trash: "Rico", "Trash"),
+    // exactly as its pages word them, so every planned question is found when the page shows it.
+    const pack = await loadPack(packIdFor(bs.map((b) => b.league.league_id)));
+    let cal = prev?.diveCalendar ?? {};
+    if (pack && prev && prev.diveNames !== 2 && pack.leagueName)
+      // Once: days already shown keep what people saw (under the old names), reworded.
+      cal = renameCalendar(divePool(packDataset(prev, pack, false)), divePool(packDataset(prev, pack, true)), cal, today);
+    ds.diveCalendar = extendCalendar(divePool(packDataset(ds, pack, true)), cal, today);
+    if (pack?.leagueName) ds.diveNames = 2;
   } catch (e) {
     logError(`dive calendar ${familyId}`, e);
   }

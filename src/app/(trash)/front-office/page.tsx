@@ -6,7 +6,7 @@ import { frontOffice } from "@/lib/front-office";
 import { league } from "@/lib/league";
 import { players } from "@/lib/extras";
 
-export const metadata: Metadata = { title: "Front Office — Trash" };
+export const metadata: Metadata = { title: "Front Office — Test Trash Fantasy" };
 
 async function Tools() {
   const data = await frontOffice();

@@ -9,7 +9,8 @@ import { Snowfall } from "@/components/holiday/snowfall";
 import { PigRide } from "@/components/pig/pig-ride";
 
 export const metadata: Metadata = {
-  title: "Trash — a fantasy basketball league",
+  // Owner (2026-11-18): this site is the test copy; the league plays on Rafterlore.
+  title: "Test Trash Fantasy",
   description:
     "Four seasons, three champions, ninety-three trades. The official home of the Trash fantasy basketball league.",
   icons: { icon: { url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" } },
@@ -20,7 +21,7 @@ export default function TrashLayout({ children }: { children: React.ReactNode })
   return (
     <SmoothScroll>
       {HOLIDAY ? <Snowfall /> : null}
-      <GlassNav />
+      <GlassNav logo="Test Trash Fantasy" />
       {children}
       <Footer />
       <PigRide />

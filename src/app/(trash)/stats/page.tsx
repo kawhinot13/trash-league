@@ -9,7 +9,7 @@ import { backtest, playoffReport, trapezoidViews } from "@/lib/core/trapezoid";
 import { TRASH, players, redrafts, tradeCourt } from "@/lib/extras";
 import { league } from "@/lib/league";
 
-export const metadata: Metadata = { title: "Stats — Trash" };
+export const metadata: Metadata = { title: "Stats — Test Trash Fantasy" };
 
 export default function StatsPage() {
   return (

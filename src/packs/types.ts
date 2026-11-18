@@ -12,6 +12,8 @@ export type LoadedPack = {
   intro: string;
   /** Sleeper display name -> what the league actually calls them. */
   nicknames: Record<string, string>;
+  /** What the league is called in its own copy (Trash rather than Sleeper's "Trash Season 4"). */
+  leagueName?: string;
   features: PackFeature[];
   /** Props for the pack's client overlay (mascots, music); null for none. */
   overlay: Record<string, unknown> | null;

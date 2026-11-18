@@ -4,6 +4,16 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: Dumpster Dive on Rafterlore uses Trash's names; Trash site renamed
+- The owner's picks for 2026-11-18 never reached Rafterlore: its calendar was planned with Sleeper names
+  ("RI3O", "Trash Season 4") but pages showed nicknames, so pinned and manager questions didn't match and were
+  swapped on page load (also skipping the no-repeat rules). Now the grade step and pages share `packDataset`
+  (nicknames + "Trash"); a one-time `renameCalendar` keeps days already shown exactly as seen, reworded.
+  ANALYSIS_VERSION 10 makes every league regrade once. 2026-11-19 pinned to the owner's fresh set (Warriors,
+  Rico's cuts, 80+ average, draft busts, 50+ lock-ins). A test fails the deploy if a pin can't be found or a day
+  repeats a category / a question returns within 10 days.
+- The owner only cares about Rafterlore now; the Trash site's nav and titles say "Test Trash Fantasy".
+
 ## 2026-11-18: Trash Exchange Perren Coin cashes back into Bushy Bucks
 - Owner asked for coin -> bucks (a hoodie sell-back was built by mistake and reverted; hoodies stay never-sold).
   Same 40 BB rate both ways, so swapping is neutral; payouts can now be reinvested in shares.
