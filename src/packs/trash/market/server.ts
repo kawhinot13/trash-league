@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -82,6 +82,24 @@ async function playerBoard(leagueId: string, week: number): Promise<PlayerLine[]
     pid, owner: owner.get(pid) ?? null, name: dir[pid]?.[0] ?? pid, pos: dir[pid]?.[1] ?? [], nba: dir[pid]?.[2] ?? "",
     pts: Math.round((tot.get(pid)?.pts ?? 0) * 10) / 10, games: tot.get(pid)?.games ?? 0, days: days(pid),
   }));
+}
+
+/** The NBA schedule (dates, status, teams), refreshed every couple of minutes. */
+async function nbaGames(season: string): Promise<NbaGame[]> {
+  "use cache: remote";
+  cacheLife({ stale: 60, revalidate: 120, expire: 600 });
+  const raw = (await sleeper<{ date: string; status: string; home?: { team?: string }; away?: { team?: string } }[] | null>(`/schedule/nba/regular/${season}`)) ?? [];
+  return raw.map((g) => ({ date: g.date, status: g.status, teams: [g.home?.team, g.away?.team].filter((t): t is string => !!t) }));
+}
+
+/** NBA teams whose players can't be traded right now (their game is on, or finished overnight). */
+async function locksNow(lid: string): Promise<Set<string>> {
+  const season = (await leagueInfo(lid))?.season;
+  if (!season) return new Set();
+  const now = new Date();
+  const et = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
+  const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
+  return lockedTeams(await nbaGames(season), et(now), et(new Date(now.getTime() - 86_400_000)), hour);
 }
 
 /** Player asset id -> fair value, for the players on the board. */
@@ -333,6 +351,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   // Player stocks: everyone on a Trash roster now (no coin; the price follows how he plays).
   const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
   const playerName = new Map(board.map((p) => [PLAYER + p.pid, p.name]));
+  const locks = await locksNow(lid).catch(() => new Set<string>());
   const today = todayET();
   const players = board
     .filter((p) => p.owner || (held.get(PLAYER + p.pid) ?? 0) > 0)
@@ -361,7 +380,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       const weekAgo = [...hist].reverse().find((x) => x.d <= cut)?.p ?? hist[0]?.p ?? price;
       return {
         id, name: p.name, pos: p.pos, nba: p.nba, owner: p.owner ? nameOf(p.owner) : null, ownerId: p.owner,
-        avg: p.games ? Math.round((p.pts / p.games) * 10) / 10 : 0, games: p.games,
+        avg: p.games ? Math.round((p.pts / p.games) * 10) / 10 : 0, games: p.games, locked: !!p.nba && locks.has(p.nba),
         fair: f, held: h, price, change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-60),
       };
     })
@@ -404,6 +423,13 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   if (!Number.isInteger(o.qty) || o.qty < 1 || o.qty > MAX_QTY) return { ok: false, error: "Pick an amount between 1 and 500." };
   const recs = await records(lid);
   const { board, fair: values } = await allValues(lid, recs);
+  if (isPlayer(o.kind === "buy" || o.kind === "sell" ? o.team : "")) {
+    const nba = board.find((p) => PLAYER + p.pid === (o as { team: string }).team)?.nba;
+    // Fail closed: if the schedule can't be read, player trades wait.
+    const locks = await locksNow(lid).catch(() => null);
+    if (!locks) return { ok: false, error: "Player trading is paused for a minute. Try again shortly." };
+    if (nba && locks.has(nba)) return { ok: false, error: "His game is on. Trading on him reopens at 6 AM Eastern." };
+  }
   const sql = await db();
   return sql.begin(async (t) => {
     const tx = t as unknown as Sql;

@@ -242,3 +242,19 @@ export function playerFair(pts: number, games: number): number {
   const v = games >= 5 ? avg : (games * avg + (5 - games) * 15) / 5;
   return Math.max(100, Math.round(v * 100));
 }
+
+/**
+ * Player stocks lock while his team plays, so nobody trades on a game in progress before the price
+ * catches up: from tip-off (or 7 PM Eastern on a game day, in case the game isn't marked started yet)
+ * until 6 AM Eastern the next day, when the final box score is in.
+ */
+export type NbaGame = { date: string; status: string; teams: string[] };
+export function lockedTeams(games: NbaGame[], today: string, yesterday: string, hourET: number): Set<string> {
+  const out = new Set<string>();
+  for (const g of games) {
+    const live = g.date === today && (g.status !== "pre_game" || hourET >= 19);
+    const overnight = g.date === yesterday && hourET < 6;
+    if (live || overnight) for (const t of g.teams) out.add(t);
+  }
+  return out;
+}

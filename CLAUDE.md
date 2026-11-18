@@ -148,6 +148,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   rostered players plus anyone who has played (dropped players stay sellable); computed outside the order lock.
   Player charts are daily: value after each day's games from box scores (from his 5th game), then market closes;
   every chart (teams too) ends on today's live price.
+  Player trading locks while his NBA team plays (`lockedTeams`: from tip-off per Sleeper's schedule, or 7 PM ET on a
+  game day, until 6 AM ET next day; fails closed if the schedule can't be read). Trading is otherwise any time, daily.
   Charts (sparkline per row, full chart with 1W/1M/All + crosshair when a team is open): `priceHistory` = market
   closing prices, and before the market opened each night's fair value from `pf_snapshots` (full nights only). Weeks
   before the first saved night are rebuilt (`weeklyBackfill`) only if every team's weekly scores sum exactly to that

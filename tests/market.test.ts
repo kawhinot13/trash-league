@@ -156,3 +156,19 @@ describe("Trash Exchange player stocks", () => {
     expect(isPlayer("887869267151069184")).toBe(false);
   });
 });
+
+describe("Trash Exchange player stocks lock during games", () => {
+  it("locks from tip-off (or 7 PM) until 6 AM Eastern the next day", async () => {
+    const { lockedTeams } = await import("@/packs/trash/market/math");
+    const games = [
+      { date: "2026-11-20", status: "pre_game", teams: ["LAL", "GSW"] },
+      { date: "2026-11-20", status: "in_progress", teams: ["BOS", "NYK"] },
+      { date: "2026-11-19", status: "complete", teams: ["DEN", "PHX"] },
+    ];
+    expect([...lockedTeams(games, "2026-11-20", "2026-11-19", 15)].sort()).toEqual(["BOS", "NYK"]);
+    expect([...lockedTeams(games, "2026-11-20", "2026-11-19", 4)].sort()).toEqual(["BOS", "DEN", "NYK", "PHX"]);
+    expect([...lockedTeams(games, "2026-11-20", "2026-11-19", 20)].sort()).toEqual(["BOS", "GSW", "LAL", "NYK"]);
+    expect([...lockedTeams(games, "2026-11-21", "2026-11-20", 7)]).toEqual([]);
+    expect([...lockedTeams(games, "2026-11-21", "2026-11-20", 2)].sort()).toEqual(["BOS", "GSW", "LAL", "NYK"]);
+  });
+});

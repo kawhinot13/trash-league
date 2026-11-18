@@ -512,7 +512,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
           <h2 className="font-display text-3xl font-black md:text-4xl">Player stocks</h2>
           <p className="mt-2 max-w-2xl text-[var(--muted)]">
             Everyone on a Trash roster. A share costs what he averages in fantasy points a game this season, scored with Trash&apos;s settings from real
-            box scores. Player stocks pay no coin: buy low, sell high. You can&apos;t buy players on your own roster.
+            box scores. Player stocks pay no coin: buy low, sell high. You can&apos;t buy players on your own roster. A player locks once his game starts and reopens at 6 AM Eastern the next day.
           </p>
           <label htmlFor="find-player" className="sr-only">
             Find a player
@@ -559,6 +559,9 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                               {[p.nba, p.pos.join("/"), p.owner ? `on ${p.owner}'s roster` : null].filter(Boolean).join(" · ")}
                               {mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
                             </span>
+                            {p.locked ? (
+                              <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-[var(--paper)]">Locked: game on, reopens 6 AM ET</span>
+                            ) : null}
                             <span className="block text-xs text-[var(--muted)] tabular-nums">
                               {p.avg.toFixed(1)} a game · {p.games} games
                             </span>
@@ -580,15 +583,15 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                                 <div className="flex flex-wrap gap-2">
                                   <button
                                     type="button"
-                                    disabled={busy || cost > w.bucks || yours}
+                                    disabled={busy || cost > w.bucks || yours || p.locked}
                                     onClick={() => void order({ kind: "buy", team: p.id, qty: q }, `Bought ${q} ${p.name}.`)}
                                     className={`${chip} bg-[var(--paper)] text-[var(--bin)]`}
                                   >
-                                    {yours ? "He's on your roster" : `Buy for ${money(cost)} BB`}
+                                    {p.locked ? "Locked: game on" : yours ? "He's on your roster" : `Buy for ${money(cost)} BB`}
                                   </button>
                                   <button
                                     type="button"
-                                    disabled={busy || mine < q}
+                                    disabled={busy || mine < q || p.locked}
                                     onClick={() => void order({ kind: "sell", team: p.id, qty: q }, `Sold ${q} ${p.name}.`)}
                                     className={`${chip} bg-white/10 hover:bg-white/15`}
                                   >
