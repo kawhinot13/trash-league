@@ -124,7 +124,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.
   Never put league-specific features in the generic components.
 - The Trash Exchange (`/l/[id]/market`, Trash pack only; `src/packs/trash/market/`, `/api/l/[id]/market`): play-money
-  market on Trash's teams. Bushy Bucks (cash, 1,000 to start), Perren Coin (1 per share per official win, ½ per tie;
+  market on Trash's teams. Bushy Bucks (cash, 1,000 to start), Perren Coin (per share per official win: opponent's value ÷
+  winner's value before the result, 0.5 to 3, `upset`/`payoutPerShare`; ½ for a tie; pairings from Sleeper's schedule only;
   or 40 BB each, one way), Xan Purple Hoodies (bought with coin, never sold, each sold raises the next; standings rank
   hoodies, then net worth). Price = fair value from official PF + record (`fairValues`) x (1 + 0.4% per share held
   league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run

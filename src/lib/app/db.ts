@@ -293,6 +293,8 @@ create table if not exists market_lots (
   bought_at timestamptz not null default now()
 );
 create index if not exists market_lots_team on market_lots(league_id, team);
+-- What a payout was for (e.g. "beat KAWH x1.80"), shown in the ledger.
+alter table market_log add column if not exists note text;
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

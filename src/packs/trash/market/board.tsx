@@ -242,7 +242,10 @@ function ledgerLine(f: Entry) {
   if (f.kind === "buy") return `bought ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "coin") return `swapped ${amt} BB for ${f.qty} Perren Coin`;
-  if (f.kind === "dividend") return `got ${amt} Perren Coin from ${f.ticker}'s win (${f.qty} shares)`;
+  if (f.kind === "dividend")
+    return f.upset
+      ? `got ${amt} Perren Coin: ${f.ticker} beat ${f.upset.vs ?? "their opponent"}, ×${f.upset.x.toFixed(2)} (${f.qty} shares)`
+      : `got ${amt} Perren Coin from ${f.ticker}'s win (${f.qty} shares)`;
   return `bought ${f.qty === 1 ? "a Xan Purple Hoodie" : `${f.qty} Xan Purple Hoodies`} for ${amt} PC`;
 }
 const when = (at: string) =>
@@ -408,6 +411,12 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     </span>
                     <span className="block text-sm break-words text-[var(--muted)]">
                       {t.record} · {t.pf.toLocaleString("en-US")} pts{mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
+                      {t.vs ? (
+                        <span className="block">
+                          vs {t.vs.ticker} · a win pays{" "}
+                          <span className={t.vs.winPays > 100 ? "font-semibold text-[var(--paper)]" : ""}>{money(t.vs.winPays)} PC</span> a share
+                        </span>
+                      ) : null}
                       {fresh(t.id) ? <span className="ml-1.5 inline-block rounded-full bg-white/10 px-2 py-0.5 text-xs text-[var(--paper)]">{fresh(t.id)} count next week</span> : null}
                     </span>
                   </span>
@@ -533,7 +542,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Coin /> Perren Coin
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Paid out when a week goes final: 1 coin per share in a team that won (half for a tie), for shares you owned before that week started on Monday. Shares bought mid-week start counting the next week. You can also swap bucks for coin.
+              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. You can also swap bucks for coin.
             </p>
           </li>
           <li className="rounded-2xl bg-black/20 p-5">

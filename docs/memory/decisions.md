@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: Trash Exchange underdogs pay more
+- Owner: upsets should pay more and favourites less, with a bit of extra incentive to back worse teams. A win pays
+  (opponent's value ÷ winner's value) coins per share, both from official totals before that week's result, clamped
+  0.5 to 3 (cap 3 rather than 2 for the extra tilt). Pairings come from Sleeper's weekly schedule (matchup ids only,
+  never its scores); unknown opponent or two results at once pays the flat 1. Each row shows "vs X, a win pays N".
+
 ## 2026-11-18: Trash Exchange coin only for shares owned before the week; public ledger
 - Loophole (owner): buy a team late in a week once its win is obvious, collect a coin per share. Fix: shares are kept
   as purchase lots; a week's coin counts only lots bought before that week began (Monday 12am ET); selling takes the

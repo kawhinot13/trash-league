@@ -68,6 +68,28 @@ export function dividend(before: TeamRecord | undefined, now: TeamRecord): numbe
   return wins * 100 + ties * 50;
 }
 
+/**
+ * Underdogs pay more. A win pays (opponent's value ÷ the winner's value) coins per share, both as
+ * they stood before that week's result, between 0.5 and 3: beating a much better team pays up to
+ * 3, beating a much worse one as little as 0.5, an even matchup about 1. Values come only from
+ * official totals, so the multiplier is the same however the market traded.
+ */
+export const UPSET_MIN = 0.5;
+export const UPSET_MAX = 3;
+export const upset = (own: number, opp: number) => (own > 0 && opp > 0 ? Math.min(UPSET_MAX, Math.max(UPSET_MIN, opp / own)) : 1);
+
+/**
+ * Coin per share (hundredths) for one team's new result: the flat dividend, scaled by the upset
+ * multiplier when exactly one game was added and the opponent is known; otherwise the flat amount.
+ */
+export function payoutPerShare(before: TeamRecord | undefined, now: TeamRecord, ownBefore?: number, oppBefore?: number): number {
+  const base = dividend(before, now);
+  if (!base || !before) return base;
+  const games = now.wins + now.losses + now.ties - (before.wins + before.losses + before.ties);
+  if (games !== 1 || ownBefore === undefined || oppBefore === undefined) return base;
+  return Math.round(base * upset(ownBefore, oppBefore));
+}
+
 /** Net worth in Bushy Bucks (hundredths): cash, shares at what selling them all would pay, coin at the swap rate. */
 export function netWorth(
   w: { bucks: number; coins: number },

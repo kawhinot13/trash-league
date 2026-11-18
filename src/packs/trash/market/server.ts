@@ -1,11 +1,11 @@
 import "server-only";
 import { cacheLife } from "next/cache";
 import { db } from "@/lib/app/db";
-import { sleeper, official, type SRoster } from "@/lib/app/sleeper";
+import { sleeper, official, type SMatchup, type SRoster } from "@/lib/app/sleeper";
 import { familyIdOf, newestSeason, packOf } from "@/lib/app/store";
 import { loadPack } from "@/packs";
 import {
-  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, ownedBefore, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -27,6 +27,32 @@ async function rosters(leagueId: string): Promise<SRoster[]> {
   "use cache: remote";
   cacheLife({ stale: 60, revalidate: 120, expire: 600 });
   return sleeper<SRoster[]>(`/v1/league/${leagueId}/rosters`);
+}
+
+async function leagueInfo(leagueId: string): Promise<{ settings?: { playoff_week_start?: number } } | null> {
+  "use cache: remote";
+  cacheLife("hours");
+  return sleeper(`/v1/league/${leagueId}`);
+}
+
+/** Who played whom in a week (Sleeper's schedule; only the pairings are used, never the scores). */
+async function opponents(leagueId: string, week: number): Promise<Map<string, string>> {
+  "use cache: remote";
+  cacheLife("hours");
+  const [ms, rs] = await Promise.all([sleeper<SMatchup[] | null>(`/v1/league/${leagueId}/matchups/${week}`), rosters(leagueId)]);
+  const owner = new Map(rs.map((r) => [r.roster_id, r.owner_id]));
+  const byMatch = new Map<number, string[]>();
+  for (const m of ms ?? []) {
+    const o = owner.get(m.roster_id);
+    if (o && m.matchup_id != null) (byMatch.get(m.matchup_id) ?? byMatch.set(m.matchup_id, []).get(m.matchup_id)!).push(o);
+  }
+  const out = new Map<string, string>();
+  for (const pair of byMatch.values())
+    if (pair.length === 2) {
+      out.set(pair[0], pair[1]);
+      out.set(pair[1], pair[0]);
+    }
+  return out;
 }
 
 async function records(leagueId: string): Promise<TeamRecord[]> {
@@ -92,8 +118,20 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[]) {
     (await tx<{ team: string; wins: number; losses: number; ties: number; pf: string }[]>`
       select team, wins, losses, ties, pf from market_teams where league_id = ${lid}`).map((r) => [r.team, { ...r, pf: Number(r.pf) }]),
   );
+  // Values before this result (official totals as last seen), to tell favourites from underdogs.
+  const valueBefore = before.size === recs.length ? fairValues([...before.values()]) : new Map<string, number>();
   for (const r of recs) {
-    const per = dividend(before.get(r.team), r);
+    const base = dividend(before.get(r.team), r);
+    let per = base;
+    let note: string | null = null;
+    if (base > 0) {
+      const b = before.get(r.team)!;
+      const week = r.wins + r.losses + r.ties;
+      const opp = (await opponents(lid, week).catch(() => new Map<string, string>())).get(r.team);
+      per = payoutPerShare(b, r, valueBefore.get(r.team), opp ? valueBefore.get(opp) : undefined);
+      // Saved as "<opponent id>|<multiplier>"; the ledger shows it as "beat JD ×1.80".
+      if (opp && per !== base) note = `${opp}|${(per / base).toFixed(2)}`;
+    }
     if (per > 0) {
       // Only shares owned since before that week began.
       const holders = await tx<{ manager: string; shares: number }[]>`
@@ -103,7 +141,7 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[]) {
       for (const h of holders.filter((x) => x.shares > 0)) {
         const amount = per * h.shares;
         await tx`update market_wallets set coins = coins + ${amount} where league_id = ${lid} and manager = ${h.manager}`;
-        await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${h.manager}, 'dividend', ${r.team}, ${h.shares}, ${amount})`;
+        await tx`insert into market_log (league_id, manager, kind, team, qty, amount, note) values (${lid}, ${h.manager}, 'dividend', ${r.team}, ${h.shares}, ${amount}, ${note})`;
       }
     }
     const b = before.get(r.team);
@@ -185,6 +223,10 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   };
   const tick = tickers(recs.map((r) => [r.team, nameOf(r.team)]));
   const thisWeek = await weekStart(sql);
+  // This week's matchups, so each team shows what a win would pay per share (regular season only).
+  const week = Math.max(0, ...recs.map((r) => r.wins + r.losses + r.ties)) + 1;
+  const playoffs = (await leagueInfo(lid).catch(() => null))?.settings?.playoff_week_start ?? 99;
+  const vsNow = week < playoffs ? await opponents(lid, week).catch(() => new Map<string, string>()) : new Map<string, string>();
   const [prices, snaps, wallets, holdings, log, lots] = await Promise.all([
     sql<{ team: string; day: Date; price: string }[]>`select team, day, price::text from market_prices where league_id = ${lid} order by day`,
     // The nightly official totals, so the charts go back before the market opened (fair value, no demand yet).
@@ -192,8 +234,8 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       select taken_on as day, owner_id as team, wins, losses, ties, pf::text, weeks_done from pf_snapshots where league_id = ${lid} order by taken_on`,
     sql<{ manager: string; bucks: string; coins: string; hoodies: number }[]>`select manager, bucks::text, coins::text, hoodies from market_wallets where league_id = ${lid}`,
     sql<{ manager: string; team: string; shares: number }[]>`select manager, team, shares from market_holdings where league_id = ${lid} and shares > 0`,
-    sql<{ manager: string; kind: string; team: string | null; qty: number; amount: string; at: Date }[]>`
-      select manager, kind, team, qty, amount::text, at from market_log where league_id = ${lid} order by at desc, id desc limit 1000`,
+    sql<{ manager: string; kind: string; team: string | null; qty: number; amount: string; at: Date; note: string | null }[]>`
+      select manager, kind, team, qty, amount::text, at, note from market_log where league_id = ${lid} order by at desc, id desc limit 1000`,
     manager
       ? sql<{ id: string; team: string; shares: number; bought_at: Date }[]>`
           select id::text, team, shares, bought_at from market_lots where league_id = ${lid} and manager = ${manager} and shares > 0`
@@ -222,6 +264,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         record: `${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ""}`, pf: Math.round(r.pf),
         fair: f, held: h, price, buy1: buyCost(f, h, 1), sell1: h > 0 ? sellValue(f, h, 1) : 0,
         change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-120),
+        vs: vsNow.has(r.team) ? { id: vsNow.get(r.team)!, ticker: tick.get(vsNow.get(r.team)!) ?? null, winPays: Math.round(100 * upset(f, fair.get(vsNow.get(r.team)!) ?? f)) } : null,
       };
     })
     .sort((a, b) => b.price - a.price);
@@ -240,7 +283,13 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     nextHoodie: hoodiePrice(hoodiesSold),
     coinRate: COIN_RATE,
     standings,
-    feed: log.map((l) => ({ name: nameOf(l.manager), kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString() })),
+    feed: log.map((l) => {
+      const [opp, x] = l.note?.split("|") ?? [];
+      return {
+        name: nameOf(l.manager), kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString(),
+        upset: opp && x ? { vs: tick.get(opp) ?? null, x: Number(x) } : null,
+      };
+    }),
     wallet: mine
       ? { bucks: Number(mine.bucks), coins: Number(mine.coins), hoodies: mine.hoodies, holdings: holdOf(manager!).map((h) => ({ ...h, counting: counting(h.team, h.shares) })), worth: standings.find((s) => s.manager === manager)?.worth ?? 0 }
       : null,

@@ -127,3 +127,20 @@ describe("Trash Exchange coin only for shares owned before the week", () => {
     expect(sellNewestFirst(lots, 26)).toBeNull();
   });
 });
+
+describe("Trash Exchange underdogs pay more", () => {
+  it("pays opponent value ÷ winner value, between 0.5 and 3", async () => {
+    const { upset, payoutPerShare } = await import("@/packs/trash/market/math");
+    expect(upset(6_900, 12_400)).toBeCloseTo(1.797, 2); // Rico beats KawhiNot
+    expect(upset(12_400, 6_900)).toBeCloseTo(0.556, 2); // KawhiNot beats Rico
+    expect(upset(10_000, 10_000)).toBe(1);
+    expect(upset(5_000, 40_000)).toBe(3);
+    expect(upset(40_000, 5_000)).toBe(0.5);
+    const b = rec("r", 0, 3, 300);
+    expect(payoutPerShare(b, rec("r", 1, 3, 420), 6_900, 12_400)).toBe(180);
+    expect(payoutPerShare(b, rec("r", 0, 3, 300, 1), 6_900, 12_400)).toBe(90); // a tie pays half
+    expect(payoutPerShare(b, rec("r", 1, 3, 420))).toBe(100); // opponent unknown: flat
+    expect(payoutPerShare(b, rec("r", 2, 3, 520), 6_900, 12_400)).toBe(200); // two results at once: flat
+    expect(payoutPerShare(b, rec("r", 0, 4, 400), 6_900, 12_400)).toBe(0);
+  });
+});
