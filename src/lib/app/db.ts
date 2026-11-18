@@ -283,6 +283,16 @@ create table if not exists market_log (
   at        timestamptz not null default now()
 );
 create index if not exists market_log_league on market_log(league_id, at desc);
+-- Each purchase, kept with its time: a week's dividend only counts shares owned before that week began.
+create table if not exists market_lots (
+  id        bigserial primary key,
+  league_id text not null,
+  manager   text not null,
+  team      text not null,
+  shares    int not null,
+  bought_at timestamptz not null default now()
+);
+create index if not exists market_lots_team on market_lots(league_id, team);
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

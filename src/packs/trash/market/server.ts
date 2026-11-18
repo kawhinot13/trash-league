@@ -5,7 +5,7 @@ import { sleeper, official, type SRoster } from "@/lib/app/sleeper";
 import { familyIdOf, newestSeason, packOf } from "@/lib/app/store";
 import { loadPack } from "@/packs";
 import {
-  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, ownedBefore, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -47,9 +47,47 @@ async function heldByTeam(tx: Sql, lid: string): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.team, Number(r.n)]));
 }
 
+/** Monday 12am Eastern of the current week (Trash's weeks run Monday to Sunday). */
+async function weekStart(tx: Sql): Promise<Date> {
+  const [r] = await tx<{ at: Date }[]>`select date_trunc('week', now() at time zone 'America/New_York') at time zone 'America/New_York' as at`;
+  return r.at;
+}
+
+/**
+ * Holdings from before purchase lots existed: rebuild the lots from the order log (sells take the
+ * newest first). If that doesn't add up to what's held, the shares count as bought now.
+ */
+async function ensureLots(tx: Sql, lid: string) {
+  const [has] = await tx<{ n: number }[]>`select count(*)::int as n from market_lots where league_id = ${lid}`;
+  if (has.n) return;
+  const held = await tx<{ manager: string; team: string; shares: number }[]>`
+    select manager, team, shares from market_holdings where league_id = ${lid} and shares > 0`;
+  if (!held.length) return;
+  const log = await tx<{ manager: string; team: string; kind: string; qty: number; at: Date }[]>`
+    select manager, team, kind, qty, at from market_log where league_id = ${lid} and kind in ('buy', 'sell') order by id`;
+  for (const h of held) {
+    let lots: Lot[] = [];
+    let id = 0;
+    for (const e of log.filter((x) => x.manager === h.manager && x.team === h.team)) {
+      if (e.kind === "buy") lots.push({ id: ++id, shares: e.qty, at: e.at.getTime() });
+      else {
+        const next = sellNewestFirst(lots, e.qty);
+        if (next) lots = lots.map((l) => ({ ...l, shares: next.find((n) => n.id === l.id)?.shares ?? l.shares }));
+      }
+    }
+    lots = lots.filter((l) => l.shares > 0);
+    if (lots.reduce((n, l) => n + l.shares, 0) !== h.shares) lots = [{ id: 1, shares: h.shares, at: Date.now() }];
+    for (const l of lots)
+      await tx`insert into market_lots (league_id, manager, team, shares, bought_at) values (${lid}, ${h.manager}, ${h.team}, ${l.shares}, ${new Date(l.at)})`;
+  }
+}
+
 /** Pay dividends for official results since the last check, save today's prices. Call inside a transaction. */
 async function settle(tx: Sql, lid: string, recs: TeamRecord[]) {
   await tx`select pg_advisory_xact_lock(hashtext(${"market:" + lid}))`;
+  await ensureLots(tx, lid);
+  // Results arrive once a week is final, so the week being paid began a week before this one.
+  const paidWeek = new Date((await weekStart(tx)).getTime() - 7 * 86_400_000);
   const before = new Map(
     (await tx<{ team: string; wins: number; losses: number; ties: number; pf: string }[]>`
       select team, wins, losses, ties, pf from market_teams where league_id = ${lid}`).map((r) => [r.team, { ...r, pf: Number(r.pf) }]),
@@ -57,9 +95,12 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[]) {
   for (const r of recs) {
     const per = dividend(before.get(r.team), r);
     if (per > 0) {
+      // Only shares owned since before that week began.
       const holders = await tx<{ manager: string; shares: number }[]>`
-        select manager, shares from market_holdings where league_id = ${lid} and team = ${r.team} and shares > 0`;
-      for (const h of holders) {
+        select manager, sum(shares)::int as shares from market_lots
+        where league_id = ${lid} and team = ${r.team} and shares > 0 and bought_at < ${paidWeek}
+        group by manager`;
+      for (const h of holders.filter((x) => x.shares > 0)) {
         const amount = per * h.shares;
         await tx`update market_wallets set coins = coins + ${amount} where league_id = ${lid} and manager = ${h.manager}`;
         await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${h.manager}, 'dividend', ${r.team}, ${h.shares}, ${amount})`;
@@ -143,7 +184,8 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     return pack?.nicknames[dn] ?? dn;
   };
   const tick = tickers(recs.map((r) => [r.team, nameOf(r.team)]));
-  const [prices, snaps, wallets, holdings, log] = await Promise.all([
+  const thisWeek = await weekStart(sql);
+  const [prices, snaps, wallets, holdings, log, lots] = await Promise.all([
     sql<{ team: string; day: Date; price: string }[]>`select team, day, price::text from market_prices where league_id = ${lid} order by day`,
     // The nightly official totals, so the charts go back before the market opened (fair value, no demand yet).
     sql<{ day: Date; team: string | null; wins: number; losses: number; ties: number; pf: string; weeks_done: number }[]>`
@@ -151,8 +193,16 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     sql<{ manager: string; bucks: string; coins: string; hoodies: number }[]>`select manager, bucks::text, coins::text, hoodies from market_wallets where league_id = ${lid}`,
     sql<{ manager: string; team: string; shares: number }[]>`select manager, team, shares from market_holdings where league_id = ${lid} and shares > 0`,
     sql<{ manager: string; kind: string; team: string | null; qty: number; amount: string; at: Date }[]>`
-      select manager, kind, team, qty, amount::text, at from market_log where league_id = ${lid} and kind <> 'dividend' order by at desc limit 12`,
+      select manager, kind, team, qty, amount::text, at from market_log where league_id = ${lid} order by at desc, id desc limit 1000`,
+    manager
+      ? sql<{ id: string; team: string; shares: number; bought_at: Date }[]>`
+          select id::text, team, shares, bought_at from market_lots where league_id = ${lid} and manager = ${manager} and shares > 0`
+      : Promise.resolve([]),
   ]);
+  // Your shares bought this week: they start earning coin next week.
+  const since = thisWeek.getTime();
+  const lotsOf = (team: string) => lots.filter((l) => l.team === team).map((l) => ({ id: Number(l.id), shares: l.shares, at: l.bought_at.getTime() }));
+  const counting = (team: string, shares: number) => (lots.some((l) => l.team === team) ? ownedBefore(lotsOf(team), since) : shares);
   const saved = snaps.flatMap((r) => (r.team ? [{ day: iso(r.day), team: r.team, wins: r.wins, losses: r.losses, ties: r.ties, pf: Number(r.pf), wd: r.weeks_done }] : []));
   const history = priceHistory(
     prices.map((p) => ({ day: iso(p.day), team: p.team, price: Number(p.price) })),
@@ -192,7 +242,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     standings,
     feed: log.map((l) => ({ name: nameOf(l.manager), kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString() })),
     wallet: mine
-      ? { bucks: Number(mine.bucks), coins: Number(mine.coins), hoodies: mine.hoodies, holdings: holdOf(manager!), worth: standings.find((s) => s.manager === manager)?.worth ?? 0 }
+      ? { bucks: Number(mine.bucks), coins: Number(mine.coins), hoodies: mine.hoodies, holdings: holdOf(manager!).map((h) => ({ ...h, counting: counting(h.team, h.shares) })), worth: standings.find((s) => s.manager === manager)?.worth ?? 0 }
       : null,
     status: season.users.size ? "open" : "closed",
   };
@@ -228,6 +278,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
         await tx`
           insert into market_holdings (league_id, manager, team, shares) values (${lid}, ${manager}, ${o.team}, ${o.qty})
           on conflict (league_id, manager, team) do update set shares = market_holdings.shares + excluded.shares`;
+        await tx`insert into market_lots (league_id, manager, team, shares) values (${lid}, ${manager}, ${o.team}, ${o.qty})`;
         await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'buy', ${o.team}, ${o.qty}, ${cost})`;
       } else {
         const [mine] = await tx<{ shares: number }[]>`
@@ -236,6 +287,12 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
         const pay = sellValue(f, h, o.qty);
         await tx`update market_wallets set bucks = bucks + ${pay} where league_id = ${lid} and manager = ${manager}`;
         await tx`update market_holdings set shares = shares - ${o.qty} where league_id = ${lid} and manager = ${manager} and team = ${o.team}`;
+        // The newest shares go first, so shares that already count for this week's coin are kept.
+        const lots = await tx<{ id: string; shares: number; bought_at: Date }[]>`
+          select id::text, shares, bought_at from market_lots where league_id = ${lid} and manager = ${manager} and team = ${o.team} and shares > 0 for update`;
+        for (const c of sellNewestFirst(lots.map((l) => ({ id: Number(l.id), shares: l.shares, at: l.bought_at.getTime() })), o.qty) ?? [])
+          if (c.shares > 0) await tx`update market_lots set shares = ${c.shares} where id = ${c.id}`;
+          else await tx`delete from market_lots where id = ${c.id}`;
         await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'sell', ${o.team}, ${o.qty}, ${pay})`;
       }
     } else if (o.kind === "coin") {

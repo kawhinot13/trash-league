@@ -183,3 +183,26 @@ export function weeklyBackfill(
   }
   return out;
 }
+
+/**
+ * Shares are kept as purchase lots (when they were bought). A week's coin goes only to shares
+ * owned since before that week started, so buying once a win looks certain earns nothing that week.
+ */
+export type Lot = { id: number; shares: number; at: number };
+
+/** Shares in these lots that were owned before `since` (ms). */
+export const ownedBefore = (lots: Lot[], since: number) => lots.reduce((n, l) => n + (l.at < since ? l.shares : 0), 0);
+
+/** Selling `qty` takes the newest shares first. Returns each lot's new size (0 = gone), or null if there aren't enough. */
+export function sellNewestFirst(lots: Lot[], qty: number): { id: number; shares: number }[] | null {
+  if (lots.reduce((n, l) => n + l.shares, 0) < qty) return null;
+  const out: { id: number; shares: number }[] = [];
+  let left = qty;
+  for (const l of [...lots].sort((a, b) => b.at - a.at || b.id - a.id)) {
+    if (!left) break;
+    const take = Math.min(left, l.shares);
+    out.push({ id: l.id, shares: l.shares - take });
+    left -= take;
+  }
+  return out;
+}

@@ -103,3 +103,27 @@ describe("Trash Exchange week-by-week backfill", () => {
     expect(weeklyBackfill(teams, new Map([["a", [100, 110, 120]], ["b", [90, 80]]]), "2026-11-11", 3, new Map([["a", 330], ["b", 240]]))).toEqual([]);
   });
 });
+
+describe("Trash Exchange coin only for shares owned before the week", () => {
+  it("counts only shares bought before the week started", async () => {
+    const { ownedBefore } = await import("@/packs/trash/market/math");
+    const monday = Date.parse("2026-11-16T05:00:00Z");
+    const lots = [
+      { id: 1, shares: 5, at: monday - 3_600_000 },
+      { id: 2, shares: 20, at: monday + 5 * 86_400_000 },
+    ];
+    expect(ownedBefore(lots, monday)).toBe(5);
+    expect(ownedBefore(lots, monday + 7 * 86_400_000)).toBe(25);
+  });
+
+  it("selling takes the newest shares first and refuses more than you own", async () => {
+    const { sellNewestFirst } = await import("@/packs/trash/market/math");
+    const lots = [
+      { id: 1, shares: 5, at: 1 },
+      { id: 2, shares: 20, at: 2 },
+    ];
+    expect(sellNewestFirst(lots, 22)).toEqual([{ id: 2, shares: 0 }, { id: 1, shares: 3 }]);
+    expect(sellNewestFirst(lots, 4)).toEqual([{ id: 2, shares: 16 }]);
+    expect(sellNewestFirst(lots, 26)).toBeNull();
+  });
+});

@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: Trash Exchange coin only for shares owned before the week; public ledger
+- Loophole (owner): buy a team late in a week once its win is obvious, collect a coin per share. Fix: shares are kept
+  as purchase lots; a week's coin counts only lots bought before that week began (Monday 12am ET); selling takes the
+  newest lots first. Old holdings were rebuilt into lots from the order log. Late buyers can still catch the small
+  price bump when a win goes final (kept as normal market timing). Rejected: pricing from live in-week scores
+  (Sleeper's basketball live scores are wrong), closing trading mid-week, filling orders at the next week's price.
+- Owner wanted every transaction public: the ledger lists all buys, sells, swaps, hoodies and payouts (amounts, times).
+
 ## 2026-11-18: Trash Exchange charts start at the first accurate data
 - Owner wanted charts from week 0 but only accurate data. Before the nightly saves (first: 2026-11-14) the only
   weekly source is Sleeper's matchup scores, which miss the official totals by 6-158 points per team over weeks 1-3.

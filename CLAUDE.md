@@ -129,6 +129,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   hoodies, then net worth). Price = fair value from official PF + record (`fairValues`) x (1 + 0.4% per share held
   league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run
   under a per-league lock. Managers only, as their linked Sleeper user (PlayGate). Other leagues: 404 / disabled.
+  Coin goes only to shares owned before the paid week began (Monday 12am ET; `market_lots`, `ownedBefore`); sells take
+  the newest shares first. Every transaction (buys, sells, swaps, hoodies, payouts) is public in "The ledger".
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
   Charts (sparkline per row, full chart with 1W/1M/All + crosshair when a team is open): `priceHistory` = market
   closing prices, and before the market opened each night's fair value from `pf_snapshots` (full nights only). Weeks

@@ -235,6 +235,19 @@ function Qty({ q, setQ, max }: { q: number; setQ: (n: number) => void; max: numb
   );
 }
 
+type Entry = MarketState["feed"][number];
+/** One ledger line, in plain words, with what changed hands. */
+function ledgerLine(f: Entry) {
+  const amt = money(f.amount);
+  if (f.kind === "buy") return `bought ${f.qty} ${f.ticker} for ${amt} BB`;
+  if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
+  if (f.kind === "coin") return `swapped ${amt} BB for ${f.qty} Perren Coin`;
+  if (f.kind === "dividend") return `got ${amt} Perren Coin from ${f.ticker}'s win (${f.qty} shares)`;
+  return `bought ${f.qty === 1 ? "a Xan Purple Hoodie" : `${f.qty} Xan Purple Hoodies`} for ${amt} PC`;
+}
+const when = (at: string) =>
+  new Date(at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
 /* ── The board ─────────────────────────────────────────────────────── */
 export function MarketBoard({ leagueId }: { leagueId: string }) {
   const url = `/api/l/${leagueId}/market`;
@@ -245,6 +258,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [coinQ, setCoinQ] = useState(1);
   const [hoodQ, setHoodQ] = useState(1);
+  const [allFeed, setAllFeed] = useState(false);
 
   const load = useCallback(() => {
     void fetch(url, { cache: "no-store" })
@@ -275,6 +289,11 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const teams = s.teams;
   const w = s.wallet ?? null;
   const owned = (id: string) => w?.holdings.find((h) => h.team === id)?.shares ?? 0;
+  // Shares bought this week don't earn this week's coin (they start next week).
+  const fresh = (id: string) => {
+    const h = w?.holdings.find((x) => x.team === id);
+    return h ? h.shares - h.counting : 0;
+  };
   const coinMax = w ? Math.floor(w.bucks / s.coinRate!) : 0;
   let hoodCost = 0;
   for (let i = 0; i < hoodQ; i++) hoodCost += hoodiePrice(s.hoodiesSold! + i);
@@ -389,6 +408,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     </span>
                     <span className="block text-sm break-words text-[var(--muted)]">
                       {t.record} · {t.pf.toLocaleString("en-US")} pts{mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
+                      {fresh(t.id) ? <span className="ml-1.5 inline-block rounded-full bg-white/10 px-2 py-0.5 text-xs text-[var(--paper)]">{fresh(t.id)} count next week</span> : null}
                     </span>
                   </span>
                   <span>
@@ -429,7 +449,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                       <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                     )}
                     <p className="text-xs text-[var(--muted)]">
-                      Fair value {money(t.fair)} BB. Every share the league holds adds 0.4% to the price, and selling brings it back down.
+                      Shares bought now earn Perren Coin starting next week (weeks start Monday). Fair value {money(t.fair)} BB. Every share the league holds adds 0.4% to the price, and selling brings it back down.
                       {t.team ? ` Team: ${t.team}.` : ""}
                     </p>
                     {note && open === t.id ? (
@@ -467,26 +487,29 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
             <p className="mt-5 text-[var(--muted)]">Nobody has opened a desk yet. First one in gets the cheapest hoodie.</p>
           )}
         </section>
-        <section aria-label="Recent trades">
-          <h2 className="font-display text-3xl font-black md:text-4xl">Floor chatter</h2>
-          <p className="mt-2 text-[var(--muted)]">The latest orders in the league.</p>
+        <section aria-label="Every transaction">
+          <h2 className="font-display text-3xl font-black md:text-4xl">The ledger</h2>
+          <p className="mt-2 text-[var(--muted)]">Every transaction in the league, newest first. Nothing on this exchange is private.</p>
           {s.feed!.length ? (
-            <ul className="mt-5 space-y-2.5">
-              {s.feed!.map((f, i) => (
-                <li key={i} className="text-sm">
-                  <span className="font-semibold">{f.name}</span>{" "}
-                  <span className="text-[var(--muted)]">
-                    {f.kind === "buy"
-                      ? `bought ${f.qty} ${f.ticker}`
-                      : f.kind === "sell"
-                        ? `sold ${f.qty} ${f.ticker}`
-                        : f.kind === "coin"
-                          ? `swapped into ${f.qty} Perren Coin`
-                          : `bought ${f.qty === 1 ? "a Xan Purple Hoodie" : `${f.qty} Xan Purple Hoodies`}`}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+                {(allFeed ? s.feed! : s.feed!.slice(0, 12)).map((f, i) => (
+                  <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2.5 text-sm">
+                    <span className="min-w-0 break-words">
+                      <span className="font-semibold">{f.name}</span> <span className="text-[var(--muted)]">{ledgerLine(f)}</span>
+                    </span>
+                    <time dateTime={f.at} className="shrink-0 text-xs text-[var(--muted)] tabular-nums">
+                      {when(f.at)}
+                    </time>
+                  </li>
+                ))}
+              </ul>
+              {s.feed!.length > 12 ? (
+                <button type="button" onClick={() => setAllFeed(!allFeed)} className={`${chip} mt-4 bg-white/10 hover:bg-white/15`}>
+                  {allFeed ? "Show fewer" : `Show all ${s.feed!.length}`}
+                </button>
+              ) : null}
+            </>
           ) : (
             <p className="mt-5 text-[var(--muted)]">Quiet on the floor. For now.</p>
           )}
@@ -510,7 +533,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Coin /> Perren Coin
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Paid out when a week goes final: 1 coin for every share you hold in a team that won (half for a tie). You can also swap bucks for coin.
+              Paid out when a week goes final: 1 coin per share in a team that won (half for a tie), for shares you owned before that week started on Monday. Shares bought mid-week start counting the next week. You can also swap bucks for coin.
             </p>
           </li>
           <li className="rounded-2xl bg-black/20 p-5">
