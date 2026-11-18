@@ -5,7 +5,7 @@ import { sleeper, official, type SRoster } from "@/lib/app/sleeper";
 import { familyIdOf, newestSeason, packOf } from "@/lib/app/store";
 import { loadPack } from "@/packs";
 import {
-  buyCost, COIN_RATE, priceHistory, dividend, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -99,6 +99,30 @@ async function needsSettle(sql: Sql, lid: string, recs: TeamRecord[]) {
   });
 }
 
+/**
+ * Week-by-week history back to week 0, before the first saved night, only when it checks out against
+ * that night's official totals (see weeklyBackfill). Weekly scores come from the stored lineup replay;
+ * no extra Sleeper calls beyond the cached rosters.
+ */
+async function backfill(lid: string, saved: { day: string; team: string; pf: number; wd: number }[]) {
+  if (!saved.length) return [];
+  const firstDay = saved.reduce((a, b) => (b.day < a.day ? b : a)).day;
+  const night = saved.filter((x) => x.day === firstDay);
+  const rs = await rosters(lid);
+  const owner = new Map(rs.flatMap((r) => (r.owner_id ? [[r.roster_id, r.owner_id] as [number, string]] : [])));
+  const teams = rs.flatMap((r) => (r.owner_id ? [{ team: r.owner_id, record: r.metadata?.record ?? "" }] : []));
+  const sql = await db();
+  const rows = await sql<{ week: number; teams: { rid: number; pts: number }[] }[]>`
+    select week, data->'teams' as teams from league_weeks where league_id = ${lid} order by week`;
+  const weekPts = new Map<string, number[]>();
+  for (const r of rows)
+    for (const t of r.teams ?? []) {
+      const o = owner.get(t.rid);
+      if (o && r.week >= 1) (weekPts.get(o) ?? weekPts.set(o, []).get(o)!)[r.week - 1] = t.pts;
+    }
+  return weeklyBackfill(teams, weekPts, firstDay, Math.min(...night.map((x) => x.wd)), new Map(night.map((x) => [x.team, x.pf])));
+}
+
 export type MarketState = Awaited<ReturnType<typeof marketState>>;
 
 /** Everything the board shows, plus the viewer's wallet when they're one of the league's managers. */
@@ -122,16 +146,17 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const [prices, snaps, wallets, holdings, log] = await Promise.all([
     sql<{ team: string; day: Date; price: string }[]>`select team, day, price::text from market_prices where league_id = ${lid} order by day`,
     // The nightly official totals, so the charts go back before the market opened (fair value, no demand yet).
-    sql<{ day: Date; team: string | null; wins: number; losses: number; ties: number; pf: string }[]>`
-      select taken_on as day, owner_id as team, wins, losses, ties, pf::text from pf_snapshots where league_id = ${lid} order by taken_on`,
+    sql<{ day: Date; team: string | null; wins: number; losses: number; ties: number; pf: string; weeks_done: number }[]>`
+      select taken_on as day, owner_id as team, wins, losses, ties, pf::text, weeks_done from pf_snapshots where league_id = ${lid} order by taken_on`,
     sql<{ manager: string; bucks: string; coins: string; hoodies: number }[]>`select manager, bucks::text, coins::text, hoodies from market_wallets where league_id = ${lid}`,
     sql<{ manager: string; team: string; shares: number }[]>`select manager, team, shares from market_holdings where league_id = ${lid} and shares > 0`,
     sql<{ manager: string; kind: string; team: string | null; qty: number; amount: string; at: Date }[]>`
       select manager, kind, team, qty, amount::text, at from market_log where league_id = ${lid} and kind <> 'dividend' order by at desc limit 12`,
   ]);
+  const saved = snaps.flatMap((r) => (r.team ? [{ day: iso(r.day), team: r.team, wins: r.wins, losses: r.losses, ties: r.ties, pf: Number(r.pf), wd: r.weeks_done }] : []));
   const history = priceHistory(
     prices.map((p) => ({ day: iso(p.day), team: p.team, price: Number(p.price) })),
-    snaps.flatMap((r) => (r.team ? [{ day: iso(r.day), team: r.team, wins: r.wins, losses: r.losses, ties: r.ties, pf: Number(r.pf) }] : [])),
+    [...(await backfill(lid, saved).catch(() => [])), ...saved],
   );
   const teams = recs
     .map((r) => {

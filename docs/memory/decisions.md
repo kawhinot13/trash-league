@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: Trash Exchange charts start at the first accurate data
+- Owner wanted charts from week 0 but only accurate data. Before the nightly saves (first: 2026-11-14) the only
+  weekly source is Sleeper's matchup scores, which miss the official totals by 6-158 points per team over weeks 1-3.
+  So weeks are rebuilt only when every team's weekly scores sum to the first saved night's official total (they
+  don't now); otherwise the chart starts at that night. Rejected: scaling weekly scores to the official total
+  (the shape between weeks would still be a guess).
+
 ## 2026-11-18: The Trash Exchange (Trash-only play-money stock market)
 - Owner asked for a stock game just for Trash with three currencies: Bushy Bucks, Perren Coin, Xan Purple Hoodies.
   Lives in the Trash pack on Rafterlore (accounts + Sleeper links already prove who each manager is; the Trash site

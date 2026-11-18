@@ -78,3 +78,28 @@ describe("Trash Exchange history", () => {
     expect(h.get("b")![1].p).toBe(10_000);
   });
 });
+
+describe("Trash Exchange week-by-week backfill", () => {
+  const teams = [
+    { team: "a", record: "WWLW" },
+    { team: "b", record: "LLWL" },
+  ];
+  const pts = new Map([["a", [100, 110, 120, 999]], ["b", [90, 80, 70, 999]]]);
+
+  it("rebuilds week 0 up to the first saved night when the weekly scores add up to the official totals", async () => {
+    const { weeklyBackfill } = await import("@/packs/trash/market/math");
+    // First saved night: Wed 2026-11-11 with 3 weeks done -> week 3 ended Sun 2026-11-08.
+    const out = weeklyBackfill(teams, pts, "2026-11-11", 3, new Map([["a", 330], ["b", 240]]));
+    const a = out.filter((x) => x.team === "a");
+    expect(a.map((x) => x.w)).toEqual([0, 1, 2]);
+    expect(a.map((x) => x.day)).toEqual(["2026-10-18", "2026-10-25", "2026-11-01"]);
+    expect(a[0]).toMatchObject({ wins: 0, losses: 0, pf: 0 });
+    expect(a[2]).toMatchObject({ wins: 2, losses: 0, pf: 210 });
+  });
+
+  it("rebuilds nothing when any team's weekly scores miss its official total", async () => {
+    const { weeklyBackfill } = await import("@/packs/trash/market/math");
+    expect(weeklyBackfill(teams, pts, "2026-11-11", 3, new Map([["a", 330], ["b", 241.5]]))).toEqual([]);
+    expect(weeklyBackfill(teams, new Map([["a", [100, 110, 120]], ["b", [90, 80]]]), "2026-11-11", 3, new Map([["a", 330], ["b", 240]]))).toEqual([]);
+  });
+});

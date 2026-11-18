@@ -57,7 +57,9 @@ export function Hoodie({ className = "size-5" }: { className?: string }) {
 }
 
 /* ── Pieces ────────────────────────────────────────────────────────── */
-type Pt = { d: string; p: number };
+type Pt = { d: string; p: number; w?: number };
+/** A point's label: rebuilt week ends say which week, saved days say the date. */
+const label = (x: Pt) => (x.w === undefined ? day(x.d) : x.w === 0 ? "Season start" : `After week ${x.w}`);
 
 function Spark({ h, up }: { h: Pt[]; up: boolean }) {
   if (h.length < 2) return <span className="block h-7 w-14 md:w-20" aria-hidden />;
@@ -115,7 +117,7 @@ function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
     <figure className="rounded-2xl bg-black/20 p-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <figcaption>
-          <span className="block text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">{sel ? day(sel.d) : `${ticker} · ${range === "All" ? "season" : range}`}</span>
+          <span className="block text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">{sel ? label(sel) : `${ticker} · ${range === "All" ? "season" : range}`}</span>
           <span className="font-display text-3xl leading-none font-black tabular-nums">{money(sel ? sel.p : last)}</span>{" "}
           <span className={`text-sm tabular-nums ${up ? UP : DOWN}`}>{pct((sel ? sel.p : last) / first - 1)}</span>
         </figcaption>
@@ -140,7 +142,7 @@ function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
           onPointerDown={move}
           onPointerLeave={() => setHover(null)}
           role="img"
-          aria-label={`${ticker} price from ${money(first)} on ${day(data[0].d)} to ${money(last)} on ${day(data[data.length - 1].d)}, low ${money(lo0)}, high ${money(hi0)}.`}
+          aria-label={`${ticker} price from ${money(first)} (${label(data[0])}) to ${money(last)} (${label(data[data.length - 1])}), low ${money(lo0)}, high ${money(hi0)}.`}
         >
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible" aria-hidden>
             <defs>
@@ -175,9 +177,15 @@ function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
         </div>
       </div>
       <div aria-hidden className="mt-2 flex justify-between pr-14 text-xs text-[var(--muted)]">
-        <span>{day(data[0].d)}</span>
-        <span>{day(data[data.length - 1].d)}</span>
+        <span>{label(data[0])}</span>
+        <span>{label(data[data.length - 1])}</span>
       </div>
+      {data.some((x) => x.w !== undefined) ? (
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          Weeks before the nightly saves began are rebuilt from the official records and Sleeper&apos;s weekly scores (per Sleeper), scaled to match the
+          official totals.
+        </p>
+      ) : null}
     </figure>
   );
 }

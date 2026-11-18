@@ -101,25 +101,85 @@ export function tickers(names: [string, string][]): Map<string, string> {
 }
 
 /**
- * Daily price history per team: the market's own closing prices where it has them, and before
- * that the fair value from each night's saved official totals (a day counts only when every team
- * was saved, so values are compared like for like). Oldest first.
+ * Price history per team, oldest first: the market's own closing prices where it has them, and
+ * before that the fair value from each night's saved official totals (a night counts only when
+ * every team was saved). Points carrying `w` are week ends rebuilt by weeklyBackfill.
  */
 export function priceHistory(
   prices: { day: string; team: string; price: number }[],
-  snaps: (TeamRecord & { day: string })[],
-): Map<string, { d: string; p: number }[]> {
+  snaps: (TeamRecord & { day: string; w?: number })[],
+): Map<string, { d: string; p: number; w?: number }[]> {
   const byDay = new Map<string, Map<string, number>>();
+  const weekOf = new Map<string, number>();
   const teams = new Set(snaps.map((s) => s.team));
   const snapDays = new Map<string, TeamRecord[]>();
-  for (const s of snaps) (snapDays.get(s.day) ?? snapDays.set(s.day, []).get(s.day)!).push(s);
+  for (const s of snaps) {
+    (snapDays.get(s.day) ?? snapDays.set(s.day, []).get(s.day)!).push(s);
+    if (s.w !== undefined) weekOf.set(s.day, s.w);
+  }
   for (const [day, recs] of snapDays) {
     if (recs.length < teams.size) continue;
     byDay.set(day, fairValues(recs));
   }
   for (const p of prices) (byDay.get(p.day) ?? byDay.set(p.day, new Map()).get(p.day)!).set(p.team, p.price);
-  const out = new Map<string, { d: string; p: number }[]>();
+  const out = new Map<string, { d: string; p: number; w?: number }[]>();
   for (const day of [...byDay.keys()].sort())
-    for (const [team, p] of byDay.get(day)!) (out.get(team) ?? out.set(team, []).get(team)!).push({ d: day, p });
+    for (const [team, p] of byDay.get(day)!) {
+      const w = weekOf.get(day);
+      (out.get(team) ?? out.set(team, []).get(team)!).push(w === undefined ? { d: day, p } : { d: day, p, w });
+    }
+  return out;
+}
+
+const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * The season before the nightly saves began, one point per finished week from week 0 (everyone
+ * 0-0, 100 BB), but only when it can be checked: records are official (Sleeper's week-by-week
+ * record string, "WLWW"), and the weekly scores (Sleeper's matchups) must add up, for every team, to
+ * the official total saved on the first night (`officialAt`, after `weeksAtFirst` weeks). If any
+ * team's don't, nothing is rebuilt and the history starts at that first saved night. Weeks end on
+ * Sundays; the Sunday before the first saved night ends week `weeksAtFirst`.
+ */
+export function weeklyBackfill(
+  teams: { team: string; record: string }[],
+  weekPts: Map<string, number[]>,
+  firstDay: string,
+  weeksAtFirst: number,
+  officialAt: Map<string, number>,
+): (TeamRecord & { day: string; w: number })[] {
+  if (!teams.length || weeksAtFirst < 1) return [];
+  for (const t of teams) {
+    const pts = weekPts.get(t.team) ?? [];
+    if (t.record.length < weeksAtFirst) return [];
+    let sum = 0;
+    for (let j = 0; j < weeksAtFirst; j++) {
+      if (typeof pts[j] !== "number") return [];
+      sum += pts[j];
+    }
+    const off = officialAt.get(t.team);
+    if (off === undefined || Math.abs(sum - off) >= 0.06) return [];
+  }
+  let end = addDays(firstDay, -1);
+  while (new Date(`${end}T12:00:00Z`).getUTCDay() !== 0) end = addDays(end, -1);
+  const out: (TeamRecord & { day: string; w: number })[] = [];
+  for (const t of teams) {
+    const pts = weekPts.get(t.team)!;
+    let pf = 0;
+    let wins = 0;
+    let losses = 0;
+    let ties = 0;
+    // Week `weeksAtFirst` itself is the first saved night's value; rebuild the weeks before it.
+    for (let j = 0; j < weeksAtFirst; j++) {
+      if (j > 0) {
+        pf += pts[j - 1];
+        const r = t.record[j - 1];
+        if (r === "W") wins++;
+        else if (r === "L") losses++;
+        else if (r === "T") ties++;
+      }
+      out.push({ team: t.team, day: addDays(end, -7 * (weeksAtFirst - j)), w: j, wins, losses, ties, pf: Math.round(pf * 100) / 100 });
+    }
+  }
   return out;
 }
