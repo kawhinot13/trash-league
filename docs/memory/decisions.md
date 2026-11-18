@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: Trash Exchange player stocks
+- Owner asked for player stocks after being told they look closer to sports betting than team stocks (real NBA
+  athletes' performance) and that the NCAA's pro-sports betting ban still stands (late-2025 change rescinded); advised
+  to ask a compliance office. Built with the guardrails the owner restated: play money that can't be bought or cashed
+  out, no entry fee, no prizes, Trash only. To stay further from betting, player stocks pay NO coin; they only rise
+  and fall. Price = fantasy points per game this season from box scores with Trash's scoring (not Sleeper's weekly
+  matchup totals). Rejected: per-game payouts (prop-bet-like), live in-game prices.
+
 ## 2026-11-18: NBA-team questions are all-time
 - Owner: "Name a Warriors player" should count anyone who played for the Warriors, not just today's roster (more
   players, more room to go niche). Sleeper's box scores record each game's team, so the grade step collects every

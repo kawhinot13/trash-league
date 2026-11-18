@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { PlayGate } from "@/components/app/play-gate";
-import { MgrPhoto } from "@/components/trash/brand";
+import { LivePlayerPhoto, MgrPhoto } from "@/components/trash/brand";
 import { buyCost, hoodiePrice, MAX_QTY, sellValue } from "@/packs/trash/market/math";
 import type { MarketState } from "@/packs/trash/market/server";
 
@@ -82,16 +82,17 @@ const RANGES = [
 ] as const;
 
 /** A team's price over time: line + soft area, with a crosshair and readout on hover or touch. */
-function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
+function PriceChart({ h, ticker, empty, note }: { h: Pt[]; ticker: string; empty?: string; note?: string }) {
   const [range, setRange] = useState<(typeof RANGES)[number][0]>("All");
   const [hover, setHover] = useState<number | null>(null);
+  const gid = `fill-${ticker.replace(/[^A-Za-z0-9]/g, "")}`;
   const days = RANGES.find((r) => r[0] === range)![1];
   // Counted back from the latest price, so the range is the same whenever the page is open.
   const end = h.length ? Date.parse(`${h[h.length - 1].d}T12:00:00Z`) : 0;
   const cut = days ? new Date(end - days * 86_400_000).toISOString().slice(0, 10) : "";
   const pts = days ? h.filter((x) => x.d >= cut) : h;
   if (h.length < 2)
-    return <p className="rounded-2xl bg-black/20 p-4 text-sm text-[var(--muted)]">{ticker}&apos;s chart fills in day by day, from the nightly official totals.</p>;
+    return <p className="rounded-2xl bg-black/20 p-4 text-sm text-[var(--muted)]">{empty ?? `${ticker}'s chart fills in day by day, from the nightly official totals.`}</p>;
   const data = pts.length >= 2 ? pts : h.slice(-2);
   const v = data.map((x) => x.p);
   const lo0 = Math.min(...v);
@@ -146,7 +147,7 @@ function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
         >
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible" aria-hidden>
             <defs>
-              <linearGradient id={`fill-${ticker}`} x1="0" x2="0" y1="0" y2="1">
+              <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor={color} stopOpacity="0.22" />
                 <stop offset="100%" stopColor={color} stopOpacity="0" />
               </linearGradient>
@@ -154,7 +155,7 @@ function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
             {ticks.map((t, i) => (
               <line key={i} x1="0" x2="100" y1={Y(t)} y2={Y(t)} stroke="var(--line)" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
             ))}
-            <path d={`${line} L100,100 L0,100 Z`} fill={`url(#fill-${ticker})`} />
+            <path d={`${line} L100,100 L0,100 Z`} fill={`url(#${gid})`} />
             <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           </svg>
           {sel ? (
@@ -182,8 +183,7 @@ function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
       </div>
       {data.some((x) => x.w !== undefined) ? (
         <p className="mt-2 text-xs text-[var(--muted)]">
-          Weeks before the nightly saves began are rebuilt from the official records and Sleeper&apos;s weekly scores (per Sleeper), scaled to match the
-          official totals.
+          {note ?? "Weeks before the nightly saves began are rebuilt from the official records and Sleeper's weekly scores (per Sleeper), scaled to match the official totals."}
         </p>
       ) : null}
     </figure>
@@ -263,6 +263,9 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const [coinQ, setCoinQ] = useState(1);
   const [hoodQ, setHoodQ] = useState(1);
   const [allFeed, setAllFeed] = useState(false);
+  const [tab, setTab] = useState<"teams" | "players">("teams");
+  const [find, setFind] = useState("");
+  const [shown, setShown] = useState(25);
 
   const load = useCallback(() => {
     void fetch(url, { cache: "no-store" })
@@ -389,7 +392,28 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
         </PlayGate>
       </div>
 
-      {/* The board */}
+      {/* The board: teams or players */}
+      <div className="mx-auto max-w-6xl px-5 md:px-10">
+        <div role="tablist" aria-label="Board" className="inline-flex gap-1 rounded-full bg-black/25 p-1">
+          {(["teams", "players"] as const).map((k) => (
+            <button
+              key={k}
+              role="tab"
+              type="button"
+              aria-selected={tab === k}
+              onClick={() => {
+                setTab(k);
+                setOpen(null);
+                setNote(null);
+              }}
+              className={`h-11 cursor-pointer rounded-full px-5 text-sm font-semibold transition-colors duration-150 ${tab === k ? "bg-[var(--paper)] text-[var(--bin)]" : "text-[var(--muted)] hover:text-[var(--paper)]"}`}
+            >
+              {k === "teams" ? "Teams" : "Players"}
+            </button>
+          ))}
+        </div>
+      </div>
+      {tab === "teams" ? (
       <section aria-label="Teams" className="mx-auto max-w-6xl px-5 md:px-10">
         <h2 className="font-display text-3xl font-black md:text-4xl">The board</h2>
         <p className="mt-2 max-w-2xl text-[var(--muted)]">
@@ -483,6 +507,123 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
           })}
         </ul>
       </section>
+      ) : (
+        <section aria-label="Players" className="mx-auto max-w-6xl px-5 md:px-10">
+          <h2 className="font-display text-3xl font-black md:text-4xl">Player stocks</h2>
+          <p className="mt-2 max-w-2xl text-[var(--muted)]">
+            Everyone on a Trash roster. A share costs what he averages in fantasy points a game this season, scored with Trash&apos;s settings from real
+            box scores. Player stocks pay no coin: buy low, sell high. You can&apos;t buy players on your own roster.
+          </p>
+          <label htmlFor="find-player" className="sr-only">
+            Find a player
+          </label>
+          <input
+            id="find-player"
+            value={find}
+            onChange={(e) => {
+              setFind(e.target.value);
+              setShown(25);
+            }}
+            placeholder="Find a player, NBA team or manager"
+            autoComplete="off"
+            className="mt-5 h-12 w-full max-w-md rounded-full border border-[var(--line)] bg-[var(--bin-2)] px-5 text-base placeholder:text-[var(--muted)] focus:border-[var(--wood)] focus:outline-none"
+          />
+          {(() => {
+            const qx = find.trim().toLowerCase();
+            const list = (s.players ?? []).filter((p) => !qx || `${p.name} ${p.nba} ${p.owner ?? ""}`.toLowerCase().includes(qx));
+            return (
+              <>
+                <ul className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+                  {list.slice(0, shown).map((p) => {
+                    const mine = owned(p.id);
+                    const isOpen = open === p.id;
+                    const cost = buyCost(p.fair, p.held, q);
+                    const pay = mine >= q ? sellValue(p.fair, p.held, q) : 0;
+                    const yours = !!s.me && p.ownerId === s.me;
+                    return (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          aria-expanded={isOpen}
+                          onClick={() => {
+                            setOpen(isOpen ? null : p.id);
+                            setQ(1);
+                            setNote(null);
+                          }}
+                          className="grid w-full cursor-pointer grid-cols-[auto_1fr_auto_auto] items-center gap-3 py-3 text-left transition-colors duration-150 hover:bg-white/[0.03] md:gap-5"
+                        >
+                          <LivePlayerPhoto pid={p.id.slice(2)} name={p.name} pos={p.pos[0]} width={44} height={44} className="size-11 rounded-full bg-black/30 object-cover" />
+                          <span className="min-w-0">
+                            <span className="block font-semibold break-words">{p.name}</span>
+                            <span className="block text-sm break-words text-[var(--muted)]">
+                              {[p.nba, p.pos.join("/"), p.owner ? `on ${p.owner}'s roster` : null].filter(Boolean).join(" · ")}
+                              {mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
+                            </span>
+                            <span className="block text-xs text-[var(--muted)] tabular-nums">
+                              {p.avg.toFixed(1)} a game · {p.games} games
+                            </span>
+                          </span>
+                          <span>
+                            <Spark h={p.history} up={p.change >= 0} />
+                          </span>
+                          <span className="text-right">
+                            <span className="block font-display text-2xl leading-none font-black tabular-nums">{money(p.price)}</span>
+                            <span className={`text-sm tabular-nums ${p.change >= 0 ? UP : DOWN}`}>{pct(p.change)} wk</span>
+                          </span>
+                        </button>
+                        {isOpen ? (
+                          <div className="space-y-3 pb-5">
+                            <PriceChart h={p.history} ticker={p.name} empty={`${p.name}'s chart fills in as he plays.`} note="Weeks before the market opened: his value at the end of each week, from box scores." />
+                            {w ? (
+                              <div className="flex flex-col gap-3 rounded-2xl bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <Qty q={q} setQ={setQ} max={MAX_QTY} />
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={busy || cost > w.bucks || yours}
+                                    onClick={() => void order({ kind: "buy", team: p.id, qty: q }, `Bought ${q} ${p.name}.`)}
+                                    className={`${chip} bg-[var(--paper)] text-[var(--bin)]`}
+                                  >
+                                    {yours ? "He's on your roster" : `Buy for ${money(cost)} BB`}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy || mine < q}
+                                    onClick={() => void order({ kind: "sell", team: p.id, qty: q }, `Sold ${q} ${p.name}.`)}
+                                    className={`${chip} bg-white/10 hover:bg-white/15`}
+                                  >
+                                    {mine >= q ? `Sell for ${money(pay)} BB` : mine ? `You own ${mine}` : "Nothing to sell"}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
+                            )}
+                            <p className="text-xs text-[var(--muted)]">
+                              Fair value {money(p.fair)} BB (his average, pulled toward 15 until he has 5 games). Every share the league holds adds 0.4%.
+                            </p>
+                            {note && open === p.id ? (
+                              <p role="status" className={`text-sm font-semibold ${note.ok ? UP : DOWN}`}>
+                                {note.text}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {list.length > shown ? (
+                  <button type="button" onClick={() => setShown(shown + 25)} className={`${chip} mt-4 bg-white/10 hover:bg-white/15`}>
+                    Show more ({list.length - shown} left)
+                  </button>
+                ) : null}
+                {!list.length ? <p className="mt-5 text-[var(--muted)]">No player matches that.</p> : null}
+              </>
+            );
+          })()}
+        </section>
+      )}
 
       <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:px-10">
         <section aria-label="Standings">
@@ -564,7 +705,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
             </p>
           </li>
         </ul>
-        <p className="mt-5 text-xs text-[var(--muted)]">Play money, just for Trash. None of it can be bought, sold or cashed out for anything real. Resets each season.</p>
+        <p className="mt-5 text-xs text-[var(--muted)]">Player stocks cost what a player averages a game (Trash scoring, real box scores) and pay no coin. Play money, just for Trash: none of it can be bought, sold or cashed out for anything real. No entry fee, no prizes. Resets each season.</p>
       </section>
     </div>
   );

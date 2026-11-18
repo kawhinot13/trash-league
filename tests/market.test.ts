@@ -144,3 +144,15 @@ describe("Trash Exchange underdogs pay more", () => {
     expect(payoutPerShare(b, rec("r", 0, 4, 400), 6_900, 12_400)).toBe(0);
   });
 });
+
+describe("Trash Exchange player stocks", () => {
+  it("cost the player's average per game, pulled toward 15 early, never under 1 BB", async () => {
+    const { playerFair, isPlayer } = await import("@/packs/trash/market/math");
+    expect(playerFair(600, 10)).toBe(6_000); // 60 a game
+    expect(playerFair(60, 1)).toBe(2_400); // one 60-point night: (60 + 4 x 15) / 5
+    expect(playerFair(0, 0)).toBe(1_500);
+    expect(playerFair(1, 10)).toBe(100);
+    expect(isPlayer("p:1234")).toBe(true);
+    expect(isPlayer("887869267151069184")).toBe(false);
+  });
+});

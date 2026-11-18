@@ -4,8 +4,10 @@ import { db } from "@/lib/app/db";
 import { sleeper, official, type SMatchup, type SRoster } from "@/lib/app/sleeper";
 import { familyIdOf, newestSeason, packOf } from "@/lib/app/store";
 import { loadPack } from "@/packs";
+import { fantasyPoints } from "@/lib/app/replay";
+import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -29,11 +31,53 @@ async function rosters(leagueId: string): Promise<SRoster[]> {
   return sleeper<SRoster[]>(`/v1/league/${leagueId}/rosters`);
 }
 
-async function leagueInfo(leagueId: string): Promise<{ settings?: { playoff_week_start?: number } } | null> {
+async function leagueInfo(leagueId: string): Promise<{ season?: string; scoring_settings?: Record<string, number>; settings?: { playoff_week_start?: number } } | null> {
   "use cache: remote";
   cacheLife("hours");
   return sleeper(`/v1/league/${leagueId}`);
 }
+
+export type PlayerLine = {
+  pid: string; name: string; pos: string[]; nba: string; owner: string | null; pts: number; games: number;
+  /** Season totals [points, games] after each finished week, for the price chart. */
+  weeks: [number, number][];
+};
+
+/**
+ * Every player who is on a Trash roster or has played this season, with his fantasy points and games,
+ * scored with the league's settings from Sleeper's box scores (the real game stats, not its weekly
+ * matchup totals). Players who leave a roster stay priced, so their shares can always be sold.
+ * Throws rather than return a wrong board, so a bad fetch is never cached or saved as prices.
+ */
+async function playerBoard(leagueId: string, week: number): Promise<PlayerLine[]> {
+  "use cache: remote";
+  cacheLife({ stale: 300, revalidate: 900, expire: 3600 });
+  const [rs, lg, dir] = await Promise.all([rosters(leagueId), leagueInfo(leagueId), playerDirectory("nba")]);
+  if (!lg?.season || !lg.scoring_settings) throw new Error(`league ${leagueId} has no season or scoring`);
+  const sc = lg.scoring_settings;
+  const owner = new Map<string, string | null>();
+  for (const r of rs) for (const pid of r.players ?? []) owner.set(pid, r.owner_id);
+  const weeks = await Promise.all(Array.from({ length: week }, (_, i) => weekStats(lg.season!, i + 1, i + 1 < week)));
+  const tot = new Map<string, { pts: number; games: number }>();
+  const after = new Map<string, [number, number][]>();
+  weeks.forEach((rows, i) => {
+    for (const row of rows) {
+      if (!dir[row.player_id] && !owner.has(row.player_id)) continue;
+      const t = tot.get(row.player_id) ?? tot.set(row.player_id, { pts: 0, games: 0 }).get(row.player_id)!;
+      t.pts += fantasyPoints(row.stats, sc);
+      t.games += 1;
+    }
+    if (i + 1 < week) for (const pid of new Set([...owner.keys(), ...tot.keys()])) (after.get(pid) ?? after.set(pid, []).get(pid)!).push([tot.get(pid)?.pts ?? 0, tot.get(pid)?.games ?? 0]);
+  });
+  return [...new Set([...owner.keys(), ...tot.keys()])].map((pid) => ({
+    pid, owner: owner.get(pid) ?? null, name: dir[pid]?.[0] ?? pid, pos: dir[pid]?.[1] ?? [], nba: dir[pid]?.[2] ?? "",
+    pts: Math.round((tot.get(pid)?.pts ?? 0) * 10) / 10, games: tot.get(pid)?.games ?? 0, weeks: after.get(pid) ?? [],
+  }));
+}
+
+/** Player asset id -> fair value, for the players on the board. */
+const playerValues = (ps: PlayerLine[]) => new Map(ps.map((p) => [PLAYER + p.pid, playerFair(p.pts, p.games)]));
+const weekOf = (recs: TeamRecord[]) => Math.max(0, ...recs.map((r) => r.wins + r.losses + r.ties)) + 1;
 
 /** Who played whom in a week (Sleeper's schedule; only the pairings are used, never the scores). */
 async function opponents(leagueId: string, week: number): Promise<Map<string, string>> {
@@ -109,7 +153,7 @@ async function ensureLots(tx: Sql, lid: string) {
 }
 
 /** Pay dividends for official results since the last check, save today's prices. Call inside a transaction. */
-async function settle(tx: Sql, lid: string, recs: TeamRecord[]) {
+async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string, number>, save = true) {
   await tx`select pg_advisory_xact_lock(hashtext(${"market:" + lid}))`;
   await ensureLots(tx, lid);
   // Results arrive once a week is final, so the week being paid began a week before this one.
@@ -150,19 +194,25 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[]) {
         insert into market_teams (league_id, team, wins, losses, ties, pf) values (${lid}, ${r.team}, ${r.wins}, ${r.losses}, ${r.ties}, ${r.pf})
         on conflict (league_id, team) do update set wins = excluded.wins, losses = excluded.losses, ties = excluded.ties, pf = excluded.pf, synced_at = now()`;
   }
-  return savePrices(tx, lid, recs);
+  return save ? savePrices(tx, lid, fair) : { fair, held: await heldByTeam(tx, lid) };
 }
 
 /** Today's closing price for every team (the latest one of the day stands). */
-async function savePrices(tx: Sql, lid: string, recs: TeamRecord[]) {
-  const fair = fairValues(recs);
+async function savePrices(tx: Sql, lid: string, fair: Map<string, number>, only?: string[]) {
   const held = await heldByTeam(tx, lid);
   const day = todayET();
-  for (const [team, f] of fair)
+  const rows = [...fair].filter(([team]) => !only || only.includes(team)).map(([team, f]) => ({ league_id: lid, team, day, price: spot(f, held.get(team) ?? 0) }));
+  if (rows.length)
     await tx`
-      insert into market_prices (league_id, team, day, price) values (${lid}, ${team}, ${day}::date, ${spot(f, held.get(team) ?? 0)})
+      insert into market_prices ${tx(rows, "league_id", "team", "day", "price")}
       on conflict (league_id, team, day) do update set price = excluded.price`;
   return { fair, held };
+}
+
+/** Fair value of every asset: teams from official totals, players from box scores (computed outside any transaction). */
+async function allValues(lid: string, recs: TeamRecord[]) {
+  const board = await playerBoard(lid, weekOf(recs));
+  return { board, fair: new Map([...fairValues(recs), ...playerValues(board)]) };
 }
 
 /** Whether anything needs writing: new official results, or no prices saved yet today. Reads only. */
@@ -211,10 +261,10 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const sql = await db();
   // Most views write nothing: only new official results (dividends), a new day's prices or a
   // manager's first visit (their desk) open a write.
-  if (await needsSettle(sql, lid, recs)) await sql.begin((tx) => settle(tx as unknown as Sql, lid, recs));
+  const { board, fair } = await allValues(lid, recs);
+  if (await needsSettle(sql, lid, recs)) await sql.begin((tx) => settle(tx as unknown as Sql, lid, recs, fair));
   if (manager && season.users.has(manager))
     await sql`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
-  const fair = fairValues(recs);
   const held = await heldByTeam(sql, lid);
   const pack = await loadPack("trash");
   const nameOf = (id: string) => {
@@ -268,6 +318,31 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       };
     })
     .sort((a, b) => b.price - a.price);
+  // Player stocks: everyone on a Trash roster now (no coin; the price follows how he plays).
+  const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+  const playerName = new Map(board.map((p) => [PLAYER + p.pid, p.name]));
+  const players = board
+    .filter((p) => p.owner || (held.get(PLAYER + p.pid) ?? 0) > 0)
+    .map((p) => {
+      const id = PLAYER + p.pid;
+      const f = fair.get(id)!;
+      const h = held.get(id) ?? 0;
+      // Before the market's own prices: his value at the end of each finished week, from box scores.
+      const market = history.get(id) ?? [];
+      const first = market[0]?.d ?? "9999";
+      const monday = thisWeek.getTime();
+      const wk = (k: number) => new Date(monday - (7 * (p.weeks.length - k) + 1) * 86_400_000).toISOString().slice(0, 10);
+      const built = [...p.weeks.map(([pts, g], i) => ({ d: wk(i + 1), p: playerFair(pts, g), w: i + 1 }))].filter((x) => x.d < first);
+      const hist = [...built, ...market];
+      const price = spot(f, h);
+      const weekAgo = [...hist].reverse().find((x) => x.d <= cut)?.p ?? hist[0]?.p ?? price;
+      return {
+        id, name: p.name, pos: p.pos, nba: p.nba, owner: p.owner ? nameOf(p.owner) : null, ownerId: p.owner,
+        avg: p.games ? Math.round((p.pts / p.games) * 10) / 10 : 0, games: p.games,
+        fair: f, held: h, price, change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-60),
+      };
+    })
+    .sort((a, b) => b.price - a.price);
   const hoodiesSold = wallets.reduce((s, w) => s + w.hoodies, 0);
   const holdOf = (m: string) => holdings.filter((h) => h.manager === m).map((h) => ({ team: h.team, shares: h.shares }));
   const standings = wallets
@@ -279,6 +354,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const mine = manager ? wallets.find((w) => w.manager === manager) : undefined;
   return {
     teams,
+    players,
     hoodiesSold,
     nextHoodie: hoodiePrice(hoodiesSold),
     coinRate: COIN_RATE,
@@ -286,7 +362,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     feed: log.map((l) => {
       const [opp, x] = l.note?.split("|") ?? [];
       return {
-        name: nameOf(l.manager), kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString(),
+        name: nameOf(l.manager), kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? playerName.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString(),
         upset: opp && x ? { vs: tick.get(opp) ?? null, x: Number(x) } : null,
       };
     }),
@@ -304,10 +380,12 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   const lid = season.leagueId;
   if (!Number.isInteger(o.qty) || o.qty < 1 || o.qty > MAX_QTY) return { ok: false, error: "Pick an amount between 1 and 500." };
   const recs = await records(lid);
+  const { board, fair: values } = await allValues(lid, recs);
   const sql = await db();
   return sql.begin(async (t) => {
     const tx = t as unknown as Sql;
-    const { fair, held } = await settle(tx, lid, recs);
+    // Every order settles new results first; the full day's prices are written only when they're due.
+    const { fair, held } = await settle(tx, lid, recs, values, await needsSettle(tx, lid, recs));
     await tx`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
     const [recent] = await tx<{ n: number }[]>`
       select count(*)::int as n from market_log where league_id = ${lid} and manager = ${manager} and kind <> 'dividend' and at > now() - interval '1 minute'`;
@@ -323,6 +401,9 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       if (o.kind === "buy") {
         // Nobody invests in themselves: you can't buy your own team (you can still sell shares you have).
         if (o.team === manager) return { ok: false as const, error: "You can't buy your own team." };
+        // Player stocks: not players on your own roster either (you set their lineup).
+        if (isPlayer(o.team) && board.some((p) => PLAYER + p.pid === o.team && p.owner === manager))
+          return { ok: false as const, error: "You can't buy players on your own roster." };
         const cost = buyCost(f, h, o.qty);
         if (cost > bucks) return { ok: false as const, error: "Not enough Bushy Bucks for that." };
         await tx`update market_wallets set bucks = bucks - ${cost} where league_id = ${lid} and manager = ${manager}`;
@@ -365,8 +446,8 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       await tx`update market_wallets set coins = coins - ${cost}, hoodies = hoodies + ${o.qty} where league_id = ${lid} and manager = ${manager}`;
       await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'hoodie', ${o.qty}, ${cost})`;
     }
-    // The day's price follows the order (demand moves it).
-    await savePrices(tx, lid, recs);
+    // The day's price of what was traded follows the order (demand moves it).
+    if (o.kind === "buy" || o.kind === "sell") await savePrices(tx, lid, fair, [o.team]);
     return { ok: true as const };
   });
 }

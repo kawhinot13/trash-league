@@ -142,6 +142,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Coin goes only to shares owned before the paid week began (Monday 12am ET; `market_lots`, `ownedBefore`); sells take
   the newest shares first. Every transaction (buys, sells, swaps, hoodies, payouts) is public in "The ledger".
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
+  Player stocks (owner's call 2026-11-18, play money only, no entry fee/prizes, Trash only): asset id `p:<pid>`, price =
+  fantasy points per game this season (Trash scoring on Sleeper box scores, `playerBoard`, pulled toward 15 under 5
+  games, `playerFair`); NO coin/dividends; same curve and lots; can't buy players on your own roster. Board covers
+  rostered players plus anyone who has played (dropped players stay sellable); computed outside the order lock.
   Charts (sparkline per row, full chart with 1W/1M/All + crosshair when a team is open): `priceHistory` = market
   closing prices, and before the market opened each night's fair value from `pf_snapshots` (full nights only). Weeks
   before the first saved night are rebuilt (`weeklyBackfill`) only if every team's weekly scores sum exactly to that

@@ -228,3 +228,17 @@ export function sellNewestFirst(lots: Lot[], qty: number): { id: number; shares:
   }
   return out;
 }
+
+/**
+ * Player stocks (Trash only). A share costs what the player averages in fantasy points per game this
+ * season, in Bushy Bucks, scored with the league's own settings from real box scores. Early in the
+ * season (under 5 games) the price is pulled toward 15 so one big night can't make it. Player stocks
+ * pay no coin: they only rise and fall with how he plays.
+ */
+export const PLAYER = "p:";
+export const isPlayer = (id: string) => id.startsWith(PLAYER);
+export function playerFair(pts: number, games: number): number {
+  const avg = games ? pts / games : 0;
+  const v = games >= 5 ? avg : (games * avg + (5 - games) * 15) / 5;
+  return Math.max(100, Math.round(v * 100));
+}
