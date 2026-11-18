@@ -144,23 +144,3 @@ describe("Trash Exchange underdogs pay more", () => {
     expect(payoutPerShare(b, rec("r", 0, 4, 400), 6_900, 12_400)).toBe(0);
   });
 });
-
-describe("Trash Exchange hoodie sell-back", () => {
-  it("selling straight back returns exactly what the hoodies cost, at the swap rate", async () => {
-    const { hoodiePrice, hoodieSellValue, COIN_RATE } = await import("@/packs/trash/market/math");
-    for (const [sold, n] of [[0, 1], [7, 3], [20, 5]]) {
-      let pc = 0;
-      for (let i = 0; i < n; i++) pc += hoodiePrice(sold + i);
-      expect(hoodieSellValue(sold + n, n)).toBe((pc * COIN_RATE) / 100);
-    }
-    // Others buying after you raises what yours sell for.
-    expect(hoodieSellValue(10, 1)).toBeGreaterThan(hoodieSellValue(1, 1));
-    expect(hoodieSellValue(0, 1)).toBe(0);
-  });
-
-  it("net worth counts hoodies at their sell-back value", async () => {
-    const { netWorth, hoodieSellValue } = await import("@/packs/trash/market/math");
-    expect(netWorth({ bucks: 52_000, coins: 200, hoodies: 1 }, [], new Map(), new Map(), 1)).toBe(52_000 + 8_000 + hoodieSellValue(1, 1));
-    expect(hoodieSellValue(1, 1)).toBe(40_000);
-  });
-});

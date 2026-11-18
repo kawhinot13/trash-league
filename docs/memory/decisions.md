@@ -4,12 +4,6 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
-## 2026-11-18: Trash Exchange hoodies can be sold back
-- Owner asked to trade hoodies back to Bushy Bucks. Each sells for what the last hoodie cost (coin x 40 BB), along the
-  same rising line, so buying then selling straight back is exact and early buyers gain when others buy later.
-  Net worth now counts hoodies at that value (before, buying one looked like losing 400 BB). Coin itself still
-  can't be swapped back directly.
-
 ## 2026-11-18: Trash Exchange underdogs pay more
 - Owner: upsets should pay more and favourites less, with a bit of extra incentive to back worse teams. A win pays
   (opponent's value ÷ winner's value) coins per share, both from official totals before that week's result, clamped

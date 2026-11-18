@@ -5,7 +5,7 @@ import { sleeper, official, type SMatchup, type SRoster } from "@/lib/app/sleepe
 import { familyIdOf, newestSeason, packOf } from "@/lib/app/store";
 import { loadPack } from "@/packs";
 import {
-  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, sellNewestFirst, type Lot, fairValues, hoodiePrice, hoodieSellValue, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -273,7 +273,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const standings = wallets
     .map((w) => ({
       manager: w.manager, name: nameOf(w.manager), hoodies: w.hoodies,
-      worth: netWorth({ bucks: Number(w.bucks), coins: Number(w.coins), hoodies: w.hoodies }, holdOf(w.manager), fair, held, hoodiesSold),
+      worth: netWorth({ bucks: Number(w.bucks), coins: Number(w.coins) }, holdOf(w.manager), fair, held),
     }))
     .sort((a, b) => b.hoodies - a.hoodies || b.worth - a.worth);
   const mine = manager ? wallets.find((w) => w.manager === manager) : undefined;
@@ -297,7 +297,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   };
 }
 
-export type Order = { kind: "buy" | "sell"; team: string; qty: number } | { kind: "coin"; qty: number } | { kind: "hoodie" | "unhoodie"; qty: number };
+export type Order = { kind: "buy" | "sell"; team: string; qty: number } | { kind: "coin"; qty: number } | { kind: "hoodie"; qty: number };
 
 /** One order for one manager, all or nothing. Returns a plain message on refusal. */
 export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof marketSeason>>>, manager: string, o: Order): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -351,12 +351,6 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       if (cost > bucks) return { ok: false as const, error: "Not enough Bushy Bucks for that much Perren Coin." };
       await tx`update market_wallets set bucks = bucks - ${cost}, coins = coins + ${o.qty * 100} where league_id = ${lid} and manager = ${manager}`;
       await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'coin', ${o.qty}, ${cost})`;
-    } else if (o.kind === "unhoodie") {
-      if (w.hoodies < o.qty) return { ok: false as const, error: "You don't have that many hoodies." };
-      const [{ sold }] = await tx<{ sold: number }[]>`select coalesce(sum(hoodies), 0)::int as sold from market_wallets where league_id = ${lid}`;
-      const pay = hoodieSellValue(sold, o.qty);
-      await tx`update market_wallets set bucks = bucks + ${pay}, hoodies = hoodies - ${o.qty} where league_id = ${lid} and manager = ${manager}`;
-      await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'unhoodie', ${o.qty}, ${pay})`;
     } else {
       const [{ sold }] = await tx<{ sold: number }[]>`select coalesce(sum(hoodies), 0)::int as sold from market_wallets where league_id = ${lid}`;
       let cost = 0;

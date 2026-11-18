@@ -126,8 +126,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - The Trash Exchange (`/l/[id]/market`, Trash pack only; `src/packs/trash/market/`, `/api/l/[id]/market`): play-money
   market on Trash's teams. Bushy Bucks (cash, 1,000 to start), Perren Coin (per share per official win: opponent's value ÷
   winner's value before the result, 0.5 to 3, `upset`/`payoutPerShare`; ½ for a tie; pairings from Sleeper's schedule only;
-  or 40 BB each, one way), Xan Purple Hoodies (bought with coin, each one held raises the next; sell back for BB at the
-  last price x the swap rate, `hoodieSellValue`, exact round trip; net worth counts them at that value; standings rank
+  or 40 BB each, one way), Xan Purple Hoodies (bought with coin, never sold, each sold raises the next; standings rank
   hoodies, then net worth). Price = fair value from official PF + record (`fairValues`) x (1 + 0.4% per share held
   league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run
   under a per-league lock. Managers only, as their linked Sleeper user (PlayGate); nobody can buy their own team. Other leagues: 404 / disabled.

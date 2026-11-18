@@ -55,19 +55,8 @@ export const buyCost = (fair: number, held: number, n: number) => Math.round(are
 /** What selling `n` shares pays when `held` are owned (n <= held). */
 export const sellValue = (fair: number, held: number, n: number) => Math.round(area(fair, held - n, held));
 
-/** The next hoodie's price in Perren Coin (hundredths); `sold` = hoodies held across the league. */
+/** The next hoodie's price in Perren Coin (hundredths). */
 export const hoodiePrice = (sold: number) => HOODIE_BASE + HOODIE_STEP * sold;
-
-/**
- * Selling hoodies back: each one pays, in Bushy Bucks, what the last hoodie cost (in coin, at the
- * swap rate), and the next one gets cheaper again. Buying and then selling straight back is exact;
- * hoodies gain value when others buy after you.
- */
-export function hoodieSellValue(sold: number, n: number): number {
-  let pc = 0;
-  for (let i = 1; i <= n && sold - i >= 0; i++) pc += hoodiePrice(sold - i);
-  return Math.round((pc * COIN_RATE) / 100);
-}
 
 /** Perren Coin per share (hundredths) that a team pays for the results since the last check. */
 export function dividend(before: TeamRecord | undefined, now: TeamRecord): number {
@@ -103,15 +92,12 @@ export function payoutPerShare(before: TeamRecord | undefined, now: TeamRecord, 
 
 /** Net worth in Bushy Bucks (hundredths): cash, shares at what selling them all would pay, coin at the swap rate. */
 export function netWorth(
-  w: { bucks: number; coins: number; hoodies?: number },
+  w: { bucks: number; coins: number },
   holdings: { team: string; shares: number }[],
   fair: Map<string, number>,
   held: Map<string, number>,
-  hoodiesHeld = 0,
 ): number {
   let total = w.bucks + Math.round((w.coins * COIN_RATE) / 100);
-  // Hoodies at what selling yours back would pay now.
-  if (w.hoodies) total += hoodieSellValue(Math.max(hoodiesHeld, w.hoodies), w.hoodies);
   for (const h of holdings) {
     const f = fair.get(h.team);
     if (f && h.shares > 0) total += sellValue(f, held.get(h.team) ?? h.shares, h.shares);
