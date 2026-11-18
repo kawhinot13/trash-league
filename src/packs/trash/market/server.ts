@@ -272,6 +272,8 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       if (!f) return { ok: false as const, error: "That team isn't on the board." };
       const h = held.get(o.team) ?? 0;
       if (o.kind === "buy") {
+        // Nobody invests in themselves: you can't buy your own team (you can still sell shares you have).
+        if (o.team === manager) return { ok: false as const, error: "You can't buy your own team." };
         const cost = buyCost(f, h, o.qty);
         if (cost > bucks) return { ok: false as const, error: "Not enough Bushy Bucks for that." };
         await tx`update market_wallets set bucks = bucks - ${cost} where league_id = ${lid} and manager = ${manager}`;

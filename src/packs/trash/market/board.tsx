@@ -429,11 +429,11 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
-                            disabled={busy || cost > w.bucks}
+                            disabled={busy || cost > w.bucks || t.id === s.me}
                             onClick={() => void order({ kind: "buy", team: t.id, qty: q }, `Bought ${q} ${t.ticker}.`)}
                             className={`${chip} bg-[var(--paper)] text-[var(--bin)]`}
                           >
-                            Buy for {money(cost)} BB
+                            {t.id === s.me ? "Can't buy your own team" : `Buy for ${money(cost)} BB`}
                           </button>
                           <button
                             type="button"
@@ -524,7 +524,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Bucks /> Bushy Bucks
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Everyone starts with 1,000. Buy shares in any team, yours included. A team&apos;s price rises with its official points and record, and
+              Everyone starts with 1,000. Buy shares in any team except your own. A team&apos;s price rises with its official points and record, and
               with demand.
             </p>
           </li>

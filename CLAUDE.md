@@ -128,7 +128,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   or 40 BB each, one way), Xan Purple Hoodies (bought with coin, never sold, each sold raises the next; standings rank
   hoodies, then net worth). Price = fair value from official PF + record (`fairValues`) x (1 + 0.4% per share held
   league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run
-  under a per-league lock. Managers only, as their linked Sleeper user (PlayGate). Other leagues: 404 / disabled.
+  under a per-league lock. Managers only, as their linked Sleeper user (PlayGate); nobody can buy their own team. Other leagues: 404 / disabled.
   Coin goes only to shares owned before the paid week began (Monday 12am ET; `market_lots`, `ownedBefore`); sells take
   the newest shares first. Every transaction (buys, sells, swaps, hoodies, payouts) is public in "The ledger".
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
