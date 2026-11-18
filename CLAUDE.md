@@ -130,6 +130,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run
   under a per-league lock. Managers only, as their linked Sleeper user (PlayGate). Other leagues: 404 / disabled.
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
+  Charts (sparkline per row, full chart with 1W/1M/All + crosshair when a team is open): `priceHistory` = market
+  closing prices, and before the market opened each night's fair value from `pf_snapshots` (full nights only).
 - Tests (`tests/*.test.ts`, Vitest, `npm test`): the math behind the numbers (official weekly scores, lineup and
   trade finder, team analyzer, Trapezoid, Dumpster Dive prompts, saved daily games). `npm run build` runs them first,
   so a failing test stops the Vercel deploy. Add a test with every math change or bug fix; pure functions only.

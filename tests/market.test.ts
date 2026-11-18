@@ -62,3 +62,19 @@ describe("Trash Exchange", () => {
     for (const v of t.values()) expect(v).toMatch(/^[A-Z0-9]{2,4}$/);
   });
 });
+
+describe("Trash Exchange history", () => {
+  it("fills days before the market from saved official totals; market prices win where both exist", async () => {
+    const { priceHistory } = await import("@/packs/trash/market/math");
+    const snaps = [
+      { day: "2026-11-01", ...rec("a", 1, 0, 120) }, { day: "2026-11-01", ...rec("b", 0, 1, 80) },
+      { day: "2026-11-02", ...rec("a", 1, 0, 120) }, // b missing that night: day skipped
+      { day: "2026-11-03", ...rec("a", 1, 1, 200) }, { day: "2026-11-03", ...rec("b", 1, 1, 200) },
+    ];
+    const h = priceHistory([{ day: "2026-11-03", team: "a", price: 12_345 }], snaps);
+    expect(h.get("a")!.map((x) => x.d)).toEqual(["2026-11-01", "2026-11-03"]);
+    expect(h.get("a")![0].p).toBeGreaterThan(h.get("b")![0].p);
+    expect(h.get("a")![1].p).toBe(12_345);
+    expect(h.get("b")![1].p).toBe(10_000);
+  });
+});

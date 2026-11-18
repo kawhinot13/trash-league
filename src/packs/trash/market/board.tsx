@@ -57,16 +57,128 @@ export function Hoodie({ className = "size-5" }: { className?: string }) {
 }
 
 /* ── Pieces ────────────────────────────────────────────────────────── */
-function Spark({ h, up }: { h: number[]; up: boolean }) {
-  if (h.length < 2) return <span className="block h-7 w-20" aria-hidden />;
-  const lo = Math.min(...h);
-  const hi = Math.max(...h);
-  const span = hi - lo || 1;
-  const pts = h.map((v, i) => `${((i / (h.length - 1)) * 80).toFixed(1)},${(26 - ((v - lo) / span) * 22).toFixed(1)}`).join(" ");
+type Pt = { d: string; p: number };
+
+function Spark({ h, up }: { h: Pt[]; up: boolean }) {
+  if (h.length < 2) return <span className="block h-7 w-14 md:w-20" aria-hidden />;
+  const v = h.map((x) => x.p);
+  const lo = Math.min(...v);
+  const span = Math.max(...v) - lo || 1;
+  const pts = v.map((y, i) => `${((i / (v.length - 1)) * 80).toFixed(1)},${(26 - ((y - lo) / span) * 22).toFixed(1)}`).join(" ");
   return (
-    <svg viewBox="0 0 80 28" className="h-7 w-20" aria-hidden>
-      <polyline points={pts} fill="none" stroke={up ? "var(--up)" : "var(--down)"} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+    <svg viewBox="0 0 80 28" preserveAspectRatio="none" className="h-7 w-14 md:w-20" aria-hidden>
+      <polyline points={pts} fill="none" stroke={up ? "var(--up)" : "var(--down)"} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
     </svg>
+  );
+}
+
+const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const RANGES = [
+  ["1W", 7],
+  ["1M", 31],
+  ["All", 0],
+] as const;
+
+/** A team's price over time: line + soft area, with a crosshair and readout on hover or touch. */
+function PriceChart({ h, ticker }: { h: Pt[]; ticker: string }) {
+  const [range, setRange] = useState<(typeof RANGES)[number][0]>("All");
+  const [hover, setHover] = useState<number | null>(null);
+  const days = RANGES.find((r) => r[0] === range)![1];
+  // Counted back from the latest price, so the range is the same whenever the page is open.
+  const end = h.length ? Date.parse(`${h[h.length - 1].d}T12:00:00Z`) : 0;
+  const cut = days ? new Date(end - days * 86_400_000).toISOString().slice(0, 10) : "";
+  const pts = days ? h.filter((x) => x.d >= cut) : h;
+  if (h.length < 2)
+    return <p className="rounded-2xl bg-black/20 p-4 text-sm text-[var(--muted)]">{ticker}&apos;s chart fills in day by day, from the nightly official totals.</p>;
+  const data = pts.length >= 2 ? pts : h.slice(-2);
+  const v = data.map((x) => x.p);
+  const lo0 = Math.min(...v);
+  const hi0 = Math.max(...v);
+  const pad = Math.max((hi0 - lo0) * 0.12, hi0 * 0.01);
+  const lo = lo0 - pad;
+  const hi = hi0 + pad;
+  const X = (i: number) => (i / (data.length - 1)) * 100;
+  const Y = (p: number) => 100 - ((p - lo) / (hi - lo)) * 100;
+  const line = data.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(2)},${Y(x.p).toFixed(2)}`).join(" ");
+  const first = data[0].p;
+  const last = data[data.length - 1].p;
+  const up = last >= first;
+  const color = up ? "var(--up)" : "var(--down)";
+  const sel = hover === null ? null : data[hover];
+  const ticks = [hi0, (hi0 + lo0) / 2, lo0];
+  const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    setHover(Math.round(f * (data.length - 1)));
+  };
+  return (
+    <figure className="rounded-2xl bg-black/20 p-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <figcaption>
+          <span className="block text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">{sel ? day(sel.d) : `${ticker} · ${range === "All" ? "season" : range}`}</span>
+          <span className="font-display text-3xl leading-none font-black tabular-nums">{money(sel ? sel.p : last)}</span>{" "}
+          <span className={`text-sm tabular-nums ${up ? UP : DOWN}`}>{pct((sel ? sel.p : last) / first - 1)}</span>
+        </figcaption>
+        <div role="group" aria-label="Time range" className="flex gap-1 rounded-full bg-black/25 p-1">
+          {RANGES.map(([k]) => (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={range === k}
+              onClick={() => setRange(k)}
+              className={`h-9 min-w-11 cursor-pointer rounded-full px-3 text-sm font-semibold transition-colors duration-150 ${range === k ? "bg-[var(--paper)] text-[var(--bin)]" : "text-[var(--muted)] hover:text-[var(--paper)]"}`}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-4 flex gap-2">
+        <div
+          className="relative h-40 flex-1 touch-pan-y md:h-48"
+          onPointerMove={move}
+          onPointerDown={move}
+          onPointerLeave={() => setHover(null)}
+          role="img"
+          aria-label={`${ticker} price from ${money(first)} on ${day(data[0].d)} to ${money(last)} on ${day(data[data.length - 1].d)}, low ${money(lo0)}, high ${money(hi0)}.`}
+        >
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible" aria-hidden>
+            <defs>
+              <linearGradient id={`fill-${ticker}`} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+                <stop offset="100%" stopColor={color} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {ticks.map((t, i) => (
+              <line key={i} x1="0" x2="100" y1={Y(t)} y2={Y(t)} stroke="var(--line)" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+            ))}
+            <path d={`${line} L100,100 L0,100 Z`} fill={`url(#fill-${ticker})`} />
+            <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          </svg>
+          {sel ? (
+            <>
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 w-px bg-[var(--paper)]/40" style={{ left: `${X(hover!)}%` }} />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--bin)]"
+                style={{ left: `${X(hover!)}%`, top: `${Y(sel.p)}%`, background: color }}
+              />
+            </>
+          ) : null}
+        </div>
+        <div aria-hidden className="relative h-40 w-12 shrink-0 text-right text-xs text-[var(--muted)] tabular-nums md:h-48">
+          {ticks.map((t, i) => (
+            <span key={i} className="absolute right-0 -translate-y-1/2" style={{ top: `${Y(t)}%` }}>
+              {money(t, 0)}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div aria-hidden className="mt-2 flex justify-between pr-14 text-xs text-[var(--muted)]">
+        <span>{day(data[0].d)}</span>
+        <span>{day(data[data.length - 1].d)}</span>
+      </div>
+    </figure>
   );
 }
 
@@ -259,7 +371,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     setQ(1);
                     setNote(null);
                   }}
-                  className="grid w-full cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 py-3.5 text-left transition-colors duration-150 hover:bg-white/[0.03] md:grid-cols-[auto_1fr_auto_auto_auto] md:gap-5"
+                  className="grid w-full cursor-pointer grid-cols-[auto_1fr_auto_auto] items-center gap-3 py-3.5 text-left transition-colors duration-150 hover:bg-white/[0.03] md:grid-cols-[auto_1fr_auto_auto_auto] md:gap-5"
                 >
                   <MgrPhoto id={t.id} alt="" width={44} height={44} className="size-11 rounded-full object-cover" />
                   <span className="min-w-0">
@@ -271,7 +383,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                       {t.record} · {t.pf.toLocaleString("en-US")} pts{mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
                     </span>
                   </span>
-                  <span className="hidden md:block">
+                  <span>
                     <Spark h={t.history} up={t.change >= 0} />
                   </span>
                   <span className="hidden text-right text-sm text-[var(--muted)] tabular-nums md:block">{t.held} held</span>
@@ -281,7 +393,8 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   </span>
                 </button>
                 {isOpen ? (
-                  <div className="pb-5">
+                  <div className="space-y-3 pb-5">
+                    <PriceChart h={t.history} ticker={t.ticker} />
                     {w ? (
                       <div className="flex flex-col gap-3 rounded-2xl bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
                         <Qty q={q} setQ={setQ} max={MAX_QTY} />
@@ -307,7 +420,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     ) : (
                       <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                     )}
-                    <p className="mt-2 text-xs text-[var(--muted)]">
+                    <p className="text-xs text-[var(--muted)]">
                       Fair value {money(t.fair)} BB. Every share the league holds adds 0.4% to the price, and selling brings it back down.
                       {t.team ? ` Team: ${t.team}.` : ""}
                     </p>

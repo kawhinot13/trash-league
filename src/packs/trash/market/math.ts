@@ -99,3 +99,27 @@ export function tickers(names: [string, string][]): Map<string, string> {
   }
   return out;
 }
+
+/**
+ * Daily price history per team: the market's own closing prices where it has them, and before
+ * that the fair value from each night's saved official totals (a day counts only when every team
+ * was saved, so values are compared like for like). Oldest first.
+ */
+export function priceHistory(
+  prices: { day: string; team: string; price: number }[],
+  snaps: (TeamRecord & { day: string })[],
+): Map<string, { d: string; p: number }[]> {
+  const byDay = new Map<string, Map<string, number>>();
+  const teams = new Set(snaps.map((s) => s.team));
+  const snapDays = new Map<string, TeamRecord[]>();
+  for (const s of snaps) (snapDays.get(s.day) ?? snapDays.set(s.day, []).get(s.day)!).push(s);
+  for (const [day, recs] of snapDays) {
+    if (recs.length < teams.size) continue;
+    byDay.set(day, fairValues(recs));
+  }
+  for (const p of prices) (byDay.get(p.day) ?? byDay.set(p.day, new Map()).get(p.day)!).set(p.team, p.price);
+  const out = new Map<string, { d: string; p: number }[]>();
+  for (const day of [...byDay.keys()].sort())
+    for (const [team, p] of byDay.get(day)!) (out.get(team) ?? out.set(team, []).get(team)!).push({ d: day, p });
+  return out;
+}

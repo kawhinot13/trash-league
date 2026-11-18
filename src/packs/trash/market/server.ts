@@ -5,7 +5,7 @@ import { sleeper, official, type SRoster } from "@/lib/app/sleeper";
 import { familyIdOf, newestSeason, packOf } from "@/lib/app/store";
 import { loadPack } from "@/packs";
 import {
-  buyCost, COIN_RATE, dividend, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, priceHistory, dividend, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -37,6 +37,8 @@ async function records(leagueId: string): Promise<TeamRecord[]> {
       : [],
   );
 }
+
+const iso = (d: Date | string) => (typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10));
 
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 
@@ -117,28 +119,34 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     return pack?.nicknames[dn] ?? dn;
   };
   const tick = tickers(recs.map((r) => [r.team, nameOf(r.team)]));
-  const since = new Date(Date.now() - 45 * 86_400_000).toISOString().slice(0, 10);
-  const [prices, wallets, holdings, log] = await Promise.all([
-    sql<{ team: string; day: Date; price: string }[]>`select team, day, price::text from market_prices where league_id = ${lid} and day >= ${since}::date order by day`,
+  const [prices, snaps, wallets, holdings, log] = await Promise.all([
+    sql<{ team: string; day: Date; price: string }[]>`select team, day, price::text from market_prices where league_id = ${lid} order by day`,
+    // The nightly official totals, so the charts go back before the market opened (fair value, no demand yet).
+    sql<{ day: Date; team: string | null; wins: number; losses: number; ties: number; pf: string }[]>`
+      select taken_on as day, owner_id as team, wins, losses, ties, pf::text from pf_snapshots where league_id = ${lid} order by taken_on`,
     sql<{ manager: string; bucks: string; coins: string; hoodies: number }[]>`select manager, bucks::text, coins::text, hoodies from market_wallets where league_id = ${lid}`,
     sql<{ manager: string; team: string; shares: number }[]>`select manager, team, shares from market_holdings where league_id = ${lid} and shares > 0`,
     sql<{ manager: string; kind: string; team: string | null; qty: number; amount: string; at: Date }[]>`
       select manager, kind, team, qty, amount::text, at from market_log where league_id = ${lid} and kind <> 'dividend' order by at desc limit 12`,
   ]);
-  const history = new Map<string, number[]>();
-  for (const p of prices) (history.get(p.team) ?? history.set(p.team, []).get(p.team)!).push(Number(p.price));
+  const history = priceHistory(
+    prices.map((p) => ({ day: iso(p.day), team: p.team, price: Number(p.price) })),
+    snaps.flatMap((r) => (r.team ? [{ day: iso(r.day), team: r.team, wins: r.wins, losses: r.losses, ties: r.ties, pf: Number(r.pf) }] : [])),
+  );
   const teams = recs
     .map((r) => {
       const f = fair.get(r.team)!;
       const h = held.get(r.team) ?? 0;
       const hist = history.get(r.team) ?? [];
       const price = spot(f, h);
-      const weekAgo = hist.length > 7 ? hist[hist.length - 8] : (hist[0] ?? price);
+      // Change over the last 7 days (or since the first price, when the history is shorter).
+      const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+      const weekAgo = [...hist].reverse().find((h) => h.d <= cut)?.p ?? hist[0]?.p ?? price;
       return {
         id: r.team, ticker: tick.get(r.team)!, name: nameOf(r.team), team: season.teams.get(r.team) ?? null,
         record: `${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ""}`, pf: Math.round(r.pf),
         fair: f, held: h, price, buy1: buyCost(f, h, 1), sell1: h > 0 ? sellValue(f, h, 1) : 0,
-        change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-30),
+        change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-120),
       };
     })
     .sort((a, b) => b.price - a.price);
