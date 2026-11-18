@@ -11,7 +11,7 @@ import { HOLIDAY } from "@/lib/holiday";
  * the league being viewed. Holiday decor follows the site-wide switch (HOLIDAY); never the Trash song.
  */
 /** The nav reads the URL (active section), so it renders inside Suspense on dynamic routes. */
-export function AppNav(props: { league?: { name: string; id: string; live: boolean } }) {
+export function AppNav(props: { league?: { name: string; id: string; live: boolean; market?: boolean } }) {
   return (
     <Suspense fallback={null}>
       <Nav {...props} />
@@ -19,7 +19,7 @@ export function AppNav(props: { league?: { name: string; id: string; live: boole
   );
 }
 
-function Nav({ league }: { league?: { name: string; id: string; live: boolean } }) {
+function Nav({ league }: { league?: { name: string; id: string; live: boolean; market?: boolean } }) {
   if (!league)
     return (
       <GlassNav
@@ -49,6 +49,8 @@ function Nav({ league }: { league?: { name: string; id: string; live: boolean } 
         [`${home}/rivals`, "Rivals"],
         [`${home}/history`, "History"],
         [`${home}/stats`, "Stats"],
+        // The Trash Exchange is Trash's own (Trash pack only).
+        ...(league.market ? ([[`${home}/market`, "Market"]] as [string, string][]) : []),
       ]}
       cta={{ href: `${home}#dive`, label: "Daily games" }}
       holiday={HOLIDAY}

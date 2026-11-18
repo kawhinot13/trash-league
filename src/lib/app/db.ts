@@ -237,6 +237,52 @@ alter table game_scores add column if not exists state jsonb;
 -- Standings links are proven with the same team-name code; the code remembers which account asked.
 alter table removal_challenges add column if not exists account_id text;
 alter table families add column if not exists use_ack_at timestamptz;
+-- The Trash Exchange (Trash pack only): a play-money market on the league's teams. Keyed by the
+-- season's league id and the manager's Sleeper user id; money in hundredths. Nothing here is real money.
+create table if not exists market_wallets (
+  league_id text not null,
+  manager   text not null,
+  bucks     bigint not null,
+  coins     bigint not null default 0,
+  hoodies   int not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (league_id, manager)
+);
+create table if not exists market_holdings (
+  league_id text not null,
+  manager   text not null,
+  team      text not null,
+  shares    int not null,
+  primary key (league_id, manager, team)
+);
+create table if not exists market_teams (
+  league_id text not null,
+  team      text not null,
+  wins      int not null,
+  losses    int not null,
+  ties      int not null,
+  pf        numeric(10,2) not null,
+  synced_at timestamptz not null default now(),
+  primary key (league_id, team)
+);
+create table if not exists market_prices (
+  league_id text not null,
+  team      text not null,
+  day       date not null,
+  price     bigint not null,
+  primary key (league_id, team, day)
+);
+create table if not exists market_log (
+  id        bigserial primary key,
+  league_id text not null,
+  manager   text not null,
+  kind      text not null,              -- buy | sell | coin | hoodie | dividend
+  team      text,
+  qty       int not null,
+  amount    bigint not null,            -- hundredths of the currency spent or received
+  at        timestamptz not null default now()
+);
+create index if not exists market_log_league on market_log(league_id, at desc);
 `;
 
 /** The database, with the schema applied once per process. Throws when no database is configured. */

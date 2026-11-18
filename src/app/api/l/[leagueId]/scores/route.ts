@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { authConfigured, getAccount, sameOrigin, sessionFrom } from "@/lib/app/account";
+import { authConfigured, sameOrigin } from "@/lib/app/account";
 import { db, hasDb } from "@/lib/app/db";
 import { clientIp, take } from "@/lib/app/ratelimit";
 import { logError } from "@/lib/app/safe";
@@ -7,6 +7,7 @@ import { verifyChallenge } from "@/lib/app/removal";
 import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
 import { cleanState } from "@/lib/core/game-state";
+import { viewerOf } from "@/lib/app/viewer";
 
 /**
  * Daily-game standings for one Rafterlore league, in Postgres:
@@ -19,27 +20,6 @@ import { cleanState } from "@/lib/core/game-state";
 // "dive2": the dive leaderboard since the no-repeat schedule and the 2026-11-15 reset.
 const GAMES = new Set(["dive", "dive2", "trashle", "lineup"]);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * Who's looking. Each account is linked to one Sleeper user for every league (picked once), and can
- * only play as that user, only in leagues where they're a manager. Never returns the account id.
- */
-async function viewerOf(req: Request, fid: string) {
-  const none = { configured: authConfigured(), signedIn: false, linked: false, member: false, manager: null as string | null, suggest: null as string | null };
-  if (!authConfigured()) return { ...none, accountId: null as string | null };
-  const s = sessionFrom(req);
-  const account = s ? await getAccount(s).catch(() => null) : null;
-  if (!account) return { ...none, accountId: null };
-  const sql = await db();
-  const season = await newestSeason(fid);
-  const users = [...(season?.users ?? [])];
-  const [link] = await sql<{ sleeper_user: string }[]>`select sleeper_user from sleeper_links where account_id = ${account.id}`;
-  const member = !!link && users.includes(link.sleeper_user);
-  // Not linked yet: the manager whose Sleeper username matches the one saved on the account, if any.
-  const saved = account.sleeper?.toLowerCase();
-  const suggest = !link && saved ? ([...(season?.names ?? [])].find(([, n]) => n?.toLowerCase() === saved)?.[0] ?? null) : null;
-  return { configured: true, signedIn: true, linked: !!link, member, manager: member ? link.sleeper_user : null, suggest, accountId: account.id };
-}
 
 export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/scores">) {
   await connection();

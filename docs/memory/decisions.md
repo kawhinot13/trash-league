@@ -4,6 +4,17 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: The Trash Exchange (Trash-only play-money stock market)
+- Owner asked for a stock game just for Trash with three currencies: Bushy Bucks, Perren Coin, Xan Purple Hoodies.
+  Lives in the Trash pack on Rafterlore (accounts + Sleeper links already prove who each manager is; the Trash site
+  has no sign-in). Each currency has one job: bucks trade shares, coin is the dividend for official wins, hoodies
+  are the prestige score (never sold, rising price so early buyers win).
+- Prices use only official season totals (PF vs league average, squared, x record; shrunk to 100 early), never
+  weekly matchup scores. Demand moves price linearly; buys and sells integrate the same line (no arbitrage, tested).
+- Reads write nothing unless new official results, a new day's prices or a first desk; dividends pay once under an
+  advisory lock (checked with concurrent requests). Rejected: shorting (manipulation via tanking), a fee, Redis.
+- Play money only: in-game line says it can't be bought, sold or cashed out. Terms unchanged (owner's call).
+
 ## 2026-11-17: League-wide open-ended Dumpster Dive questions
 - Owner wanted questions not tied to a manager ("locked in for 60+ in this league"). Per-player weekly scores aren't
   in the data (only season totals per team), so built from totals: Workhorses (started N+ times), Franchise scorers

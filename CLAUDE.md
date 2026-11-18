@@ -123,6 +123,13 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   per Sleeper (weekly) and compared only with per-Sleeper regular weeks. Never move the window to fit champions.
 - Custom packs (`src/packs/`): league-only features for one league. The Trash pack loads only for Trash's seasons.
   Never put league-specific features in the generic components.
+- The Trash Exchange (`/l/[id]/market`, Trash pack only; `src/packs/trash/market/`, `/api/l/[id]/market`): play-money
+  market on Trash's teams. Bushy Bucks (cash, 1,000 to start), Perren Coin (1 per share per official win, ½ per tie;
+  or 40 BB each, one way), Xan Purple Hoodies (bought with coin, never sold, each sold raises the next; standings rank
+  hoodies, then net worth). Price = fair value from official PF + record (`fairValues`) x (1 + 0.4% per share held
+  league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run
+  under a per-league lock. Managers only, as their linked Sleeper user (PlayGate). Other leagues: 404 / disabled.
+  Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
 - Tests (`tests/*.test.ts`, Vitest, `npm test`): the math behind the numbers (official weekly scores, lineup and
   trade finder, team analyzer, Trapezoid, Dumpster Dive prompts, saved daily games). `npm run build` runs them first,
   so a failing test stops the Vercel deploy. Add a test with every math change or bug fix; pure functions only.

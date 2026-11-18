@@ -36,6 +36,8 @@ of re-exploring the codebase; update it when work ships. Public repo: nothing se
 
 - Yahoo Fantasy football, members-only (2026-11-16): needs YAHOO_CLIENT_ID/SECRET in Vercel; untested against live Yahoo yet.
 
+- The Trash Exchange (2026-11-18): Trash-only play-money market, `/l/<trash id>/market` (nav "Market").
+
 ## Open tasks and ideas
 - Trapezoid: category leagues would need a separate category-dominance model (not built; points leagues only).
 - Before a major public or commercial launch: written authorization from Sleeper (see decisions.md).

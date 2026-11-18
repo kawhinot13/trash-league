@@ -1,6 +1,7 @@
 import { league } from "@/lib/league";
 import { HOLIDAY } from "@/lib/holiday";
 import type { LoadedPack } from "@/packs/types";
+import { ALWAYS_TRACKED } from "@/packs/ids";
 
 /**
  * The Trash pack: everything that only makes sense for Trash. The generic league page stays
@@ -14,6 +15,7 @@ export function trashPack(): LoadedPack {
     intro: "Lore that only makes sense in Trash. The full versions live on the league's own site.",
     nicknames: Object.fromEntries(league.managers.map((m) => [m.id, m.nick])),
     features: [
+      { key: "market", title: "The Trash Exchange", line: "Trade shares in every team with Bushy Bucks, Perren Coin and Xan Purple Hoodies.", href: `/l/${ALWAYS_TRACKED[0]}/market` },
       { key: "mickey", title: "The Mickey Mouse ring inquiry", line: "Every playoff game of Oscar's title run, reviewed.", href: "/history#ring" },
       { key: "story", title: "The story so far", line: "Fifteen moments that made the league.", href: "/history#story" },
       { key: "movie", title: "Trash: the movie", line: "The whole history in four and a half minutes, animated and narrated.", href: "/history#movie" },

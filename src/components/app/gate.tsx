@@ -58,7 +58,7 @@ export async function LeagueGate({
   const p = r.page;
   return (
     <>
-      <AppNav league={{ name: p.view.name, id: leagueId, live: p.view.current.status === "in_season" }} />
+      <AppNav league={{ name: p.view.name, id: leagueId, live: p.view.current.status === "in_season", market: p.pack?.id === "trash" }} />
       <BrandProvider config={p.brand}>{children(p)}</BrandProvider>
       {p.db ? <Freshen leagueId={leagueId} mine={{ id: p.view.current.leagueId, name: p.view.name }} /> : null}
     </>
