@@ -20,8 +20,9 @@ export type Prompt = {
   /** The manager the prompt is about, so a day doesn't ask about the same one twice. */
   who?: string;
   /** 2: added with the no-repeat schedule (2026-11-16). 3: added 2026-11-18 (waivers, NBA teams); only
-   * the schedule from RESTART uses them, so earlier days keep their prompts. */
-  v?: 2 | 3;
+   * the schedule from RESTART uses them, so earlier days keep their prompts. 4: positions and season rosters,
+   * planned only from BROAD_FROM. */
+  v?: 2 | 3 | 4;
   /** The question's shape ("roster", "traded-for"...), so a day never asks the same kind of thing twice. */
   t?: string;
 };
@@ -296,6 +297,21 @@ export function divePool(d: Dataset): Prompt[] {
     }
     for (const [team, ps] of [...byTeam].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
       add("NBA teams", `Name a ${NBA_TEAMS[team]} player who has been on a ${d.name} roster.`, ps, 0.4, { ...v3, t: "nba-team" });
+    // Positions: league-wide, any player at that spot (as Sleeper lists him now).
+    for (const [pos, label] of [["PG", "point guard"], ["SG", "shooting guard"], ["SF", "small forward"], ["PF", "power forward"], ["C", "center"]] as const) {
+      const ps = new Map([...weeksIn].filter(([pid]) => players[pid]?.[1]?.includes(pos)));
+      add("Positions", `Name a ${label} who has been on a ${d.name} roster.`, ps, 0.4, { v: 4, t: "position" });
+    }
+  }
+  // Season rosters: anyone on any team that season, league-wide.
+  {
+    const latest = league.seasons[league.seasons.length - 1]?.code;
+    for (const s of raw.seasons) {
+      const ps = new Map<string, number>();
+      for (const g of Object.values(s.guys)) for (const [pid, [w]] of Object.entries(g)) sum(ps, pid, w);
+      const when = s.code === latest ? `this season (${years[s.code]})` : `in ${years[s.code]}`;
+      add("Season rosters", `Name a player who was on a ${d.name} roster ${when}.`, ps, 0.5, { v: 4, t: "season-roster" });
+    }
   }
   return out;
 }
@@ -336,6 +352,12 @@ const LEGACY_DAYS = ["2026-11-14", "2026-11-15"];
  * and Node could plan different prompts for the same day. Every step from here is engine-independent.
  */
 export const RESTART = "2026-11-18";
+/** Most questions in a day that are about one manager (the rest are league-wide). */
+export const MAX_WHO = 2;
+/** First day planned with the broad-question rules and the questions added with them. */
+export const BROAD_FROM = "2026-11-20";
+/** Question shapes that ran nearly every day before RESTART. */
+const OVERUSED = ["journey", "first", "late", "playoffs"];
 const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 /**
@@ -348,7 +370,7 @@ const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_40
 export function dailyPrompts(all: Prompt[], day: string, calendar: Calendar = {}) {
   if (day >= RESTART) return planned(all, day, calendar);
   // Days before the restart keep exactly the prompts they had (nothing added since).
-  const pool = all.filter((q) => q.v !== 3);
+  const pool = all.filter((q) => q.v !== 3 && q.v !== 4);
   if (day < SCHEDULE_FROM) return legacy(pool, day);
   const restart = false;
   const from = restart ? RESTART : SCHEDULE_FROM;
@@ -460,17 +482,29 @@ function planned(pool: Prompt[], day: string, fixed: Calendar = {}): Prompt[] {
 function schedule(pool: Prompt[], until: string, fixed: Calendar = {}): Map<string, Prompt[]> {
   const out = new Map<string, Prompt[]>();
   const shape = (q: Prompt) => q.t ?? q.kind;
-  const shapes = [...new Set(pool.map(shape))].sort();
+  // Questions added on 2026-11-18 (v4) and the broad-question rules only plan days from BROAD_FROM, so
+  // every earlier day (including what pages fill in on them) comes out exactly as before.
+  const base = pool.filter((q) => q.v !== 4);
+  const shapesBase = [...new Set(base.map(shape))].sort();
+  const shapesAll = [...new Set(pool.map(shape))].sort();
   // Each shape belongs to one category (the label players see, e.g. "Waiver wire"); a day never repeats one.
   const kindOf = new Map(pool.map((q) => [shape(q), q.kind]));
   // The exact same question waits at least 10 days (less if the pool is small).
-  const cool = Math.max(1, Math.min(10, Math.floor(pool.length / ROUNDS) - 2));
+  const cool = Math.max(1, Math.min(10, Math.floor(base.length / ROUNDS) - 2));
   const lastShape = new Map<string, number>();
   const lastPrompt = new Map<string, number>();
   const lastWho = new Map<string, number>();
+  // Asked almost daily the week before RESTART (owner: too repetitive). Those days depend on the browser,
+  // so they can't be replayed here; these shapes simply count as asked the day before RESTART.
+  const earlier = new Map<string, number>();
+  for (const q of pool) if (OVERUSED.includes(shape(q))) earlier.set(q.prompt, -1);
   let n = 0;
   for (let d = RESTART; d <= until; d = nextDay(d), n++) {
     const r = rng(Number(d.replaceAll("-", "")) + 7);
+    const broad = d >= BROAD_FROM;
+    const lastAsked = (t: string) => lastPrompt.get(t) ?? (broad ? earlier.get(t) : undefined);
+    const shapes = broad ? shapesAll : shapesBase;
+    const dayPool = broad ? pool : base;
     const chosen: Prompt[] = [];
     const who = new Set<string>();
     const used = new Set<string>();
@@ -485,19 +519,29 @@ function schedule(pool: Prompt[], until: string, fixed: Calendar = {}): Map<stri
         kinds.add(q.kind);
         if (q.who) who.add(q.who);
       }
+    // Owner's call (2026-11-18): broad questions over remembering who owned whom. Planned days get one
+    // NBA-team question and at most MAX_WHO questions about a single manager.
+    const planning = broad && !pin?.length;
+    const nbaSlot = planning && shapes.includes("nba-team") ? Math.floor(r() * ROUNDS) : -1;
     for (let slot = chosen.length; slot < ROUNDS; slot++) {
-      const ranked = shapes
-        .filter((t) => !used.has(t) && !kinds.has(kindOf.get(t)!))
-        .map((t) => {
-          const all = pool.filter((q) => shape(q) === t && !chosen.includes(q) && !(q.who && who.has(q.who)));
-          const fresh = all.filter((q) => n - (lastPrompt.get(q.prompt) ?? -1000) > cool);
-          const rest = Math.min(30, n - (lastShape.get(t) ?? -30));
-          // Empty shapes last; shapes with only recently asked questions next to last; yesterday's
-          // shapes after the rest; then longest rested; random among equals.
-          const key = (all.length ? 0 : 1000) + (fresh.length ? 0 : 500) + (rest <= 1 ? 100 : 0) - rest + r() * 0.9;
-          return { of: fresh.length ? fresh : all, key };
-        })
-        .sort((a, b) => a.key - b.key);
+      const mgrFull = planning && chosen.filter((q) => q.who).length >= MAX_WHO;
+      const forceNba = slot === nbaSlot && !used.has("nba-team");
+      const rank = (cap: boolean) =>
+        shapes
+          .filter((t) => !used.has(t) && !kinds.has(kindOf.get(t)!) && (!forceNba || t === "nba-team"))
+          .map((t) => {
+            const all = dayPool.filter((q) => shape(q) === t && !chosen.includes(q) && !(q.who && who.has(q.who)) && !(cap && q.who));
+            const fresh = all.filter((q) => n - (lastAsked(q.prompt) ?? -1000) > cool);
+            const rest = Math.min(30, n - (lastShape.get(t) ?? -30));
+            // Empty shapes last; shapes with only recently asked questions next to last; yesterday's
+            // shapes after the rest; then longest rested; random among equals.
+            const key = (all.length ? 0 : 1000) + (fresh.length ? 0 : 500) + (rest <= 1 ? 100 : 0) - rest + r() * 0.9;
+            return { of: fresh.length ? fresh : all, key, fresh: fresh.length > 0 };
+          })
+          .sort((a, b) => a.key - b.key);
+      // The manager cap gives way only when no fresh league-wide question is left: never repeating wins.
+      let ranked = rank(mgrFull);
+      if (mgrFull && !ranked[0]?.fresh) ranked = rank(false);
       const of = ranked[0]?.of ?? [];
       if (!of.length) break;
       const scored = of.map((q) => {

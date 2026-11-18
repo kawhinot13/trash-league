@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dailyPrompts, divePool, extendCalendar, PINNED_DAYS, renameCalendar, RESTART } from "@/lib/core/dive";
+import { BROAD_FROM, dailyPrompts, divePool, extendCalendar, MAX_WHO, PINNED_DAYS, renameCalendar, RESTART } from "@/lib/core/dive";
 import { TRASH } from "@/lib/extras";
 import { packDataset } from "@/packs/view";
 
@@ -32,10 +32,22 @@ describe("Dumpster Dive calendar", () => {
     });
   });
 
-  it("asks NBA-team questions regularly", () => {
-    const cal = extendCalendar(pool, {}, "2026-11-18", 30);
-    const nba = Object.keys(cal).filter((d) => d >= RESTART && dailyPrompts(pool, d, cal).some((q) => q.kind === "NBA teams"));
-    expect(nba.length).toBeGreaterThanOrEqual(5);
+  it("planned days have one NBA-team question and at most two about a single manager", () => {
+    const cal = extendCalendar(pool, {}, "2026-11-18", 40);
+    for (const d of Object.keys(cal).filter((d) => d >= RESTART && !(d in PINNED_DAYS))) {
+      const qs = dailyPrompts(pool, d, cal);
+      expect(qs.filter((q) => q.kind === "NBA teams").length, d).toBe(1);
+      expect(qs.filter((q) => q.who).length, d).toBeLessThanOrEqual(MAX_WHO);
+    }
+  });
+
+  it("last week's overused questions stay away for 10 days after the restart", () => {
+    const cal = extendCalendar(pool, {}, "2026-11-18", 20);
+    const overused = ["Journeymen", "First round", "Late rounds", "Playoffs"];
+    let n = 0;
+    for (let d = RESTART; d <= addDays(RESTART, 20); d = addDays(d, 1), n++)
+      if (d >= BROAD_FROM && n < 10)
+        for (const q of dailyPrompts(pool, d, cal)) expect(overused.includes(q.kind), `${d}: ${q.prompt}`).toBe(false);
   });
 
   it("renaming a league keeps every day already shown, reworded", () => {

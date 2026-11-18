@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: Dumpster Dive leans broad
+- Owner: broad questions (an NBA team, league-wide) are better than remembering who owned whom. From 2026-11-20 every
+  planned day has one NBA-team question and at most 2 about a single manager (the cap yields only when no fresh
+  league-wide question is left, since no-repeat wins). New broad types: Positions (PG/SG/SF/PF/C) and Season rosters.
+  Last week's near-daily shapes (journeymen, first round, late rounds, playoffs) rest 10 days. Gated by date so the
+  days already shown and the pinned 2026-11-19 don't move. Rejected: replaying pre-restart days to seed the
+  cooldown (they depend on the browser's sort, the reason RESTART exists).
+
 ## 2026-11-18: Dumpster Dive on Rafterlore uses Trash's names; Trash site renamed
 - The owner's picks for 2026-11-18 never reached Rafterlore: its calendar was planned with Sleeper names
   ("RI3O", "Trash Season 4") but pages showed nicknames, so pinned and manager questions didn't match and were

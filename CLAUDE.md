@@ -21,7 +21,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Pack leagues on Rafterlore (Trash) plan AND show questions through `packDataset` (packs/view.ts: nicknames + the
   pack's `leagueName`, flag `diveNames: 2`), so planned texts always match what the page builds; a text mismatch
   silently swaps questions (that broke the 2026-11-18 picks). `PINNED` texts must exist in Trash's pool
-  (tests/dive-calendar.test.ts, also checks no repeats). The owner cares about Rafterlore; the Trash site is now
+  (tests/dive-calendar.test.ts, also checks no repeats). From `BROAD_FROM` (2026-11-20) planned days have one NBA-team
+  question and at most `MAX_WHO` (2) manager questions (owner: broad over who-owned-whom); v4 types Positions and
+  Season rosters plan only from then; `OVERUSED` shapes rest 10 days after RESTART. The owner cares about Rafterlore; the Trash site is now
   titled "Test Trash Fantasy" (test copy).
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
