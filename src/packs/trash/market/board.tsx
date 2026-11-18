@@ -181,7 +181,7 @@ function PriceChart({ h, ticker, empty, note }: { h: Pt[]; ticker: string; empty
         <span>{label(data[0])}</span>
         <span>{label(data[data.length - 1])}</span>
       </div>
-      {data.some((x) => x.w !== undefined) ? (
+      {note || data.some((x) => x.w !== undefined) ? (
         <p className="mt-2 text-xs text-[var(--muted)]">
           {note ?? "Weeks before the nightly saves began are rebuilt from the official records and Sleeper's weekly scores (per Sleeper), scaled to match the official totals."}
         </p>
@@ -573,7 +573,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                         </button>
                         {isOpen ? (
                           <div className="space-y-3 pb-5">
-                            <PriceChart h={p.history} ticker={p.name} empty={`${p.name}'s chart fills in as he plays.`} note="Weeks before the market opened: his value at the end of each week, from box scores." />
+                            <PriceChart h={p.history} ticker={p.name} empty={`${p.name}'s chart fills in as he plays.`} note="Before the market opened: his value after each day's games, from box scores." />
                             {w ? (
                               <div className="flex flex-col gap-3 rounded-2xl bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <Qty q={q} setQ={setQ} max={MAX_QTY} />

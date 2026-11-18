@@ -39,8 +39,8 @@ async function leagueInfo(leagueId: string): Promise<{ season?: string; scoring_
 
 export type PlayerLine = {
   pid: string; name: string; pos: string[]; nba: string; owner: string | null; pts: number; games: number;
-  /** Season totals [points, games] after each finished week, for the price chart. */
-  weeks: [number, number][];
+  /** Season totals [day, points, games] after each day he played, for the price chart. */
+  days: [string, number, number][];
 };
 
 /**
@@ -59,19 +59,28 @@ async function playerBoard(leagueId: string, week: number): Promise<PlayerLine[]
   for (const r of rs) for (const pid of r.players ?? []) owner.set(pid, r.owner_id);
   const weeks = await Promise.all(Array.from({ length: week }, (_, i) => weekStats(lg.season!, i + 1, i + 1 < week)));
   const tot = new Map<string, { pts: number; games: number }>();
-  const after = new Map<string, [number, number][]>();
-  weeks.forEach((rows, i) => {
+  const byDay = new Map<string, Map<string, number>>();
+  for (const rows of weeks)
     for (const row of rows) {
       if (!dir[row.player_id] && !owner.has(row.player_id)) continue;
       const t = tot.get(row.player_id) ?? tot.set(row.player_id, { pts: 0, games: 0 }).get(row.player_id)!;
-      t.pts += fantasyPoints(row.stats, sc);
+      const pts = fantasyPoints(row.stats, sc);
+      t.pts += pts;
       t.games += 1;
+      const m = byDay.get(row.player_id) ?? byDay.set(row.player_id, new Map()).get(row.player_id)!;
+      m.set(row.date ?? "", (m.get(row.date ?? "") ?? 0) + pts);
     }
-    if (i + 1 < week) for (const pid of new Set([...owner.keys(), ...tot.keys()])) (after.get(pid) ?? after.set(pid, []).get(pid)!).push([tot.get(pid)?.pts ?? 0, tot.get(pid)?.games ?? 0]);
-  });
+  const days = (pid: string): [string, number, number][] => {
+    let pts = 0;
+    let games = 0;
+    return [...(byDay.get(pid) ?? [])]
+      .filter(([d]) => d)
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([d, p]) => [d, Math.round((pts += p) * 10) / 10, ++games]);
+  };
   return [...new Set([...owner.keys(), ...tot.keys()])].map((pid) => ({
     pid, owner: owner.get(pid) ?? null, name: dir[pid]?.[0] ?? pid, pos: dir[pid]?.[1] ?? [], nba: dir[pid]?.[2] ?? "",
-    pts: Math.round((tot.get(pid)?.pts ?? 0) * 10) / 10, games: tot.get(pid)?.games ?? 0, weeks: after.get(pid) ?? [],
+    pts: Math.round((tot.get(pid)?.pts ?? 0) * 10) / 10, games: tot.get(pid)?.games ?? 0, days: days(pid),
   }));
 }
 
@@ -108,6 +117,7 @@ async function records(leagueId: string): Promise<TeamRecord[]> {
   );
 }
 
+const nextDay = (d: string) => new Date(Date.parse(`${d}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 const iso = (d: Date | string) => (typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10));
 
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
@@ -304,8 +314,10 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     .map((r) => {
       const f = fair.get(r.team)!;
       const h = held.get(r.team) ?? 0;
-      const hist = history.get(r.team) ?? [];
       const price = spot(f, h);
+      // The chart always ends on today's live price.
+      const today = todayET();
+      const hist = (history.get(r.team) ?? []).filter((x) => x.d !== today).concat({ d: today, p: price });
       // Change over the last 7 days (or since the first price, when the history is shorter).
       const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
       const weekAgo = [...hist].reverse().find((h) => h.d <= cut)?.p ?? hist[0]?.p ?? price;
@@ -321,19 +333,30 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   // Player stocks: everyone on a Trash roster now (no coin; the price follows how he plays).
   const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
   const playerName = new Map(board.map((p) => [PLAYER + p.pid, p.name]));
+  const today = todayET();
   const players = board
     .filter((p) => p.owner || (held.get(PLAYER + p.pid) ?? 0) > 0)
     .map((p) => {
       const id = PLAYER + p.pid;
       const f = fair.get(id)!;
       const h = held.get(id) ?? 0;
-      // Before the market's own prices: his value at the end of each finished week, from box scores.
+      // Every day of the season: his value after each day's games (box scores), carried over days he
+      // didn't play; the market's own closing prices once it has them; and today's live price last.
       const market = history.get(id) ?? [];
       const first = market[0]?.d ?? "9999";
-      const monday = thisWeek.getTime();
-      const wk = (k: number) => new Date(monday - (7 * (p.weeks.length - k) + 1) * 86_400_000).toISOString().slice(0, 10);
-      const built = [...p.weeks.map(([pts, g], i) => ({ d: wk(i + 1), p: playerFair(pts, g), w: i + 1 }))].filter((x) => x.d < first);
-      const hist = [...built, ...market];
+      const built: { d: string; p: number }[] = [];
+      if (p.days.length) {
+        let i = 0;
+        let v = playerFair(0, 0);
+        // From his 5th game (before that the price is held near 15, which isn't him).
+        const start = (p.days.find((x) => x[2] >= 5) ?? p.days[p.days.length - 1])[0];
+        for (let d = start; d < first && d <= today; d = nextDay(d)) {
+          while (i < p.days.length && p.days[i][0] <= d) v = playerFair(p.days[i][1], p.days[i++][2]);
+          built.push({ d, p: v });
+        }
+      }
+      const live = spot(f, h);
+      const hist = [...built, ...market].filter((x) => x.d !== today).concat({ d: today, p: live });
       const price = spot(f, h);
       const weekAgo = [...hist].reverse().find((x) => x.d <= cut)?.p ?? hist[0]?.p ?? price;
       return {
