@@ -242,6 +242,7 @@ function ledgerLine(f: Entry) {
   if (f.kind === "buy") return `bought ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "coin") return `swapped ${amt} BB for ${f.qty} Perren Coin`;
+  if (f.kind === "uncoin") return `cashed ${f.qty} Perren Coin into ${amt} BB`;
   if (f.kind === "dividend")
     return f.upset
       ? `got ${amt} Perren Coin: ${f.ticker} beat ${f.upset.vs ?? "their opponent"}, ×${f.upset.x.toFixed(2)} (${f.qty} shares)`
@@ -297,7 +298,8 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
     const h = w?.holdings.find((x) => x.team === id);
     return h ? h.shares - h.counting : 0;
   };
-  const coinMax = w ? Math.floor(w.bucks / s.coinRate!) : 0;
+  // The stepper goes as high as either direction allows (buying with bucks, or cashing coin in).
+  const coinMax = w ? Math.max(Math.floor(w.bucks / s.coinRate!), Math.floor(w.coins / 100)) : 0;
   let hoodCost = 0;
   for (let i = 0; i < hoodQ; i++) hoodCost += hoodiePrice(s.hoodiesSold! + i);
   let hoodMax = 0;
@@ -334,18 +336,26 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl bg-black/20 p-4">
                   <p className="flex items-center gap-2 font-semibold">
-                    <Coin /> Buy Perren Coin
+                    <Coin /> Swap Perren Coin
                   </p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">{money(s.coinRate!, 0)} Bushy Bucks each. No way back to bucks.</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{money(s.coinRate!, 0)} Bushy Bucks a coin, both ways.</p>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <Qty q={coinQ} setQ={setCoinQ} max={coinMax} />
                     <button
                       type="button"
-                      disabled={busy || coinQ > coinMax}
+                      disabled={busy || s.coinRate! * coinQ > w.bucks}
                       onClick={() => void order({ kind: "coin", qty: coinQ }, `Bought ${coinQ} Perren Coin.`)}
                       className={`${chip} bg-[var(--paper)] text-[var(--bin)]`}
                     >
-                      Pay {money(s.coinRate! * coinQ, 0)} BB
+                      Buy for {money(s.coinRate! * coinQ, 0)} BB
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy || coinQ * 100 > w.coins}
+                      onClick={() => void order({ kind: "uncoin", qty: coinQ }, `Cashed ${coinQ} Perren Coin into ${money(s.coinRate! * coinQ, 0)} Bushy Bucks.`)}
+                      className={`${chip} bg-white/10 hover:bg-white/15`}
+                    >
+                      Cash in for {money(s.coinRate! * coinQ, 0)} BB
                     </button>
                   </div>
                 </div>
@@ -542,7 +552,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Coin /> Perren Coin
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. You can also swap bucks for coin.
+              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. Swap coin and bucks either way at 40 BB a coin.
             </p>
           </li>
           <li className="rounded-2xl bg-black/20 p-5">

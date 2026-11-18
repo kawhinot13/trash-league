@@ -297,7 +297,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   };
 }
 
-export type Order = { kind: "buy" | "sell"; team: string; qty: number } | { kind: "coin"; qty: number } | { kind: "hoodie"; qty: number };
+export type Order = { kind: "buy" | "sell"; team: string; qty: number } | { kind: "coin" | "uncoin"; qty: number } | { kind: "hoodie"; qty: number };
 
 /** One order for one manager, all or nothing. Returns a plain message on refusal. */
 export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof marketSeason>>>, manager: string, o: Order): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -351,6 +351,12 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       if (cost > bucks) return { ok: false as const, error: "Not enough Bushy Bucks for that much Perren Coin." };
       await tx`update market_wallets set bucks = bucks - ${cost}, coins = coins + ${o.qty * 100} where league_id = ${lid} and manager = ${manager}`;
       await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'coin', ${o.qty}, ${cost})`;
+    } else if (o.kind === "uncoin") {
+      // Cash coin back into bucks at the same rate (whole coins).
+      if (o.qty * 100 > coins) return { ok: false as const, error: "You don't have that much Perren Coin." };
+      const pay = COIN_RATE * o.qty;
+      await tx`update market_wallets set coins = coins - ${o.qty * 100}, bucks = bucks + ${pay} where league_id = ${lid} and manager = ${manager}`;
+      await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'uncoin', ${o.qty}, ${pay})`;
     } else {
       const [{ sold }] = await tx<{ sold: number }[]>`select coalesce(sum(hoodies), 0)::int as sold from market_wallets where league_id = ${lid}`;
       let cost = 0;

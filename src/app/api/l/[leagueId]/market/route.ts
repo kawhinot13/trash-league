@@ -35,7 +35,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/ma
   if (!sameOrigin(req)) return Response.json({ error: "bad request" }, { status: 403 });
   const b = (await req.json().catch(() => null)) as { kind?: string; team?: string; qty?: number } | null;
   const kind = b?.kind;
-  if (!b || !["buy", "sell", "coin", "hoodie"].includes(kind ?? "") || typeof b.qty !== "number") return Response.json({ error: "bad request" }, { status: 400 });
+  if (!b || !["buy", "sell", "coin", "uncoin", "hoodie"].includes(kind ?? "") || typeof b.qty !== "number") return Response.json({ error: "bad request" }, { status: 400 });
   if ((kind === "buy" || kind === "sell") && !(typeof b.team === "string" && /^\d{1,24}$/.test(b.team))) return Response.json({ error: "bad request" }, { status: 400 });
   try {
     const season = await marketSeason(leagueId);
