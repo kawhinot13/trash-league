@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { PlayGate } from "@/components/app/play-gate";
 import { MgrPhoto } from "@/components/trash/brand";
-import { buyCost, hoodiePrice, MAX_QTY, sellValue } from "@/packs/trash/market/math";
+import { buyCost, hoodiePrice, hoodieSellValue, MAX_QTY, sellValue } from "@/packs/trash/market/math";
 import type { MarketState } from "@/packs/trash/market/server";
 
 /**
@@ -246,6 +246,7 @@ function ledgerLine(f: Entry) {
     return f.upset
       ? `got ${amt} Perren Coin: ${f.ticker} beat ${f.upset.vs ?? "their opponent"}, ×${f.upset.x.toFixed(2)} (${f.qty} shares)`
       : `got ${amt} Perren Coin from ${f.ticker}'s win (${f.qty} shares)`;
+  if (f.kind === "unhoodie") return `sold ${f.qty === 1 ? "a Xan Purple Hoodie" : `${f.qty} Xan Purple Hoodies`} back for ${amt} BB`;
   return `bought ${f.qty === 1 ? "a Xan Purple Hoodie" : `${f.qty} Xan Purple Hoodies`} for ${amt} PC`;
 }
 const when = (at: string) =>
@@ -336,7 +337,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   <p className="flex items-center gap-2 font-semibold">
                     <Coin /> Buy Perren Coin
                   </p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">{money(s.coinRate!, 0)} Bushy Bucks each. No way back to bucks.</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{money(s.coinRate!, 0)} Bushy Bucks each. Coin itself can&apos;t be swapped back.</p>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <Qty q={coinQ} setQ={setCoinQ} max={coinMax} />
                     <button
@@ -354,7 +355,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     <Hoodie /> Buy a Xan Purple Hoodie
                   </p>
                   <p className="mt-1 text-sm text-[var(--muted)]">
-                    {s.hoodiesSold} sold in the league. Each one makes the next dearer, and hoodies are never sold back.
+                    {s.hoodiesSold} held in the league. Each one bought makes the next dearer. Sell one back for Bushy Bucks any time.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <Qty q={hoodQ} setQ={setHoodQ} max={hoodMax} />
@@ -367,6 +368,24 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                       Pay {money(hoodCost)} PC
                     </button>
                   </div>
+                  {w.hoodies ? (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--line)] pt-3">
+                      <span className="text-sm text-[var(--muted)]">
+                        Sell {hoodQ > w.hoodies ? w.hoodies : hoodQ} back
+                      </span>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          const n = Math.min(hoodQ, w.hoodies);
+                          void order({ kind: "unhoodie", qty: n }, n === 1 ? "Hoodie sold back." : `${n} hoodies sold back.`);
+                        }}
+                        className={`${chip} bg-white/10 hover:bg-white/15`}
+                      >
+                        Get {money(hoodieSellValue(s.hoodiesSold!, Math.min(hoodQ, w.hoodies)))} BB
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               {note ? (
@@ -550,7 +569,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Hoodie /> Xan Purple Hoodies
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Bought with Perren Coin, kept forever. Every hoodie sold raises the price of the next one, so early buyers get a deal.
+              Bought with Perren Coin. Every hoodie bought raises the price of the next one, so early buyers get a deal, and you can sell one back for Bushy Bucks at the going price.
             </p>
           </li>
         </ul>
