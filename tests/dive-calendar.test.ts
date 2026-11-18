@@ -71,3 +71,14 @@ describe("Dumpster Dive calendar", () => {
     expect(packDataset({ ...long, diveNames: 2 }, pack).name).toBe("Trash");
   });
 });
+
+describe("NBA-team questions count every team a player has played for", () => {
+  it("adds players who used to play for that team", () => {
+    const warriors = (d: typeof TRASH) => divePool(d).find((q) => q.prompt.startsWith("Name a Warriors player"))!;
+    const before = warriors(TRASH).answers.length;
+    // Someone rostered in Trash who isn't on the Warriors now, credited with a past Warriors stint.
+    const pid = TRASH.extras.seasons.flatMap((s) => Object.values(s.guys).flatMap((g) => Object.keys(g))).find((p) => TRASH.extras.players[p]?.[2] && TRASH.extras.players[p][2] !== "GSW")!;
+    const withPast = { ...TRASH, extras: { ...TRASH.extras, teamsPlayed: { [pid]: ["GSW"] } } };
+    expect(warriors(withPast).answers.length).toBe(before + 1);
+  });
+});

@@ -101,7 +101,13 @@ export type RawSeason = {
 };
 /** pid -> [name, positions, team, has headshot, height in inches (0 if unknown), birth date YYYY-MM-DD or ""] */
 export type Players = Record<string, [string, string[], string, number, number, string]>;
-export type ExtrasData = { asOf: string; seasons: RawSeason[]; players: Players };
+export type ExtrasData = {
+  asOf: string;
+  seasons: RawSeason[];
+  players: Players;
+  /** Every NBA team each player has played for in the league's seasons (from box scores; Rafterlore). */
+  teamsPlayed?: Record<string, string[]>;
+};
 
 /** Everything the shared features need about one league. `name` is how copy refers to it ("Trash"). */
 export type Dataset = {

@@ -50,7 +50,8 @@ export type Pickup = { who: Who; pid: string; season: string; years: string; wee
 export type Game = { season: string; years: string; week: number; a: Who; b: Who; pa: number; pb: number; playoff: boolean };
 
 // 10: custom-pack leagues plan Dumpster Dive in the pack's names (Trash on Rafterlore).
-export const ANALYSIS_VERSION = 10;
+// 11: NBA-team questions count every team a player has played for (box scores).
+export const ANALYSIS_VERSION = 11;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */

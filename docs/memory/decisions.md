@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-18: NBA-team questions are all-time
+- Owner: "Name a Warriors player" should count anyone who played for the Warriors, not just today's roster (more
+  players, more room to go niche). Sleeper's box scores record each game's team, so the grade step collects every
+  team per player over the league's seasons (`weekTeams`, cached per week; `extras.teamsPlayed`). Trash: Warriors 12
+  -> 22 answers, Knicks 12 -> 27, Lakers 10 -> 30. Wording unchanged so planned questions still match. Only covers
+  seasons the league has played (no pre-league history). ANALYSIS_VERSION 11.
+
 ## 2026-11-18: Dumpster Dive leans broad
 - Owner: broad questions (an NBA team, league-wide) are better than remembering who owned whom. From 2026-11-20 every
   planned day has one NBA-team question and at most 2 about a single manager (the cap yields only when no fresh

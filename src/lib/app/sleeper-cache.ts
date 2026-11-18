@@ -105,6 +105,19 @@ export async function weekStats(season: string, week: number, final: boolean): P
   });
 }
 
+/**
+ * Which NBA team each player played for in a week's games (from the same box scores), so questions
+ * can count every team a player has suited up for, not just today's. Small; kept a year once final.
+ */
+export async function weekTeams(season: string, week: number, final: boolean): Promise<Record<string, string>> {
+  return cached<Record<string, string>>(`teams/nba/${season}/${week}`, final ? 365 * DAY : 3600_000, async () => {
+    const raw = (await sleeper<SStatRow[] | null>(`/stats/nba/${season}/${week}?season_type=regular`)) ?? [];
+    const out: Record<string, string> = {};
+    for (const r of raw) if (r.team && r.date && !r.player_id.startsWith("TEAM") && Object.keys(r.stats ?? {}).length) out[r.player_id] = r.team;
+    return out;
+  });
+}
+
 /** Nightly housekeeping: drop box-score weeks nobody has used in a week. */
 export async function pruneCache() {
   if (!hasDb()) return;

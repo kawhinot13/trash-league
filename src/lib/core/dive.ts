@@ -286,15 +286,16 @@ export function divePool(d: Dataset): Prompt[] {
     if (gt) add("Waiver gems", `Name a waiver pickup who was started ${gt}+ times by the team that grabbed him.`, above(gems, gt), 0.5, { ...v3, t: "waiver-gems" });
   }
 
-  // NBA teams: players on that team now who have been on a league roster (basketball leagues).
+  // NBA teams: players who have played for that team (or play there now) and been on a league roster.
   if (d.sport !== "nfl") {
     const weeksIn = new Map<string, number>();
     for (const s of raw.seasons) for (const ps of Object.values(s.guys)) for (const [pid, [w]] of Object.entries(ps)) sum(weeksIn, pid, w);
     const byTeam = new Map<string, Map<string, number>>();
-    for (const [pid, w] of weeksIn) {
-      const team = players[pid]?.[2];
-      if (team && NBA_TEAMS[team]) (byTeam.get(team) ?? byTeam.set(team, new Map()).get(team)!).set(pid, w);
-    }
+    // Every team he has played for (box scores, where the league has them) plus his team today.
+    const played = d.extras.teamsPlayed ?? {};
+    for (const [pid, w] of weeksIn)
+      for (const team of new Set([players[pid]?.[2], ...(played[pid] ?? [])]))
+        if (team && NBA_TEAMS[team]) (byTeam.get(team) ?? byTeam.set(team, new Map()).get(team)!).set(pid, w);
     for (const [team, ps] of [...byTeam].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
       add("NBA teams", `Name a ${NBA_TEAMS[team]} player who has been on a ${d.name} roster.`, ps, 0.4, { ...v3, t: "nba-team" });
     // Positions: league-wide, any player at that spot (as Sleeper lists him now).

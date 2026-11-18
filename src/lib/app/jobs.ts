@@ -12,7 +12,7 @@ import { datasetOf, invalidateFamily } from "@/lib/app/store";
 import { REPLAY_VERSION, replayFootballWeek, replayWeek, type WeekData } from "@/lib/app/replay";
 import { consensusMatchups, sportState, sleeper, type STransaction } from "@/lib/app/sleeper";
 import { sportOf, type Sport } from "@/lib/core/sport";
-import { playerDirectory, weekStats, type PlayerDir } from "@/lib/app/sleeper-cache";
+import { playerDirectory, weekStats, weekTeams, type PlayerDir } from "@/lib/app/sleeper-cache";
 import { logError, safeMessage } from "@/lib/app/safe";
 
 /**
@@ -185,8 +185,8 @@ async function grade(familyId: string) {
   const bs = await bundles(familyId);
   const sport: Sport = sportOf(bs[bs.length - 1]?.league);
   const state = await sportState(sport);
-  const rows = await sql<{ league_id: string; data: WeekData }[]>`
-    select w.league_id, w.data from league_weeks w join leagues l using (league_id)
+  const rows = await sql<{ league_id: string; data: WeekData; final: boolean }[]>`
+    select w.league_id, w.data, w.final from league_weeks w join leagues l using (league_id)
     where l.family_id = ${familyId} order by w.week`;
   const cur = state.league_season || state.season;
   const inputs = await Promise.all(
@@ -213,6 +213,21 @@ async function grade(familyId: string) {
     if (!p.startsWith("pick:") && !a.players[p]) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];
   // The full dataset (Trash's league.json + extras.json shapes) that the league's pages are built from.
   const ds = buildDataset(bs[bs.length - 1]?.league.name ?? "League", inputs, a, exact, dir);
+  // Basketball: every NBA team each player has played for in these seasons (box scores record the team
+  // of each game), for "Name a Warriors player..." questions across all time, not just today's rosters.
+  if (sport === "nba")
+    try {
+      const played = new Map<string, Set<string>>();
+      const weeks = rows.map((r) => ({ season: bs.find((b) => b.league.league_id === r.league_id)?.league.season, week: r.data.week, final: r.final }));
+      const seen = new Set<string>();
+      const todo = weeks.filter((w) => w.season && !seen.has(`${w.season}/${w.week}`) && seen.add(`${w.season}/${w.week}`));
+      for (let i = 0; i < todo.length; i += 4)
+        for (const m of await Promise.all(todo.slice(i, i + 4).map((w) => weekTeams(w.season!, w.week, w.final).catch(() => ({}) as Record<string, string>))))
+          for (const [pid, team] of Object.entries(m)) (played.get(pid) ?? played.set(pid, new Set()).get(pid)!).add(team);
+      ds.extras.teamsPlayed = Object.fromEntries([...played].map(([pid, t]) => [pid, [...t].sort()]));
+    } catch (e) {
+      logError(`teams played ${familyId}`, e);
+    }
   // Dumpster Dive: keep every day already written (played or in play), plan the next 30 from the new data.
   try {
     const prev = await datasetOf(familyId).catch(() => null);
