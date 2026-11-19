@@ -213,6 +213,12 @@ async function grade(familyId: string) {
     if (!p.startsWith("pick:") && !a.players[p]) a.players[p] = dir[p] ? [dir[p][0], dir[p][1]] : ["Unknown player", []];
   // The full dataset (Trash's league.json + extras.json shapes) that the league's pages are built from.
   const ds = buildDataset(bs[bs.length - 1]?.league.name ?? "League", inputs, a, exact, dir);
+  // Each player's best single start for a league team (Sleeper's per-starter points), for "Big numbers".
+  {
+    const best: Record<string, number> = {};
+    for (const r of rows) for (const t of r.data.teams ?? []) (t.st ?? []).forEach((pid, i) => (best[pid] = Math.max(best[pid] ?? 0, t.sp?.[i] ?? 0)));
+    ds.extras.bigNights = best;
+  }
   // Basketball: every NBA team each player has played for in these seasons (box scores record the team
   // of each game), for "Name a Warriors player..." questions across all time, not just today's rosters.
   if (sport === "nba")

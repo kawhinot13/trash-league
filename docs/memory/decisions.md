@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: Dumpster Dive "Big numbers" gets easier, plus "Big nights"
+- Owner: "averaged 80+ per lock-in" had only ~10 answers. From 2026-11-20 the average question's bar is the
+  highest that leaves 25+ answers (Trash site 65+, Rafterlore 70+), and a new "Big nights" question asks for a single
+  start of N+ (lock-in wording: "had an 80+ lock-in"), bar with 100+ answers (Trash 80+, 126 answers). Uses Sleeper's
+  per-starter points (per Sleeper; fine for trivia). Old 80+ text kept up to 2026-11-19 (pinned that day).
+  ANALYSIS_VERSION 12.
+
 ## 2026-11-19: Team stocks closed outside Mondays (no waiting orders)
 - Waiting orders showed an estimated price that might not fill (a 1-share order could get 0 if the price rose).
   Owner: just don't allow team or company trades until Monday. Team buys, sells, shorts and closes work only Monday

@@ -25,7 +25,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   question and at most `MAX_WHO` (2) manager questions (owner: broad over who-owned-whom); v4 types Positions and
   Season rosters plan only from then; `OVERUSED` shapes rest 10 days after RESTART. NBA-team questions count every team a player
   has played for in the league's seasons (box scores record each game's team: `weekTeams`, `extras.teamsPlayed`,
-  built in the grade step; Rafterlore only) plus his team today. The owner cares about Rafterlore; the Trash site is now
+  built in the grade step; Rafterlore only) plus his team today. From `BIG_NIGHT_FROM` (2026-11-20): the season-average
+  question uses a lower bar (25+ answers) and "Big nights" asks for one N+ start (lock-in leagues: "had an N+ lock-in";
+  bar = highest with 100+ answers, Trash 80+; `extras.bigNights` from Sleeper's starter points, Rafterlore only).
+  Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now
   titled "Test Trash Fantasy" (test copy).
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 

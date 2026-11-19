@@ -25,6 +25,9 @@ export type Prompt = {
   v?: 2 | 3 | 4;
   /** The question's shape ("roster", "traded-for"...), so a day never asks the same kind of thing twice. */
   t?: string;
+  /** Planned only on days from / up to these (YYYY-MM-DD); written and pinned days keep what they have. */
+  from?: string;
+  to?: string;
 };
 
 type Raw = {
@@ -105,7 +108,7 @@ export function divePool(d: Dataset): Prompt[] {
   const years = Object.fromEntries(league.seasons.map((s) => [s.code, s.years]));
   const active = league.seasons.find((s) => s.code === lastCode(d))!.standings.map((r) => r.manager);
   const out: Prompt[] = [];
-  const add = (kind: string, prompt: string, signal: Map<string, number>, weight: number, extra: Pick<Prompt, "who" | "v" | "t"> = {}) => {
+  const add = (kind: string, prompt: string, signal: Map<string, number>, weight: number, extra: Pick<Prompt, "who" | "v" | "t" | "from" | "to"> = {}) => {
     const answers = score(signal, fame, weight);
     if (answers.length >= 8) out.push({ kind, prompt, answers, ...extra });
   };
@@ -261,7 +264,26 @@ export function divePool(d: Dataset): Prompt[] {
     const pt = cutoff(pts, [3000, 2500, 2000, 1500, 1000, 750, 500, 300, 200, 100]);
     if (pt) add("Franchise scorers", `Name a player who has scored ${fmt(pt)}+ points for ${d.name} teams.`, above(pts, pt), 0.5, { ...v3, t: "legend-points" });
     const av = cutoff(avg, [80, 70, 65, 60, 55, 50, 45, 40, 30, 20, 15]);
-    if (av) add("Big numbers", `Name a player who averaged ${av}+ per start for a ${d.name} team in a season.`, above(avg, av), 0.5, { ...v3, t: "legend-avg" });
+    // Through 2026-11-19 the bar left 10+ answers; from BIG_NIGHT_FROM it's lowered to leave 25+ (owner: more answers).
+    if (av) add("Big numbers", `Name a player who averaged ${av}+ per start for a ${d.name} team in a season.`, above(avg, av), 0.5, { ...v3, t: "legend-avg", to: "2026-11-19" });
+    const steps = [80, 75, 70, 65, 60, 55, 50, 45, 40, 30, 20, 15];
+    const low = steps.find((t) => [...avg.values()].filter((v) => v >= t).length >= 25) ?? av;
+    if (low)
+      add("Big numbers", `Name a player who averaged ${low}+ per start for a ${d.name} team in a season.`, above(avg, low), 0.5, {
+        v: 4, t: "legend-avg", from: BIG_NIGHT_FROM,
+      });
+  }
+  // Big nights (owner's call 2026-11-19): one start of N+ points
+  // for a league team, per Sleeper's starter points. A lower bar than an average, so far more answers.
+  if (d.extras.bigNights) {
+    const nights = new Map(Object.entries(d.extras.bigNights));
+    const steps = [120, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40];
+    // The highest bar with lots of answers (100+; Trash: 80+), or 10+ in a small league.
+    const bar = steps.find((t) => [...nights.values()].filter((v) => v >= t).length >= 100) ?? steps.find((t) => [...nights.values()].filter((v) => v >= t).length >= 10);
+    if (bar)
+      add("Big nights", `Name a player who scored ${bar}+ in a single start for a ${d.name} team.`, new Map([...nights].filter(([, v]) => v >= bar)), 0.5, {
+        v: 4, t: "big-night", from: BIG_NIGHT_FROM,
+      });
   }
   {
     // Draft busts: drafted, then never started by the team that drafted him that season. Obvious = picked earlier.
@@ -357,6 +379,8 @@ export const RESTART = "2026-11-18";
 export const MAX_WHO = 2;
 /** First day planned with the broad-question rules and the questions added with them. */
 export const BROAD_FROM = "2026-11-20";
+/** First day planned with "scored N+ in a single start" (and no more season-average question). */
+export const BIG_NIGHT_FROM = "2026-11-20";
 /** Question shapes that ran nearly every day before RESTART. */
 const OVERUSED = ["journey", "first", "late", "playoffs"];
 const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
@@ -428,6 +452,9 @@ export function promptText(prompt: string, lineup: "lock-in" | "daily" | "weekly
   return prompt
     .replace(/has been started (\d+)\+ times/, (_, n: string) => (lock ? `has been locked in ${n}+ times` : `has been in a lineup ${n}+ weeks`))
     .replace(/per start for/, lock ? "per lock-in for" : "per week in the lineup for")
+    .replace(/^Name a player who scored (\d+)\+ in a single start for (.+)\.$/, (_, n: string, rest: string) =>
+      lock ? `Name a player who had a ${n}+ lock-in for ${rest}.` : `Name a player who scored ${n}+ in a week in the lineup for ${rest}.`,
+    )
     .replace(/but never started for the team/, lock ? "but was never locked in by the team" : "but never made the lineup for the team")
     .replace(/was started (\d+)\+ times by/, (_, n: string) => (lock ? `was locked in ${n}+ times by` : `was in the lineup ${n}+ weeks for`))
     .replace(/^Name a player (.+) has started\.$/, (_, who: string) => (lock ? `Name a player ${who} has locked in.` : `Name a player ${who} has had in the lineup.`))
@@ -505,7 +532,7 @@ function schedule(pool: Prompt[], until: string, fixed: Calendar = {}): Map<stri
     const broad = d >= BROAD_FROM;
     const lastAsked = (t: string) => lastPrompt.get(t) ?? (broad ? earlier.get(t) : undefined);
     const shapes = broad ? shapesAll : shapesBase;
-    const dayPool = broad ? pool : base;
+    const dayPool = (broad ? pool : base).filter((q) => (!q.from || d >= q.from) && (!q.to || d <= q.to));
     const chosen: Prompt[] = [];
     const who = new Set<string>();
     const used = new Set<string>();

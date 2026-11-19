@@ -107,6 +107,8 @@ export type ExtrasData = {
   players: Players;
   /** Every NBA team each player has played for in the league's seasons (from box scores; Rafterlore). */
   teamsPlayed?: Record<string, string[]>;
+  /** Each player's best single start for a league team (Sleeper's starter points; Rafterlore). */
+  bigNights?: Record<string, number>;
 };
 
 /** Everything the shared features need about one league. `name` is how copy refers to it ("Trash"). */
