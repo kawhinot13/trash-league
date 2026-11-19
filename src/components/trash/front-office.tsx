@@ -179,6 +179,8 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
   // "Right now" discounts injured players (what you can field this week); "Full strength" counts
   // everyone healthy (what the roster is when they're back).
   const [strength, setStrength] = useState<"now" | "full">("now");
+  // Tapping a category opens the whole league's table for it.
+  const [rankOpen, setRankOpen] = useState<Metric | null>(null);
   const profiles = useMemo(
     () => data.teams.map((t) => profile(t, P, data.slots, sport, strength === "full" ? fullStrength : undefined)),
     [data, P, sport, strength],
@@ -292,8 +294,18 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                 const r = d.rank[key as Metric];
                 const n = profiles.length;
                 const tone = r <= 3 ? GOOD : r > n - 3 ? BAD : "var(--paper)";
+                const isOpen = rankOpen === key;
+                const table = isOpen ? [...profiles].sort((a, b) => b.m[key] - a.m[key]) : [];
+                const top = table[0]?.m[key] || 1;
+                const fmt = (v: number) => (key === "health" ? `${Math.round(v * 100)}%` : n0(v));
                 return (
-                  <li key={key} className="rounded-2xl bg-black/20 p-3 sm:p-4" title={info}>
+                  <li key={key} className={`rounded-2xl bg-black/20 ${isOpen ? "col-span-2" : ""}`} title={info}>
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() => setRankOpen(isOpen ? null : key)}
+                      className="block w-full cursor-pointer rounded-2xl p-3 text-left transition-colors duration-150 hover:bg-white/[0.03] sm:p-4"
+                    >
                     <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                       <span className="text-sm font-semibold sm:text-base">{label}</span>
                       <span className="font-display text-xl font-black tabular-nums sm:text-2xl" style={{ color: tone }}>
@@ -311,6 +323,37 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                       />
                     </div>
                     <p className="mt-2 hidden text-xs leading-relaxed text-[var(--muted)] sm:block">{info}</p>
+                    <p className="mt-2 text-xs font-semibold text-[var(--muted)]">{isOpen ? "Hide the league ▲" : "See the league ▼"}</p>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.ol
+                          key="table"
+                          initial={reduce ? false : { opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={reduce ? undefined : { opacity: 0 }}
+                          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                          className="grid gap-1.5 px-3 pb-3 sm:px-4 sm:pb-4"
+                          aria-label={`${label}: every team`}
+                        >
+                          {table.map((p, j) => {
+                            const you = p.id === me;
+                            return (
+                              <li key={p.id} className={`grid grid-cols-[1.75rem_1fr_auto] items-center gap-x-2 rounded-lg px-2 py-1.5 text-sm ${you ? "bg-white/10 font-semibold" : ""}`}>
+                                <span className="font-display tabular-nums text-[var(--muted)]">{j + 1}</span>
+                                <span className="min-w-0">
+                                  <span className="break-words">{nick(p.id)}{you ? " (you)" : ""}</span>
+                                  <span className="mt-1 block h-1.5 rounded-full bg-white/8">
+                                    <span className="block h-full rounded-full" style={{ width: `${Math.max(2, (p.m[key] / top) * 100)}%`, background: you ? tone : "rgba(246,243,234,0.45)" }} />
+                                  </span>
+                                </span>
+                                <span className="tabular-nums text-[var(--muted)]">{fmt(p.m[key])}</span>
+                              </li>
+                            );
+                          })}
+                        </motion.ol>
+                      )}
+                    </AnimatePresence>
                   </li>
                 );
               })}
