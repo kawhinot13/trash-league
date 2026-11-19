@@ -306,20 +306,26 @@ export const shortValue = (entry: number, now: number, shares: number) => shares
 /**
  * Player price from recent form (owner's call 2026-11-19, last 5 from 11-20): 60% his average over his last 5 games
  * plus 40% his season average, so hot streaks and slumps move it within a week or two while one wild
- * night doesn't. Pulled toward 15 until he has 5 games; never under 1 BB. A player who isn't playing
+ * night doesn't. Until he has 5 games it starts from last season's level (his average per game, if he
+ * played PRIOR_GAMES+ games then), or 15 with no history (rookies), each game moving it a fifth of the
+ * way to his own numbers (owner's call 2026-11-19); never under 1 BB. A player who isn't playing
  * (injured) adds no games, so his price holds where it was.
  */
 /** How many recent games count for 60% of a player's price. */
 export const RECENT_GAMES = 5;
 
-export function formFair(points: number[]): number {
+/** Games last season needed for it to count as his starting level. */
+export const PRIOR_GAMES = 10;
+
+export function formFair(points: number[], prior?: number | null): number {
+  const base = prior ?? 15;
   const n = points.length;
-  if (!n) return 1_500;
+  if (!n) return Math.max(100, Math.round(base * 100));
   const season = points.reduce((a, b) => a + b, 0) / n;
   const recent = points.slice(-RECENT_GAMES);
   const last = recent.reduce((a, b) => a + b, 0) / recent.length;
   const avg = 0.6 * last + 0.4 * season;
-  const v = n >= 5 ? avg : (n * avg + (5 - n) * 15) / 5;
+  const v = n >= 5 ? avg : (n * avg + (5 - n) * base) / 5;
   return Math.max(100, Math.round(v * 100));
 }
 

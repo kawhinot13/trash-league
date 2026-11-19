@@ -38,6 +38,14 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-19: Player prices start from last season
+- Owner: with a flat 15 start, every star opened a season at 15 and climbed to his level over 5 games (free
+  money on opening night, and injured stars back from injury sat near 15). Now a player with 10+ games last
+  season starts from his last-season points per game (Trash scoring, box scores; `priorLevels`); rookies still
+  15. Each game still moves it a fifth of the way. Moved 44 current prices (Butler 15 -> 48.5, Kawhi 26.7 -> 53.8).
+  Past player trades re-priced once more (`REPRICES` key `reprice-players-prior`). Rejected: 20 for rookies
+  (owner kept 15).
+
 ## 2026-11-19: Player prices follow recent form
 - Owner: a season average barely moves after 20 games, so player stocks were dull. Price is now 60% the last 10
   games' average + 40% the season average (`formFair`), still from box scores with Trash scoring, still pulled

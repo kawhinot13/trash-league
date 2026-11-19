@@ -229,6 +229,14 @@ describe("Player prices follow recent form", () => {
     expect(formFair([60])).toBe(2_400); // one big night early: (60 + 4 x 15) / 5
     expect(formFair([0.5, 0.5, 0.5, 0.5, 0.5, 0.5])).toBe(100); // never under 1 BB
   });
+  it("starts a returning player from last season's level, a rookie from 15", async () => {
+    const { formFair } = await import("@/packs/trash/market/math");
+    expect(formFair([], 70)).toBe(7_000); // opening night: last season's average
+    expect(formFair([], null)).toBe(1_500); // no history
+    expect(formFair([40], 70)).toBe(6_400); // (40 + 4 x 70) / 5
+    expect(formFair(Array(5).fill(40), 70)).toBe(4_000); // 5 games in: only this season counts
+    expect(formFair(Array(20).fill(40), 70)).toBe(formFair(Array(20).fill(40)));
+  });
 });
 
 describe("Team shorts follow the weekly schedule", () => {

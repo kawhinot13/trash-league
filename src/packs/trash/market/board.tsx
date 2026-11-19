@@ -979,7 +979,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                               <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                             )}
                             <p className="text-xs text-[var(--muted)]">
-                              Fair value {money(p.fair)} BB: 60% his last 5 games, 40% his season average (pulled toward 15 until he has 5 games; holds while he sits out). Every share the league holds adds 0.4%.
+                              Fair value {money(p.fair)} BB: 60% his last 5 games, 40% his season average (until he has 5 games it starts from last season&apos;s average, or 15 for a rookie; holds while he sits out). Every share the league holds adds 0.4%.
                             </p>
                             {note && open === p.id ? (
                               <p role="status" className={`text-sm font-semibold ${note.ok ? UP : DOWN}`}>

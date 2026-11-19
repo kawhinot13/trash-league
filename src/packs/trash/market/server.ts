@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, repriceTrades, type PastTrade, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, TICKERS, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PRIOR_GAMES, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, repriceTrades, type PastTrade, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, TICKERS, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -46,7 +46,31 @@ export type PlayerLine = {
   pid: string; name: string; pos: string[]; nba: string; owner: string | null; pts: number; games: number;
   /** Every game this season, oldest first: [day, fantasy points]. */
   days: [string, number][];
+  /** Last season's points per game (PRIOR_GAMES+ games), his starting level; null for rookies. */
+  prior: number | null;
 };
+
+/**
+ * Every player's points per game last season (Trash's scoring, from box scores), for those with
+ * PRIOR_GAMES+ games: where a returning player's price starts before he has 5 games this season.
+ * Past seasons never change, so this is kept for days. Throws on a thin season so it's never cached wrong.
+ */
+async function priorLevels(season: string, sc: Record<string, number>): Promise<Record<string, number>> {
+  "use cache: remote";
+  cacheLife("days");
+  const weeks = await Promise.all(Array.from({ length: 26 }, (_, i) => weekStats(season, i + 1, true)));
+  if (weeks.filter((w) => w.length).length < 15) throw new Error(`season ${season} box scores incomplete`);
+  const tot = new Map<string, { pts: number; games: number }>();
+  for (const rows of weeks)
+    for (const row of rows) {
+      const t = tot.get(row.player_id) ?? tot.set(row.player_id, { pts: 0, games: 0 }).get(row.player_id)!;
+      t.pts += fantasyPoints(row.stats, sc);
+      t.games += 1;
+    }
+  const out: Record<string, number> = {};
+  for (const [pid, t] of tot) if (t.games >= PRIOR_GAMES) out[pid] = Math.round((t.pts / t.games) * 10) / 10;
+  return out;
+}
 
 /**
  * Every player who is on a Trash roster or has played this season, with his fantasy points and games,
@@ -62,7 +86,10 @@ async function playerBoard(leagueId: string, week: number): Promise<PlayerLine[]
   const sc = lg.scoring_settings;
   const owner = new Map<string, string | null>();
   for (const r of rs) for (const pid of r.players ?? []) owner.set(pid, r.owner_id);
-  const weeks = await Promise.all(Array.from({ length: week }, (_, i) => weekStats(lg.season!, i + 1, i + 1 < week)));
+  const [weeks, prior] = await Promise.all([
+    Promise.all(Array.from({ length: week }, (_, i) => weekStats(lg.season!, i + 1, i + 1 < week))),
+    priorLevels(String(Number(lg.season) - 1), sc),
+  ]);
   const tot = new Map<string, { pts: number; games: number }>();
   const byDay = new Map<string, Map<string, number>>();
   for (const rows of weeks)
@@ -83,6 +110,7 @@ async function playerBoard(leagueId: string, week: number): Promise<PlayerLine[]
   return [...new Set([...owner.keys(), ...tot.keys()])].map((pid) => ({
     pid, owner: owner.get(pid) ?? null, name: dir[pid]?.[0] ?? pid, pos: dir[pid]?.[1] ?? [], nba: dir[pid]?.[2] ?? "",
     pts: Math.round((tot.get(pid)?.pts ?? 0) * 10) / 10, games: tot.get(pid)?.games ?? 0, days: days(pid),
+    prior: prior[pid] ?? null,
   }));
 }
 
@@ -105,7 +133,7 @@ async function locksNow(lid: string): Promise<Set<string>> {
 }
 
 /** Player asset id -> fair value, for the players on the board. */
-const playerValues = (ps: PlayerLine[]) => new Map(ps.map((p) => [PLAYER + p.pid, formFair(p.days.map((x) => x[1]))]));
+const playerValues = (ps: PlayerLine[]) => new Map(ps.map((p) => [PLAYER + p.pid, formFair(p.days.map((x) => x[1]), p.prior)]));
 const weekOf = (recs: TeamRecord[]) => Math.max(0, ...recs.map((r) => r.wins + r.losses + r.ties)) + 1;
 
 /** Who played whom in a week (Sleeper's schedule; only the pairings are used, never the scores). */
@@ -175,13 +203,13 @@ async function refundWaitingOnce(tx: Sql, lid: string) {
  * player shorts get their entry reset the same way. Anyone who'd owe more than their cash gives back
  * shares of their players at today's value instead, so nobody goes negative.
  */
-async function repriceOnce(tx: Sql, lid: string, board: PlayerLine[], fair: Map<string, number>) {
+async function repriceOnce(tx: Sql, lid: string, board: PlayerLine[], fair: Map<string, number>, key: string) {
   await tx`select pg_advisory_xact_lock(hashtext(${"market:" + lid}))`;
-  const done = await tx`insert into market_meta (league_id, key) values (${lid}, 'reprice-players-last5') on conflict do nothing returning key`;
+  const done = await tx`insert into market_meta (league_id, key) values (${lid}, ${key}) on conflict do nothing returning key`;
   if (!done.length) return;
   const etDay = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
-  const games = new Map(board.map((p) => [PLAYER + p.pid, p.days]));
-  const fairAt = (asset: string, day: string) => formFair((games.get(asset) ?? []).filter((g) => g[0] < day).map((g) => g[1]));
+  const games = new Map(board.map((p) => [PLAYER + p.pid, p]));
+  const fairAt = (asset: string, day: string) => formFair((games.get(asset)?.days ?? []).filter((g) => g[0] < day).map((g) => g[1]), games.get(asset)?.prior);
   const rows = await tx<{ id: string; manager: string; team: string; kind: "buy" | "sell"; qty: number; amount: string; at: Date }[]>`
     select id::text, manager, team, kind, qty, amount::text, at from market_log
     where league_id = ${lid} and kind in ('buy', 'sell') and team like 'p:%' order by id`;
@@ -405,6 +433,9 @@ async function backfill(lid: string, saved: { day: string; team: string; pf: num
   return weeklyBackfill(teams, weekPts, firstDay, Math.min(...night.map((x) => x.wd)), new Map(night.map((x) => [x.team, x.pf])));
 }
 
+/** One key per player-formula change; each re-prices past player trades once (newest formula). */
+const REPRICES = ["reprice-players-last5", "reprice-players-prior"];
+
 export type MarketState = Awaited<ReturnType<typeof marketState>>;
 
 /** Everything the board shows, plus the viewer's wallet when they're one of the league's managers. */
@@ -416,8 +447,9 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   // manager's first visit (their desk) open a write.
   const storm = stormIds(season);
   const { board, fair } = await allValues(lid, recs, storm);
-  const [repriced] = await sql`select 1 as x from market_meta where league_id = ${lid} and key = 'reprice-players-last5'`;
-  if (!repriced) await sql.begin((tx) => repriceOnce(tx as unknown as Sql, lid, board, fair));
+  // Player formula changes re-price past player trades once each, as if the new formula had always applied.
+  const done = new Set((await sql<{ key: string }[]>`select key from market_meta where league_id = ${lid} and key like 'reprice-players-%'`).map((r) => r.key));
+  for (const key of REPRICES) if (!done.has(key)) await sql.begin((tx) => repriceOnce(tx as unknown as Sql, lid, board, fair, key));
   if (await needsSettle(sql, lid, recs)) await sql.begin((tx) => settle(tx as unknown as Sql, lid, recs, fair, true, storm));
   if (manager && season.users.has(manager))
     await sql`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
@@ -538,11 +570,12 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       const built: { d: string; p: number }[] = [];
       if (p.days.length) {
         let i = 0;
-        // From his 5th game (before that the price is held near 15, which isn't him).
-        const start = (p.days[4] ?? p.days[p.days.length - 1])[0];
+        // From his first game when he has last season to start from; a rookie's from his 5th (before
+        // that his price is held near 15, which isn't him).
+        const start = (p.prior != null ? p.days[0] : (p.days[4] ?? p.days[p.days.length - 1]))[0];
         for (let d = start; d < first && d <= today; d = nextDay(d)) {
           while (i < p.days.length && p.days[i][0] <= d) i++;
-          built.push({ d, p: formFair(p.days.slice(0, i).map((x) => x[1])) });
+          built.push({ d, p: formFair(p.days.slice(0, i).map((x) => x[1]), p.prior) });
         }
       }
       const live = spot(f, h);
@@ -695,7 +728,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   return sql.begin(async (t) => {
     const tx = t as unknown as Sql;
     // Every order settles new results first; the full day's prices are written only when they're due.
-    await repriceOnce(tx, lid, board, values);
+    for (const key of REPRICES) await repriceOnce(tx, lid, board, values, key);
     const { fair, held } = await settle(tx, lid, recs, values, await needsSettle(tx, lid, recs), storm);
     await tx`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
     const [recent] = await tx<{ n: number }[]>`
