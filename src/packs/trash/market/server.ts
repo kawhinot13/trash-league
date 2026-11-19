@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -407,6 +407,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     hoodiesSold,
     nextHoodie: hoodiePrice(hoodiesSold),
     coinRate: COIN_RATE,
+    coinBack: COIN_BACK,
     standings,
     feed: log.map((l) => {
       const [opp, x] = l.note?.split("|") ?? [];
@@ -498,9 +499,9 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       await tx`update market_wallets set bucks = bucks - ${cost}, coins = coins + ${o.qty * 100} where league_id = ${lid} and manager = ${manager}`;
       await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'coin', ${o.qty}, ${cost})`;
     } else if (o.kind === "uncoin") {
-      // Cash coin back into bucks at the same rate (whole coins).
+      // Cash coin back into bucks at the lower cash-in rate (whole coins).
       if (o.qty * 100 > coins) return { ok: false as const, error: "You don't have that much Perren Coin." };
-      const pay = COIN_RATE * o.qty;
+      const pay = COIN_BACK * o.qty;
       await tx`update market_wallets set coins = coins - ${o.qty * 100}, bucks = bucks + ${pay} where league_id = ${lid} and manager = ${manager}`;
       await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'uncoin', ${o.qty}, ${pay})`;
     } else {

@@ -388,7 +388,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   <p className="flex items-center gap-2 font-semibold">
                     <Coin /> Swap Perren Coin
                   </p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">{money(s.coinRate!, 0)} Bushy Bucks a coin, both ways.</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">Buy at {money(s.coinRate!, 0)} Bushy Bucks a coin, cash in at {money(s.coinBack!, 0)}. Coin goes furthest on hoodies.</p>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <Qty q={coinQ} setQ={setCoinQ} max={coinMax} />
                     <button
@@ -402,10 +402,10 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     <button
                       type="button"
                       disabled={busy || coinQ * 100 > w.coins}
-                      onClick={() => void order({ kind: "uncoin", qty: coinQ }, `Cashed ${coinQ} Perren Coin into ${money(s.coinRate! * coinQ, 0)} Bushy Bucks.`)}
+                      onClick={() => void order({ kind: "uncoin", qty: coinQ }, `Cashed ${coinQ} Perren Coin into ${money(s.coinBack! * coinQ, 0)} Bushy Bucks.`)}
                       className={`${chip} bg-white/10 hover:bg-white/15`}
                     >
-                      Cash in for {money(s.coinRate! * coinQ, 0)} BB
+                      Cash in for {money(s.coinBack! * coinQ, 0)} BB
                     </button>
                   </div>
                 </div>
@@ -771,7 +771,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Coin /> Perren Coin
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. Swap coin and bucks either way at 40 BB a coin.
+              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. Buy coin at 40 BB; cashing it back in pays 30.
             </p>
           </li>
           <li className="rounded-2xl bg-black/20 p-5">

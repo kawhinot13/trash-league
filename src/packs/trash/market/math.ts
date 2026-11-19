@@ -14,7 +14,9 @@
  * All money is kept in hundredths (integers) so nothing drifts.
  */
 export const START_BUCKS = 100_000; // 1,000.00 BB, in hundredths
-export const COIN_RATE = 4_000; // 40.00 BB for 1 Perren Coin
+export const COIN_RATE = 4_000; // 40.00 BB buys 1 Perren Coin
+/** Cashing coin back pays less (30 BB), so coin's natural use is hoodies and swaps can't loop for free. */
+export const COIN_BACK = 3_000;
 export const HOODIE_BASE = 1_000; // 10.00 PC for the first hoodie
 export const HOODIE_STEP = 100; // +1.00 PC for every hoodie already sold in the league
 export const IMPACT = 0.004; // each share held league-wide adds 0.4% to the price
@@ -90,14 +92,15 @@ export function payoutPerShare(before: TeamRecord | undefined, now: TeamRecord, 
   return Math.round(base * upset(ownBefore, oppBefore));
 }
 
-/** Net worth in Bushy Bucks (hundredths): cash, shares at what selling them all would pay, coin at the swap rate. */
+/** Net worth in Bushy Bucks (hundredths): cash, shares at what selling them all would pay, coin at what cashing it in pays. */
 export function netWorth(
   w: { bucks: number; coins: number },
   holdings: { team: string; shares: number }[],
   fair: Map<string, number>,
   held: Map<string, number>,
 ): number {
-  let total = w.bucks + Math.round((w.coins * COIN_RATE) / 100);
+  // Coin counts at what cashing it in would pay.
+  let total = w.bucks + Math.round((w.coins * COIN_BACK) / 100);
   for (const h of holdings) {
     const f = fair.get(h.team);
     if (f && h.shares > 0) total += sellValue(f, held.get(h.team) ?? h.shares, h.shares);

@@ -172,3 +172,11 @@ describe("Trash Exchange player stocks lock during games", () => {
     expect([...lockedTeams(games, "2026-11-21", "2026-11-20", 2)].sort()).toEqual(["BOS", "GSW", "LAL", "NYK"]);
   });
 });
+
+describe("Trash Exchange coin cash-in", () => {
+  it("cashing in pays less than buying, and net worth counts coin at the cash-in rate", async () => {
+    const { COIN_RATE, COIN_BACK, netWorth } = await import("@/packs/trash/market/math");
+    expect(COIN_BACK).toBeLessThan(COIN_RATE);
+    expect(netWorth({ bucks: 0, coins: 200 }, [], new Map(), new Map())).toBe(2 * COIN_BACK);
+  });
+});
