@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, TICKERS, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -370,7 +370,13 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     const dn = season.names.get(id) ?? id;
     return pack?.nicknames[dn] ?? dn;
   };
-  const tick = tickers(recs.map((r) => [r.team, nameOf(r.team)]));
+  const fixedTickers = new Map(
+    recs.flatMap((r) => {
+      const t = TICKERS[(season.names.get(r.team) ?? "").toLowerCase()];
+      return t ? [[r.team, t] as [string, string]] : [];
+    }),
+  );
+  const tick = tickers(recs.map((r) => [r.team, nameOf(r.team)]), fixedTickers);
   const thisWeek = await weekStart(sql);
   // This week's matchups, so each team shows what a win would pay per share (regular season only).
   const week = Math.max(0, ...recs.map((r) => r.wins + r.losses + r.ties)) + 1;

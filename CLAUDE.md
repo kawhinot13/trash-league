@@ -159,6 +159,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   `market_teams.result_at`); closed the rest of the week, no waiting orders (any were refunded once,
   `refundWaitingOnce`). Coin counts shares owned before Monday 7 PM of the paid week (`GAME_TIME_MS`). Team buys/shorts
   from Nov 16-19 were backdated to that Monday 6:59 PM (`backdateOnce`, `market_meta`). Player stocks stay daily.
+  Tickers: made from nicknames, except owner-chosen ones in `TICKERS` (by Sleeper username): JYD, DILL, LAZ, JRIV, LINR.
   Desk shows holdings, then a "Portfolio mix" donut (`Mix`: Bushy Bucks, Teams, Players, Perren Coin at 30,
   Companies, Shorts; fixed slot order, palette validated on --bin-2 with the dataviz validator; hoodies not counted).
   Over/under-performing (Teams tab panel + "expected N wins" per row): `expectedWins` = Pythagorean (exponent 14)

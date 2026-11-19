@@ -238,3 +238,14 @@ describe("Team shorts follow the weekly schedule", () => {
     expect(fillPending(2, 24_000, 30_000)).toEqual({ shares: 0, refund: 24_000 });
   });
 });
+
+describe("Owner-chosen tickers", () => {
+  it("win over made-up ones and stay unique", async () => {
+    const { tickers } = await import("@/packs/trash/market/math");
+    const t = tickers([["1", "Junkyard Dog"], ["2", "Jydd"], ["3", "Edizzle"]], new Map([["1", "JYD"], ["3", "DILL"]]));
+    expect(t.get("1")).toBe("JYD");
+    expect(t.get("3")).toBe("DILL");
+    expect(t.get("2")).not.toBe("JYD");
+    expect(new Set(t.values()).size).toBe(3);
+  });
+});

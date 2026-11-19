@@ -109,10 +109,21 @@ export function netWorth(
 }
 
 /** Short tickers from what the league calls each manager: "Junkyard Dog" -> "JD", "Goodie" -> "GOOD". Unique. */
-export function tickers(names: [string, string][]): Map<string, string> {
+/** Owner-chosen tickers, by Sleeper username (lower case). Everyone else gets one made from their nickname. */
+export const TICKERS: Record<string, string> = {
+  junkyarddoggg: "JYD",
+  edizzle6: "DILL",
+  llazaris7: "LAZ",
+  absbrainscells: "JRIV",
+  milesbridgessgf: "LINR",
+};
+
+export function tickers(names: [string, string][], fixed: Map<string, string> = new Map()): Map<string, string> {
   const out = new Map<string, string>();
-  const used = new Set<string>();
+  const used = new Set<string>(fixed.values());
+  for (const [id, t] of fixed) out.set(id, t);
   for (const [id, name] of names) {
+    if (out.has(id)) continue;
     const words = name.replace(/[^A-Za-z0-9 ]/g, " ").trim().split(/\s+/).filter(Boolean);
     let t = words.length > 1 ? words.map((w) => w[0]).join("").slice(0, 4) : (words[0] ?? "TEAM").slice(0, 4);
     t = t.toUpperCase();
