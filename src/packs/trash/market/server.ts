@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -16,6 +16,11 @@ import {
  * under a per-league lock, so a payout happens once however many people are looking.
  */
 type Sql = Awaited<ReturnType<typeof db>>;
+
+/** The Great Storm's two teams (Sleeper user ids) this season, found by their Sleeper usernames. */
+export function stormIds(season: { names: Map<string, string> }): string[] {
+  return [...season.names].filter(([, n]) => STORM_MEMBERS.includes((n ?? "").toLowerCase())).map(([id]) => id);
+}
 
 /** The current Trash season for a league id, or null when the league isn't Trash's. */
 export async function marketSeason(leagueId: string) {
@@ -181,7 +186,7 @@ async function ensureLots(tx: Sql, lid: string) {
 }
 
 /** Pay dividends for official results since the last check, save today's prices. Call inside a transaction. */
-async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string, number>, save = true) {
+async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string, number>, save = true, storm: string[] = []) {
   await tx`select pg_advisory_xact_lock(hashtext(${"market:" + lid}))`;
   await ensureLots(tx, lid);
   // Results arrive once a week is final, so the week being paid began a week before this one.
@@ -192,6 +197,20 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string
   );
   // Values before this result (official totals as last seen), to tell favourites from underdogs.
   const valueBefore = before.size === recs.length ? fairValues([...before.values()]) : new Map<string, number>();
+  // For The Great Storm: each member's payout per share this time, and whether he won.
+  const paid = new Map<string, { per: number; won: boolean; played: boolean }>();
+  const pay = async (asset: string, per: number, note: string | null) => {
+    // Only shares owned since before that week began.
+    const holders = await tx<{ manager: string; shares: number }[]>`
+      select manager, sum(shares)::int as shares from market_lots
+      where league_id = ${lid} and team = ${asset} and shares > 0 and bought_at < ${paidWeek}
+      group by manager`;
+    for (const h of holders.filter((x) => x.shares > 0)) {
+      const amount = per * h.shares;
+      await tx`update market_wallets set coins = coins + ${amount} where league_id = ${lid} and manager = ${h.manager}`;
+      await tx`insert into market_log (league_id, manager, kind, team, qty, amount, note) values (${lid}, ${h.manager}, 'dividend', ${asset}, ${h.shares}, ${amount}, ${note})`;
+    }
+  };
   for (const r of recs) {
     const base = dividend(before.get(r.team), r);
     let per = base;
@@ -204,23 +223,21 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string
       // Saved as "<opponent id>|<multiplier>"; the ledger shows it as "beat JD ×1.80".
       if (opp && per !== base) note = `${opp}|${(per / base).toFixed(2)}`;
     }
-    if (per > 0) {
-      // Only shares owned since before that week began.
-      const holders = await tx<{ manager: string; shares: number }[]>`
-        select manager, sum(shares)::int as shares from market_lots
-        where league_id = ${lid} and team = ${r.team} and shares > 0 and bought_at < ${paidWeek}
-        group by manager`;
-      for (const h of holders.filter((x) => x.shares > 0)) {
-        const amount = per * h.shares;
-        await tx`update market_wallets set coins = coins + ${amount} where league_id = ${lid} and manager = ${h.manager}`;
-        await tx`insert into market_log (league_id, manager, kind, team, qty, amount, note) values (${lid}, ${h.manager}, 'dividend', ${r.team}, ${h.shares}, ${amount}, ${note})`;
-      }
-    }
+    if (per > 0) await pay(r.team, per, note);
     const b = before.get(r.team);
+    if (b) paid.set(r.team, { per, won: r.wins > b.wins, played: r.wins + r.losses + r.ties > b.wins + b.losses + b.ties });
     if (!b || b.wins !== r.wins || b.losses !== r.losses || b.ties !== r.ties || Math.abs(b.pf - r.pf) > 0.001)
       await tx`
         insert into market_teams (league_id, team, wins, losses, ties, pf) values (${lid}, ${r.team}, ${r.wins}, ${r.losses}, ${r.ties}, ${r.pf})
         on conflict (league_id, team) do update set wins = excluded.wins, losses = excluded.losses, ties = excluded.ties, pf = excluded.pf, synced_at = now()`;
+  }
+  // The Great Storm pays once both members' results are in: the average, 1.5x in a Storm week.
+  if (storm.length === 2) {
+    const [a, b] = storm.map((id) => paid.get(id));
+    if (a?.played && b?.played) {
+      const per = stormPayout(a.per, b.per, a.won && b.won);
+      if (per > 0) await pay(STORM, per, a.won && b.won ? "storm" : null);
+    }
   }
   return save ? savePrices(tx, lid, fair) : { fair, held: await heldByTeam(tx, lid) };
 }
@@ -238,9 +255,12 @@ async function savePrices(tx: Sql, lid: string, fair: Map<string, number>, only?
 }
 
 /** Fair value of every asset: teams from official totals, players from box scores (computed outside any transaction). */
-async function allValues(lid: string, recs: TeamRecord[]) {
+async function allValues(lid: string, recs: TeamRecord[], storm: string[]) {
   const board = await playerBoard(lid, weekOf(recs));
-  return { board, fair: new Map([...fairValues(recs), ...playerValues(board)]) };
+  const teams = fairValues(recs);
+  const fair = new Map([...teams, ...playerValues(board)]);
+  if (storm.length === 2 && teams.has(storm[0]) && teams.has(storm[1])) fair.set(STORM, stormFair(teams.get(storm[0])!, teams.get(storm[1])!));
+  return { board, fair };
 }
 
 /** Whether anything needs writing: new official results, or no prices saved yet today. Reads only. */
@@ -289,8 +309,9 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const sql = await db();
   // Most views write nothing: only new official results (dividends), a new day's prices or a
   // manager's first visit (their desk) open a write.
-  const { board, fair } = await allValues(lid, recs);
-  if (await needsSettle(sql, lid, recs)) await sql.begin((tx) => settle(tx as unknown as Sql, lid, recs, fair));
+  const storm = stormIds(season);
+  const { board, fair } = await allValues(lid, recs, storm);
+  if (await needsSettle(sql, lid, recs)) await sql.begin((tx) => settle(tx as unknown as Sql, lid, recs, fair, true, storm));
   if (manager && season.users.has(manager))
     await sql`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
   const held = await heldByTeam(sql, lid);
@@ -348,6 +369,29 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       };
     })
     .sort((a, b) => b.price - a.price);
+  // The Great Storm: Junkyard Dog + KawhiNot as one stock (before it traded: the average of the two).
+  const stormStock = (() => {
+    const f = fair.get(STORM);
+    if (!f || storm.length !== 2) return null;
+    const h = held.get(STORM) ?? 0;
+    const price = spot(f, h);
+    const [ha, hb] = storm.map((id) => new Map((history.get(id) ?? []).map((x) => [x.d, x.p])));
+    const own = new Map((history.get(STORM) ?? []).map((x) => [x.d, x.p]));
+    const today = todayET();
+    const days = [...new Set([...ha.keys(), ...own.keys()])].filter((d) => d !== today && (own.has(d) || hb.has(d))).sort();
+    const hist = days.map((d) => ({ d, p: own.get(d) ?? stormFair(ha.get(d)!, hb.get(d)!) })).concat({ d: today, p: price });
+    const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const weekAgo = [...hist].reverse().find((x) => x.d <= cut)?.p ?? hist[0]?.p ?? price;
+    const members = storm.map((id) => ({ id, ticker: tick.get(id) ?? "", name: nameOf(id), record: teams.find((t) => t.id === id)?.record ?? "" }));
+    // This week's payout if both win (each member's "a win pays", averaged, x1.5).
+    const pays = storm.map((id) => teams.find((t) => t.id === id)?.vs?.winPays ?? 0);
+    return {
+      id: STORM, ticker: "STORM", name: "The Great Storm", members, fair: f, held: h, price,
+      change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-120),
+      stormWeekPays: pays.every((x) => x > 0) ? stormPayout(pays[0], pays[1], true) : null,
+    };
+  })();
+  tick.set(STORM, "STORM");
   // Player stocks: everyone on a Trash roster now (no coin; the price follows how he plays).
   const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
   const playerName = new Map(board.map((p) => [PLAYER + p.pid, p.name]));
@@ -403,6 +447,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       invested.set(r.team, Number(r.n));
   return {
     teams,
+    storm: stormStock,
     players,
     hoodiesSold,
     nextHoodie: hoodiePrice(hoodiesSold),
@@ -414,6 +459,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       return {
         name: nameOf(l.manager), kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? playerName.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString(),
         upset: opp && x ? { vs: tick.get(opp) ?? null, x: Number(x) } : null,
+        stormWeek: l.note === "storm",
       };
     }),
     wallet: mine
@@ -422,8 +468,8 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
           const value = f ? sellValue(f, held.get(h.team) ?? h.shares, h.shares) : 0;
           return {
             ...h, counting: counting(h.team, h.shares),
-            name: isPlayer(h.team) ? (playerName.get(h.team) ?? "Player") : `${tick.get(h.team) ?? ""} · ${nameOf(h.team)}`,
-            kind: isPlayer(h.team) ? ("player" as const) : ("team" as const),
+            name: isPlayer(h.team) ? (playerName.get(h.team) ?? "Player") : h.team === STORM ? "STORM · The Great Storm" : `${tick.get(h.team) ?? ""} · ${nameOf(h.team)}`,
+            kind: isPlayer(h.team) ? ("player" as const) : h.team === STORM ? ("storm" as const) : ("team" as const),
             value, invested: invested.get(h.team) ?? 0,
           };
         }), worth: standings.find((s) => s.manager === manager)?.worth ?? 0 }
@@ -439,7 +485,8 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   const lid = season.leagueId;
   if (!Number.isInteger(o.qty) || o.qty < 1 || o.qty > MAX_QTY) return { ok: false, error: "Pick an amount between 1 and 500." };
   const recs = await records(lid);
-  const { board, fair: values } = await allValues(lid, recs);
+  const storm = stormIds(season);
+  const { board, fair: values } = await allValues(lid, recs, storm);
   if (isPlayer(o.kind === "buy" || o.kind === "sell" ? o.team : "")) {
     const nba = board.find((p) => PLAYER + p.pid === (o as { team: string }).team)?.nba;
     // Fail closed: if the schedule can't be read, player trades wait.
@@ -451,7 +498,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   return sql.begin(async (t) => {
     const tx = t as unknown as Sql;
     // Every order settles new results first; the full day's prices are written only when they're due.
-    const { fair, held } = await settle(tx, lid, recs, values, await needsSettle(tx, lid, recs));
+    const { fair, held } = await settle(tx, lid, recs, values, await needsSettle(tx, lid, recs), storm);
     await tx`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
     const [recent] = await tx<{ n: number }[]>`
       select count(*)::int as n from market_log where league_id = ${lid} and manager = ${manager} and kind <> 'dividend' and at > now() - interval '1 minute'`;
@@ -467,6 +514,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       if (o.kind === "buy") {
         // Nobody invests in themselves: you can't buy your own team (you can still sell shares you have).
         if (o.team === manager) return { ok: false as const, error: "You can't buy your own team." };
+        if (o.team === STORM && storm.includes(manager)) return { ok: false as const, error: "You're part of The Great Storm, so you can't buy it." };
         const cost = buyCost(f, h, o.qty);
         if (cost > bucks) return { ok: false as const, error: "Not enough Bushy Bucks for that." };
         await tx`update market_wallets set bucks = bucks - ${cost} where league_id = ${lid} and manager = ${manager}`;

@@ -244,6 +244,8 @@ function ledgerLine(f: Entry) {
   if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "coin") return `swapped ${amt} BB for ${f.qty} Perren Coin`;
   if (f.kind === "uncoin") return `cashed ${f.qty} Perren Coin into ${amt} BB`;
+  if (f.kind === "dividend" && f.ticker === "STORM")
+    return `got ${amt} Perren Coin from The Great Storm${f.stormWeek ? " (Storm week: both won, ×1.5)" : ""} (${f.qty} shares)`;
   if (f.kind === "dividend")
     return f.upset
       ? `got ${amt} Perren Coin: ${f.ticker} beat ${f.upset.vs ?? "their opponent"}, ×${f.upset.x.toFixed(2)} (${f.qty} shares)`
@@ -356,7 +358,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                               setOpen(h.team);
                               setQ(1);
                               setNote(null);
-                              setTimeout(() => document.getElementById(`asset-${h.team}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+                              setTimeout(() => document.getElementById(h.kind === "storm" ? "asset-storm" : `asset-${h.team}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
                             }}
                             className="flex w-full cursor-pointer flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3 text-left transition-colors duration-150 hover:bg-white/[0.04]"
                           >
@@ -438,6 +440,100 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
           ) : null}
         </PlayGate>
       </div>
+
+      {/* The Great Storm: Junkyard Dog + KawhiNot as one stock (Trash lore). */}
+      {s.storm ? (
+        <section id="asset-storm" aria-label="The Great Storm" className="mx-auto max-w-6xl scroll-mt-28 px-5 md:px-10">
+          {(() => {
+            const st = s.storm!;
+            const mine = owned(st.id);
+            const isOpen = open === st.id;
+            const cost = buyCost(st.fair, st.held, q);
+            const pay = mine >= q ? sellValue(st.fair, st.held, q) : 0;
+            const member = !!s.me && st.members.some((m) => m.id === s.me);
+            return (
+              <div className="relative overflow-hidden rounded-[28px] border border-[var(--storm)]/25 bg-[radial-gradient(120%_90%_at_85%_0%,rgba(159,182,220,0.22),transparent_60%),linear-gradient(180deg,rgba(20,33,43,0.9),var(--bin))] p-5 md:p-8">
+                <svg aria-hidden viewBox="0 0 120 160" className="pointer-events-none absolute -top-4 right-4 h-40 w-auto opacity-[0.12] md:h-56">
+                  <path d="M70 0 20 90h34L40 160l60-100H62L80 0z" fill="var(--storm)" />
+                </svg>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => {
+                    setOpen(isOpen ? null : st.id);
+                    setQ(1);
+                    setNote(null);
+                  }}
+                  className="relative grid w-full cursor-pointer grid-cols-1 items-end gap-4 text-left sm:grid-cols-[1fr_auto]"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold tracking-[0.25em] text-[var(--storm)] uppercase">Publicly traded · STORM</span>
+                    <span className="mt-1 block font-display text-4xl leading-none font-black md:text-6xl">The Great Storm</span>
+                    <span className="mt-3 flex flex-wrap items-center gap-2">
+                      {st.members.map((m) => (
+                        <span key={m.id} className="inline-flex items-center gap-2 rounded-full bg-black/30 py-1 pr-3 pl-1">
+                          <MgrPhoto id={m.id} alt="" width={28} height={28} className="size-7 rounded-full object-cover" />
+                          <span className="text-sm font-semibold">{m.name}</span>
+                          <span className="text-xs whitespace-nowrap text-[var(--muted)] tabular-nums">{m.record}</span>
+                        </span>
+                      ))}
+                    </span>
+                    <span className="mt-3 block max-w-xl text-sm text-[var(--muted)]">
+                      Before Season 4, Junkyard Dog and KawhiNot warned the league they were coming for the top. One stock for both: worth
+                      the average of the two teams, paying the average of their coin each week, and 1.5 times that in a Storm week, when both
+                      win.
+                      {mine ? <span className="text-[var(--paper)]"> You own {mine}.</span> : null}
+                    </span>
+                  </span>
+                  <span className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 sm:block sm:text-right">
+                    <span className="block sm:ml-auto sm:w-fit"><Spark h={st.history} up={st.change >= 0} /></span>
+                    <span className="block font-display text-4xl leading-none font-black tabular-nums md:text-5xl">{money(st.price)}</span>
+                    <span className={`text-sm tabular-nums ${st.change >= 0 ? UP : DOWN}`}>{pct(st.change)} wk</span>
+                    {st.stormWeekPays ? (
+                      <span className="mt-1 block text-xs text-[var(--storm)] tabular-nums">Storm week pays {money(st.stormWeekPays)} PC a share</span>
+                    ) : null}
+                  </span>
+                </button>
+                {isOpen ? (
+                  <div className="relative mt-5 space-y-3">
+                    <PriceChart h={st.history} ticker="STORM" note="Before STORM traded: the average of Junkyard Dog's and KawhiNot's values each night." />
+                    {w ? (
+                      <div className="flex flex-col gap-3 rounded-2xl bg-black/25 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <Qty q={q} setQ={setQ} max={MAX_QTY} />
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={busy || cost > w.bucks || member}
+                            onClick={() => void order({ kind: "buy", team: st.id, qty: q }, `Bought ${q} STORM.`)}
+                            className={`${chip} bg-[var(--storm)] text-[var(--bin)]`}
+                          >
+                            {member ? "You're part of the Storm" : `Buy for ${money(cost)} BB`}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy || mine < q}
+                            onClick={() => void order({ kind: "sell", team: st.id, qty: q }, `Sold ${q} STORM.`)}
+                            className={`${chip} bg-white/10 hover:bg-white/15`}
+                          >
+                            {mine >= q ? `Sell for ${money(pay)} BB` : mine ? `You own ${mine}` : "Nothing to sell"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
+                    )}
+                    {note && open === st.id ? (
+                      <p role="status" className={`text-sm font-semibold ${note.ok ? UP : DOWN}`}>
+                        {note.text}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })()}
+        </section>
+      ) : null}
 
       {/* The board: teams or players */}
       <div className="mx-auto max-w-6xl px-5 md:px-10">

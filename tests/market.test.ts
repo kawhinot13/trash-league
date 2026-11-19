@@ -180,3 +180,13 @@ describe("Trash Exchange coin cash-in", () => {
     expect(netWorth({ bucks: 0, coins: 200 }, [], new Map(), new Map())).toBe(2 * COIN_BACK);
   });
 });
+
+describe("The Great Storm", () => {
+  it("is worth the average of both teams and pays 1.5x when both win", async () => {
+    const { stormFair, stormPayout } = await import("@/packs/trash/market/math");
+    expect(stormFair(12_000, 11_000)).toBe(11_500);
+    expect(stormPayout(100, 0, false)).toBe(50); // one wins
+    expect(stormPayout(90, 110, true)).toBe(150); // Storm week
+    expect(stormPayout(0, 0, false)).toBe(0);
+  });
+});

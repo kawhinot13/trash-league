@@ -261,3 +261,14 @@ export function lockedTeams(games: NbaGame[], today: string, yesterday: string, 
   }
   return out;
 }
+
+/**
+ * The Great Storm (STORM): one stock for Junkyard Dog and KawhiNot together, the two teams that
+ * warned the league before Season 4 that they were coming for the top. Its value is the average of
+ * the two team values; each week it pays the average of what their shares pay, and 1.5 times that
+ * in a Storm week (both of them win).
+ */
+export const STORM = "storm";
+export const STORM_MEMBERS = ["junkyarddoggg", "kawhinot13"];
+export const stormFair = (a: number, b: number) => Math.round((a + b) / 2);
+export const stormPayout = (a: number, b: number, bothWon: boolean) => Math.round(((a + b) / 2) * (bothWon ? 1.5 : 1));

@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: The Great Storm (STORM)
+- Owner wanted a tradeable "company" for Junkyard Dog + KawhiNot, who warned the league before Season 4 they were
+  coming for the top. One stock: worth the average of the two team values; pays the average of their per-share coin
+  each week, x1.5 in a Storm week (both win). Members can't buy it (same spirit as no buying your own team).
+  Chart before it traded = nightly average of the two. Rejected: sum of both (would dwarf every other stock).
+
 ## 2026-11-19: Perren Coin cashes in at 30 BB (buys at 40)
 - Owner agreed: an even 40/40 swap made coin just another name for bucks and hoodies one option among many. Cashing
   coin back now pays 30 BB, so reinvesting is possible but costs something, coin's natural use is hoodies, and

@@ -148,6 +148,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   rostered players plus anyone who has played (dropped players stay sellable); computed outside the order lock.
   Player charts are daily: value after each day's games from box scores (from his 5th game), then market closes;
   every chart (teams too) ends on today's live price.
+  The Great Storm (asset `storm`, ticker STORM; owner's lore: Junkyard Dog + KawhiNot warned the league before Season 4):
+  value = average of the two team values (`stormFair`), coin = average of their per-share payouts, x1.5 when both win
+  (`stormPayout`, ledger "Storm week"); same lots/curve; the two members can't buy it (`STORM_MEMBERS` usernames).
   Player trading locks while his NBA team plays (`lockedTeams`: from tip-off per Sleeper's schedule, or 7 PM ET on a
   game day, until 6 AM ET next day; fails closed if the schedule can't be read). Trading is otherwise any time, daily.
   Charts (sparkline per row, full chart with 1W/1M/All + crosshair when a team is open): `priceHistory` = market
