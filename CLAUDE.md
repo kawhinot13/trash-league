@@ -139,8 +139,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   hoodies, then net worth). Price = fair value from official PF + record (`fairValues`) x (1 + 0.4% per share held
   league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run
   under a per-league lock. Managers only, as their linked Sleeper user (PlayGate); nobody can buy their own team. Other leagues: 404 / disabled.
-  Coin goes only to shares owned before the paid week began (Monday 12am ET; `market_lots`, `ownedBefore`); sells take
-  the newest shares first. Every transaction (buys, sells, swaps, hoodies, payouts) is public in "The ledger"; tapping a name (standings or
+  Coin goes only to shares owned before the paid week's Monday 7 PM ET (`market_lots`); sells take the newest first. Every transaction (buys, sells, swaps, hoodies, payouts) is public in "The ledger"; tapping a name (standings or
   ledger) opens that manager's public portfolio (`portfolios`: cash, coin, hoodies, holdings, shorts at today's values).
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
   Player stocks (owner's call 2026-11-18, play money only, no entry fee/prizes, Trash only): asset id `p:<pid>`, price =
@@ -155,9 +154,12 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Shorts (teams + players, not STORM; owner's call 2026-11-19): `market_shorts`, collateral = stats-only fair value
   (not spot, so buying can't set one up), close pays `shortValue` = 2x entry - value now, clamped 0..2x; no coin;
   not your own team or own-roster players; player shorts obey the game lock; counted in net worth.
-  Team shorts follow the weekly schedule (`teamShortOpenNow`): open now only Monday ET before 7 PM once last week's
-  result posted (`market_teams.result_at`); otherwise pending (`market_shorts.pending`, BB reserved) and filled at the
-  new value when the team's next result posts (`fillPending`, refund the rest); cancellable any time.
+  Team stocks (teams + STORM) trade Mondays only (owner's call 2026-11-19): every team order (buy, sell, short,
+  close) goes through right away only Monday ET before 7 PM once last week's results posted (`teamWindowOpen`,
+  `market_teams.result_at`); otherwise it waits (`market_orders`, BB set aside; shorts in `market_shorts.pending`) and
+  fills at the new prices when the next result posts (`fillOrders`, `fillPending`); cancel any time. Coin counts shares
+  owned before Monday 7 PM of the paid week (`GAME_TIME_MS`). Team buys/shorts from Nov 16-19 were backdated to that
+  Monday 6:59 PM (`backdateOnce`, `market_meta`). Player stocks stay daily (game lock only).
   Over/under-performing (Teams tab panel + "expected N wins" per row): `expectedWins` = Pythagorean (exponent 14)
   from official PF and PA; luck = actual wins minus expected. Official totals only.
   Player trading locks while his NBA team plays (`lockedTeams`: from tip-off per Sleeper's schedule, or 7 PM ET on a

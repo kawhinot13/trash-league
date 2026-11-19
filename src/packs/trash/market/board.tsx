@@ -244,6 +244,9 @@ function ledgerLine(f: Entry) {
   if (f.kind === "buy") return `bought ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "short") return `shorted ${f.qty} ${f.ticker}, putting up ${amt} BB`;
+  if (f.kind === "q-buy") return `ordered ${f.qty} ${f.ticker} at Monday's price (${amt} BB set aside)`;
+  if (f.kind === "q-sell") return `ordered to sell ${f.qty} ${f.ticker} at Monday's price`;
+  if (f.kind === "q-cover") return `ordered to close a ${f.qty}-share ${f.ticker} short at Monday's price`;
   if (f.kind === "shortq") return `placed a ${f.qty}-share ${f.ticker} short to open at next week's price (${amt} BB set aside)`;
   if (f.kind === "cancel") return `cancelled a waiting ${f.ticker} short (${amt} BB back)`;
   if (f.kind === "cover") return `closed a ${f.qty}-share ${f.ticker} short for ${amt} BB`;
@@ -402,11 +405,11 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
         >
           {blocked ?? (waits ? `Short next week (${money(put)} BB)` : `Short for ${money(put)} BB`)}
         </button>
-        {sh?.waiting ? (
+        {sh?.waiting || w.orders?.some((x) => x.asset === id) ? (
           <button
             type="button"
             disabled={busy}
-            onClick={() => void order({ kind: "cancel", team: id, qty: 1 }, `Cancelled the waiting ${label} short.`)}
+            onClick={() => void order({ kind: "cancel", team: id, qty: 1 }, `Cancelled what was waiting on ${label}.`)}
             className={`${chip} bg-white/10 hover:bg-white/15`}
           >
             Cancel waiting
@@ -419,7 +422,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
             onClick={() => void order({ kind: "cover", team: id, qty: q }, `Closed ${q} ${label} short.`)}
             className={`${chip} bg-white/10 hover:bg-white/15`}
           >
-            {sh.shares >= q ? `Close for ${money(back)} BB` : `Short ${sh.shares}`}
+            {sh.shares >= q ? (waits ? `Close Monday (~${money(back)} BB)` : `Close for ${money(back)} BB`) : `Short ${sh.shares}`}
           </button>
         ) : null}
       </div>
@@ -491,7 +494,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                               <span className="font-semibold break-words">{h.name}</span>{" "}
                               <span className="text-sm text-[var(--muted)]">
                                 {h.shares} {h.shares === 1 ? "share" : "shares"}
-                                {h.kind === "team" && h.counting < h.shares ? ` · ${h.shares - h.counting} count next week` : ""}
+
                               </span>
                             </span>
                             <span className="text-right tabular-nums">
@@ -684,7 +687,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                           <span className={t.vs.winPays > 100 ? "font-semibold text-[var(--paper)]" : ""}>{money(t.vs.winPays)} PC</span> a share
                         </span>
                       ) : null}
-                      {fresh(t.id) ? <span className="ml-1.5 inline-block rounded-full bg-white/10 px-2 py-0.5 text-xs text-[var(--paper)]">{fresh(t.id)} count next week</span> : null}
+                      {false && fresh(t.id) ? <span className="ml-1.5 inline-block rounded-full bg-white/10 px-2 py-0.5 text-xs text-[var(--paper)]">{fresh(t.id)} count next week</span> : null}
                     </span>
                   </span>
                   <span>
@@ -706,21 +709,33 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                           <button
                             type="button"
                             disabled={busy || cost > w.bucks || t.id === s.me}
-                            onClick={() => void order({ kind: "buy", team: t.id, qty: q }, `Bought ${q} ${t.ticker}.`)}
+                            onClick={() => void order({ kind: "buy", team: t.id, qty: q }, s.teamWindow ? `Bought ${q} ${t.ticker}.` : `Order placed: ${q} ${t.ticker} at Monday's price.`)}
                             className={`${chip} bg-[var(--paper)] text-[var(--bin)]`}
                           >
-                            {t.id === s.me ? "Can't buy your own team" : `Buy for ${money(cost)} BB`}
+                            {t.id === s.me ? "Can't buy your own team" : s.teamWindow ? `Buy for ${money(cost)} BB` : `Buy Monday (~${money(cost)} BB)`}
                           </button>
                           <button
                             type="button"
                             disabled={busy || mine < q}
-                            onClick={() => void order({ kind: "sell", team: t.id, qty: q }, `Sold ${q} ${t.ticker}.`)}
+                            onClick={() => void order({ kind: "sell", team: t.id, qty: q }, s.teamWindow ? `Sold ${q} ${t.ticker}.` : `Sell order placed: ${q} ${t.ticker} at Monday's price.`)}
                             className={`${chip} bg-white/10 hover:bg-white/15`}
                           >
-                            {mine >= q ? `Sell for ${money(pay)} BB` : mine ? `You own ${mine}` : "Nothing to sell"}
+                            {mine >= q ? (s.teamWindow ? `Sell for ${money(pay)} BB` : `Sell Monday (~${money(pay)} BB)`) : mine ? `You own ${mine}` : "Nothing to sell"}
                           </button>
                         </div>
                       </div>
+                    ) : null}
+                    {w && !s.teamWindow ? (
+                      <p className="text-xs text-[var(--muted)]">
+                        Team stocks trade Mondays before 7 PM Eastern, once last week&apos;s results are in. Orders placed now wait and go through at
+                        Monday&apos;s price.
+                        {w.orders?.filter((x) => x.asset === t.id).map((x, i) => (
+                          <span key={i} className="block text-[var(--paper)]">
+                            Waiting: {x.kind === "buy" ? "buy" : x.kind === "sell" ? "sell" : "close short on"} {x.qty} {t.ticker}
+                            {x.reserved ? ` (${money(x.reserved)} BB set aside)` : ""}
+                          </span>
+                        ))}
+                      </p>
                     ) : null}
                     {w ? shortControls(t.id, t.fair, t.ticker, t.id === s.me ? "Can't short your own team" : null, !t.shortNow) : (
                       <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
@@ -1077,7 +1092,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Coin /> Perren Coin
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. Buy coin at 40 BB; cashing it back in pays 30. Shorts (teams and players): put up today&apos;s value, and closing pays you what the price fell (or costs what it rose, never more than you put up); no coin either way; not your own team or roster.
+              Paid out when a week goes final, for every share you owned before that week&apos;s Monday 7 PM game time. Team stocks trade Mondays before 7 PM Eastern; orders placed other days go through at Monday&apos;s price. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Buy coin at 40 BB; cashing it back in pays 30. Shorts (teams and players): put up today&apos;s value, and closing pays you what the price fell (or costs what it rose, never more than you put up); no coin either way; not your own team or roster.
             </p>
           </li>
           <li className="rounded-2xl bg-black/20 p-5">

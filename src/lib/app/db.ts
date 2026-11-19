@@ -309,6 +309,20 @@ alter table market_shorts add column if not exists pending boolean not null defa
 alter table market_shorts add column if not exists reserved bigint not null default 0;
 -- When a team's record last changed (a weekly result posted), for the Monday short window.
 alter table market_teams add column if not exists result_at timestamptz;
+-- Team orders placed outside the Monday window wait here and go through at Monday's prices (reserved = BB set aside).
+create table if not exists market_orders (
+  id         bigserial primary key,
+  league_id  text not null,
+  manager    text not null,
+  kind       text not null,             -- buy | sell | cover
+  asset      text not null,
+  qty        int not null,
+  reserved   bigint not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists market_orders_league on market_orders(league_id);
+-- One-time market changes already applied, per league.
+create table if not exists market_meta (league_id text not null, key text not null, primary key (league_id, key));
 -- What a payout was for (e.g. "beat KAWH x1.80"), shown in the ledger.
 alter table market_log add column if not exists note text;
 `;

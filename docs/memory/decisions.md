@@ -4,6 +4,14 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: Team stocks trade on Mondays
+- Mixed rules confused the owner (instant buys at mid-week prices earning coin a week later; waiting shorts; instant
+  sells that could dodge a known loss). Now every team order goes through only Monday before 7 PM ET once last week's
+  results are in; anything placed at other times waits and fills at the prices right after the next result, with
+  BB set aside and cancel any time. So every team share is bought before that week's games and earns that week's coin
+  (cutoff Monday 7 PM). Owner asked that this week's team buys and shorts count as if made that Monday: backdated
+  once to Mon Nov 16 6:59 PM ET, waiting shorts opened at their placed value. Players stay daily.
+
 ## 2026-11-19: Team shorts follow the weekly schedule
 - Gap: short a team late in a week once its loss is obvious, close after the result posts. Owner's fix: team shorts
   open right away only on Monday before 7 PM ET (after last week's result posted); otherwise they wait, with the BB

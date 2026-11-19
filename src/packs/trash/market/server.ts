@@ -147,6 +147,24 @@ async function heldByTeam(tx: Sql, lid: string): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.team, Number(r.n)]));
 }
 
+/** Team trading closes, and a week's coin starts counting, at Monday 7 PM Eastern (19 h after the week starts). */
+const GAME_TIME_MS = 19 * 3_600_000;
+
+/**
+ * One-time (owner's call 2026-11-19, when team stocks went Monday-only): team shares bought and team
+ * shorts placed during the week of Nov 16 are treated as if they happened that Monday before games, so
+ * they count for that week. Waiting team shorts open at the value they were placed at.
+ */
+async function backdateOnce(tx: Sql, lid: string) {
+  const done = await tx`insert into market_meta (league_id, key) values (${lid}, 'monday-only-2026-11-16') on conflict do nothing returning key`;
+  if (!done.length) return;
+  const monday = new Date("2026-11-16T23:59:00Z"); // 6:59 PM Eastern, Monday Nov 16
+  await tx`update market_lots set bought_at = ${monday} where league_id = ${lid} and team not like 'p:%' and bought_at > ${monday}`;
+  await tx`
+    update market_shorts set pending = false, entry = reserved / shares, reserved = 0, opened_at = ${monday}
+    where league_id = ${lid} and pending and asset not like 'p:%' and shares > 0`;
+}
+
 /** Monday 12am Eastern of the current week (Trash's weeks run Monday to Sunday). */
 async function weekStart(tx: Sql): Promise<Date> {
   const [r] = await tx<{ at: Date }[]>`select date_trunc('week', now() at time zone 'America/New_York') at time zone 'America/New_York' as at`;
@@ -187,7 +205,9 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string
   await tx`select pg_advisory_xact_lock(hashtext(${"market:" + lid}))`;
   await ensureLots(tx, lid);
   // Results arrive once a week is final, so the week being paid began a week before this one.
-  const paidWeek = new Date((await weekStart(tx)).getTime() - 7 * 86_400_000);
+  // A week's coin counts shares owned before that week's games: Monday 7 PM Eastern (the end of the trading window).
+  const paidWeek = new Date((await weekStart(tx)).getTime() - 7 * 86_400_000 + GAME_TIME_MS);
+  await backdateOnce(tx, lid);
   const before = new Map(
     (await tx<{ team: string; wins: number; losses: number; ties: number; pf: string }[]>`
       select team, wins, losses, ties, pf from market_teams where league_id = ${lid}`).map((r) => [r.team, { ...r, pf: Number(r.pf) }]),
@@ -245,6 +265,8 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string
       }
     }
   }
+  // Monday's open: a new weekly result means waiting team orders go through now, at the new prices.
+  if ([...paid.values()].some((x) => x.played)) await fillOrders(tx, { lid, fair, held: await heldByTeam(tx, lid), board: [], storm });
   // The Great Storm pays once both members' results are in: the average, 1.5x in a Storm week.
   if (storm.length === 2) {
     const [a, b] = storm.map((id) => paid.get(id));
@@ -355,7 +377,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       : Promise.resolve([]),
   ]);
   // Your shares bought this week: they start earning coin next week.
-  const since = thisWeek.getTime();
+  const since = thisWeek.getTime() + GAME_TIME_MS;
   const lotsOf = (team: string) => lots.filter((l) => l.team === team).map((l) => ({ id: Number(l.id), shares: l.shares, at: l.bought_at.getTime() }));
   const counting = (team: string, shares: number) => (lots.some((l) => l.team === team) ? ownedBefore(lotsOf(team), since) : shares);
   const saved = snaps.flatMap((r) => (r.team ? [{ day: iso(r.day), team: r.team, wins: r.wins, losses: r.losses, ties: r.ties, pf: Number(r.pf), wd: r.weeks_done }] : []));
@@ -371,6 +393,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const nowET = new Date();
   const dayET = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(nowET));
   const hourET = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(nowET));
+  const teamOpen = teamShortOpenNow(dayET, hourET, [...posted.values()].some(Boolean));
   const teams = recs
     .map((r) => {
       const f = fair.get(r.team)!;
@@ -390,7 +413,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         luck: Math.round((r.wins + r.ties / 2 - expectedWins(r.pf, r.pa ?? 0, r.wins + r.losses + r.ties)) * 10) / 10,
         fair: f, held: h, price, buy1: buyCost(f, h, 1), sell1: h > 0 ? sellValue(f, h, 1) : 0,
         change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-120),
-        shortNow: teamShortOpenNow(dayET, hourET, posted.get(r.team) ?? false),
+        shortNow: teamOpen,
         vs: vsNow.has(r.team) ? { id: vsNow.get(r.team)!, ticker: tick.get(vsNow.get(r.team)!) ?? null, winPays: Math.round(100 * upset(f, fair.get(vsNow.get(r.team)!) ?? f)) } : null,
       };
     })
@@ -470,9 +493,18 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const waitingOf = (m: string) => allShorts.filter((r) => r.pending && r.manager === m);
   const shortWorth = (m: string) =>
     shortRows.filter((r) => r.manager === m).reduce((t, r) => t + (fair.has(r.asset) ? shortValue(Number(r.entry), fair.get(r.asset)!, r.shares) : Number(r.entry) * r.shares), 0);
-  for (const st of standings) st.worth += shortWorth(st.manager) + waitingOf(st.manager).reduce((t, r) => t + Number(r.reserved), 0);
+  // Bucks set aside for Monday orders still belong to their owner.
+  const setAside = new Map(
+    (await sql<{ manager: string; n: string }[]>`select manager, sum(reserved)::text as n from market_orders where league_id = ${lid} group by manager`).map((r) => [r.manager, Number(r.n)]),
+  );
+  for (const st of standings) st.worth += shortWorth(st.manager) + waitingOf(st.manager).reduce((t, r) => t + Number(r.reserved), 0) + (setAside.get(st.manager) ?? 0);
   standings.sort((a, b) => b.hoodies - a.hoodies || b.worth - a.worth);
   const mine = manager ? wallets.find((w) => w.manager === manager) : undefined;
+  // The viewer's team orders waiting for Monday.
+  const myOrders = manager
+    ? (await sql<{ kind: string; asset: string; qty: number; reserved: string }[]>`
+        select kind, asset, qty, reserved::text from market_orders where league_id = ${lid} and manager = ${manager} order by created_at`).map((r) => ({ kind: r.kind, asset: r.asset, qty: r.qty, reserved: Number(r.reserved) }))
+    : [];
   const assetName = (id: string) => (isPlayer(id) ? (playerName.get(id) ?? "Player") : id === STORM ? "STORM · The Great Storm" : `${tick.get(id) ?? ""} · ${nameOf(id)}`);
   const myShorts = manager
     ? [...new Set(allShorts.filter((r) => r.manager === manager).map((r) => r.asset))].map((asset) => {
@@ -522,6 +554,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     coinBack: COIN_BACK,
     standings,
     portfolios,
+    teamWindow: teamOpen,
     feed: log.map((l) => {
       const [opp, x] = l.note?.split("|") ?? [];
       return {
@@ -540,7 +573,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
             kind: isPlayer(h.team) ? ("player" as const) : h.team === STORM ? ("storm" as const) : ("team" as const),
             value, invested: invested.get(h.team) ?? 0,
           };
-        }), worth: standings.find((s) => s.manager === manager)?.worth ?? 0, shorts: myShorts }
+        }), worth: standings.find((s) => s.manager === manager)?.worth ?? 0, shorts: myShorts, orders: myOrders }
       : null,
     status: season.users.size ? "open" : "closed",
   };
@@ -571,6 +604,84 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
     const [recent] = await tx<{ n: number }[]>`
       select count(*)::int as n from market_log where league_id = ${lid} and manager = ${manager} and kind <> 'dividend' and at > now() - interval '1 minute'`;
     if (recent.n >= 30) return { ok: false as const, error: "Easy, trader. Too many orders in a minute; try again shortly." };
+    const ctx: Ctx = { lid, fair, held, board, storm };
+    // Team stocks trade on Mondays (see teamWindowOpen); placed any other time, an order waits for Monday's price.
+    if ("team" in o && !isPlayer(o.team) && (o.kind === "buy" || o.kind === "sell" || o.kind === "cover") && !(await teamWindowOpen(tx, lid)))
+      return queueOrder(tx, ctx, manager, o as { kind: "buy" | "sell" | "cover"; team: string; qty: number });
+    return execute(tx, ctx, manager, o);
+  });
+}
+
+type Ctx = { lid: string; fair: Map<string, number>; held: Map<string, number>; board: PlayerLine[]; storm: string[] };
+
+/** Monday before 7 PM Eastern, once last week's results have posted: team orders go through right away. */
+async function teamWindowOpen(tx: Sql, lid: string): Promise<boolean> {
+  const [{ posted }] = await tx<{ posted: boolean }[]>`
+    select coalesce(max(result_at) >= ${await weekStart(tx)}, false) as posted from market_teams where league_id = ${lid}`;
+  const now = new Date();
+  const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(now));
+  const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
+  return teamShortOpenNow(day, hour, posted);
+}
+
+/** A team order placed outside the window: set the bucks (or check the shares) aside and wait for Monday. */
+async function queueOrder(tx: Sql, ctx: Ctx, manager: string, o: { kind: "buy" | "sell" | "cover"; team: string; qty: number }) {
+  const { lid, fair, held, storm } = ctx;
+  const f = fair.get(o.team);
+  if (!f) return { ok: false as const, error: "That isn't on the board." };
+  const [{ queued }] = await tx<{ queued: number }[]>`
+    select coalesce(sum(qty), 0)::int as queued from market_orders where league_id = ${lid} and manager = ${manager} and asset = ${o.team} and kind = ${o.kind}`;
+  let reserved = 0;
+  if (o.kind === "buy") {
+    if (o.team === manager) return { ok: false as const, error: "You can't buy your own team." };
+    if (o.team === STORM && storm.includes(manager)) return { ok: false as const, error: "You're part of The Great Storm, so you can't buy it." };
+    reserved = buyCost(f, held.get(o.team) ?? 0, o.qty);
+    const [w] = await tx<{ bucks: string }[]>`select bucks::text from market_wallets where league_id = ${lid} and manager = ${manager} for update`;
+    if (reserved > Number(w.bucks)) return { ok: false as const, error: "Not enough Bushy Bucks to set aside for that." };
+    await tx`update market_wallets set bucks = bucks - ${reserved} where league_id = ${lid} and manager = ${manager}`;
+  } else if (o.kind === "sell") {
+    const [mine] = await tx<{ shares: number }[]>`select shares from market_holdings where league_id = ${lid} and manager = ${manager} and team = ${o.team}`;
+    if (!mine || mine.shares - queued < o.qty) return { ok: false as const, error: "You don't have that many shares to sell." };
+  } else {
+    const [mine] = await tx<{ n: number }[]>`
+      select coalesce(sum(shares), 0)::int as n from market_shorts where league_id = ${lid} and manager = ${manager} and asset = ${o.team} and not pending`;
+    if (mine.n - queued < o.qty) return { ok: false as const, error: "You aren't short that many shares." };
+  }
+  await tx`insert into market_orders (league_id, manager, kind, asset, qty, reserved) values (${lid}, ${manager}, ${o.kind}, ${o.team}, ${o.qty}, ${reserved})`;
+  await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, ${"q-" + o.kind}, ${o.team}, ${o.qty}, ${reserved})`;
+  return { ok: true as const };
+}
+
+/** Monday's open: every waiting team order goes through at the new prices, oldest first. */
+async function fillOrders(tx: Sql, ctx: Ctx) {
+  const orders = await tx<{ id: string; manager: string; kind: "buy" | "sell" | "cover"; asset: string; qty: number; reserved: string }[]>`
+    select id::text, manager, kind, asset, qty, reserved::text from market_orders where league_id = ${ctx.lid} order by created_at, id for update`;
+  for (const od of orders) {
+    await tx`delete from market_orders where id = ${od.id}`;
+    const f = ctx.fair.get(od.asset);
+    let qty = od.qty;
+    if (od.kind === "buy") {
+      // Give the set-aside bucks back, then buy as many as they cover at Monday's price (up to the order).
+      await tx`update market_wallets set bucks = bucks + ${Number(od.reserved)} where league_id = ${ctx.lid} and manager = ${od.manager}`;
+      if (!f) continue;
+      const h = ctx.held.get(od.asset) ?? 0;
+      while (qty > 0 && buyCost(f, h, qty) > Number(od.reserved)) qty--;
+    } else if (od.kind === "sell") {
+      const [mine] = await tx<{ shares: number }[]>`select shares from market_holdings where league_id = ${ctx.lid} and manager = ${od.manager} and team = ${od.asset}`;
+      qty = Math.min(qty, mine?.shares ?? 0);
+    } else {
+      const [mine] = await tx<{ n: number }[]>`
+        select coalesce(sum(shares), 0)::int as n from market_shorts where league_id = ${ctx.lid} and manager = ${od.manager} and asset = ${od.asset} and not pending`;
+      qty = Math.min(qty, mine.n);
+    }
+    if (qty > 0) await execute(tx, ctx, od.manager, { kind: od.kind, team: od.asset, qty });
+  }
+}
+
+/** Carry out one order now (inside the per-league lock). */
+async function execute(tx: Sql, ctx: Ctx, manager: string, o: Order): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { lid, fair, held, board, storm } = ctx;
+  {
     const [w] = await tx<{ bucks: string; coins: string; hoodies: number }[]>`
       select bucks::text, coins::text, hoodies from market_wallets where league_id = ${lid} and manager = ${manager} for update`;
     const bucks = Number(w.bucks);
@@ -607,13 +718,16 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
         await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'sell', ${o.team}, ${o.qty}, ${pay})`;
       }
     } else if (o.kind === "cancel") {
+      // Cancel everything waiting on this stock: Monday orders and waiting shorts.
       const waiting = await tx<{ id: string; reserved: string }[]>`
         select id::text, reserved::text from market_shorts where league_id = ${lid} and manager = ${manager} and asset = ${o.team} and pending for update`;
-      if (!waiting.length) return { ok: false as const, error: "Nothing waiting to cancel." };
-      const back = waiting.reduce((t, w) => t + Number(w.reserved), 0);
+      const orders = await tx<{ reserved: string }[]>`
+        delete from market_orders where league_id = ${lid} and manager = ${manager} and asset = ${o.team} returning reserved::text`;
+      if (!waiting.length && !orders.length) return { ok: false as const, error: "Nothing waiting to cancel." };
+      const back = waiting.reduce((t, w) => t + Number(w.reserved), 0) + orders.reduce((t, w) => t + Number(w.reserved), 0);
       await tx`delete from market_shorts where league_id = ${lid} and manager = ${manager} and asset = ${o.team} and pending`;
       await tx`update market_wallets set bucks = bucks + ${back} where league_id = ${lid} and manager = ${manager}`;
-      await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'cancel', ${o.team}, ${waiting.length}, ${back})`;
+      await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'cancel', ${o.team}, ${waiting.length + orders.length}, ${back})`;
     } else if (o.kind === "short" || o.kind === "cover") {
       // Shorts work off the stats-only value (no buying demand), pay no coin, and can't lose more than was put up.
       const f = fair.get(o.team);
@@ -629,12 +743,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
         await tx`update market_wallets set bucks = bucks - ${put} where league_id = ${lid} and manager = ${manager}`;
         if (!isPlayer(o.team)) {
           // Team shorts: right away only Monday before game time with last week's result in; otherwise they wait.
-          const now = new Date();
-          const [{ posted }] = await tx<{ posted: boolean }[]>`
-            select coalesce(max(result_at) >= ${await weekStart(tx)}, false) as posted from market_teams where league_id = ${lid} and team = ${o.team}`;
-          const day = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(now);
-          const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
-          if (!teamShortOpenNow(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(day), hour, posted)) {
+          if (!(await teamWindowOpen(tx, lid))) {
             await tx`insert into market_shorts (league_id, manager, asset, shares, entry, pending, reserved) values (${lid}, ${manager}, ${o.team}, ${o.qty}, 0, true, ${put})`;
             await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'shortq', ${o.team}, ${o.qty}, ${put})`;
             return { ok: true as const };
@@ -680,7 +789,10 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       await tx`insert into market_log (league_id, manager, kind, qty, amount) values (${lid}, ${manager}, 'hoodie', ${o.qty}, ${cost})`;
     }
     // The day's price of what was traded follows the order (demand moves it).
-    if (o.kind === "buy" || o.kind === "sell") await savePrices(tx, lid, fair, [o.team]);
+    if (o.kind === "buy" || o.kind === "sell") {
+      held.set(o.team, (held.get(o.team) ?? 0) + (o.kind === "buy" ? o.qty : -o.qty));
+      await savePrices(tx, lid, fair, [o.team]);
+    }
     return { ok: true as const };
-  });
+  }
 }
