@@ -166,3 +166,16 @@ describe("Dumpster Dive written calendar", () => {
     }
   });
 });
+
+describe("Division tips", () => {
+  it("names the NBA or NFL division", async () => {
+    const { divisionOf } = await import("@/lib/core/lineup");
+    expect(divisionOf("DAL")).toBe("the Southwest Division");
+    expect(divisionOf("NYK")).toBe("the Atlantic Division");
+    expect(divisionOf("KC", "nfl")).toBe("the AFC West");
+    expect(divisionOf("FA")).toBeNull();
+    // every NBA team is in exactly one division
+    const all = ["ATL","BOS","BKN","CHA","CHI","CLE","DAL","DEN","DET","GSW","HOU","IND","LAC","LAL","MEM","MIA","MIL","MIN","NOP","NYK","OKC","ORL","PHI","PHX","POR","SAC","SAS","TOR","UTA","WAS"];
+    for (const t of all) expect(divisionOf(t), t).not.toBeNull();
+  });
+});

@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/re
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Players } from "@/lib/extras";
 import type { Suspect } from "@/lib/lineup";
+import { divisionOf } from "@/lib/core/lineup";
 import { sfx } from "./dive/sfx";
 import { Face } from "./player";
 import { Leaderboard, type Person } from "./leaderboard";
@@ -494,7 +495,7 @@ export function Lineup({
           <div className="mt-3 space-y-1.5" aria-label="Tip line">
             {target
               ? [
-                  { at: 3, label: "Tip", text: target.conf ? `Plays in the ${target.conf}` : "Currently a free agent" },
+                  { at: 3, label: "Tip", text: !target.conf ? "Currently a free agent" : `Plays in ${divisionOf(target.team, brand.sport ?? "nba") ?? `the ${target.conf}`}` },
                   {
                     at: 5,
                     label: "Tip",

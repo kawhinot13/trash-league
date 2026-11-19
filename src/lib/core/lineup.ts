@@ -25,6 +25,32 @@ export type Suspect = {
 };
 
 export const EAST = new Set(["ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND", "MIA", "MIL", "NYK", "ORL", "PHI", "TOR", "WAS"]);
+/** NBA and NFL divisions by team abbreviation (Sleeper's), for "Plays in the Southwest Division" tips. */
+const NBA_DIVISIONS: Record<string, string[]> = {
+  Atlantic: ["BOS", "BKN", "NYK", "PHI", "TOR"],
+  Central: ["CHI", "CLE", "DET", "IND", "MIL"],
+  Southeast: ["ATL", "CHA", "MIA", "ORL", "WAS"],
+  Northwest: ["DEN", "MIN", "OKC", "POR", "UTA"],
+  Pacific: ["GSW", "LAC", "LAL", "PHX", "SAC"],
+  Southwest: ["DAL", "HOU", "MEM", "NOP", "SAS"],
+};
+const NFL_DIVISIONS: Record<string, string[]> = {
+  "AFC East": ["BUF", "MIA", "NE", "NYJ"],
+  "AFC North": ["BAL", "CIN", "CLE", "PIT"],
+  "AFC South": ["HOU", "IND", "JAX", "TEN"],
+  "AFC West": ["DEN", "KC", "LV", "LAC"],
+  "NFC East": ["DAL", "NYG", "PHI", "WAS"],
+  "NFC North": ["CHI", "DET", "GB", "MIN"],
+  "NFC South": ["ATL", "CAR", "NO", "TB"],
+  "NFC West": ["ARI", "LAR", "LA", "SF", "SEA"],
+};
+/** "the Southwest Division" (NBA) / "the AFC East" (NFL), or null for no or an unknown team. */
+export function divisionOf(team: string, sport: "nba" | "nfl" = "nba"): string | null {
+  const table = sport === "nfl" ? NFL_DIVISIONS : NBA_DIVISIONS;
+  const d = Object.entries(table).find(([, ts]) => ts.includes(team))?.[0];
+  return d ? (sport === "nfl" ? `the ${d}` : `the ${d} Division`) : null;
+}
+
 export const AFC = new Set(["BAL", "BUF", "CIN", "CLE", "DEN", "HOU", "IND", "JAX", "KC", "LV", "LAC", "MIA", "NE", "NYJ", "PIT", "TEN"]);
 export function lineup(d: Dataset): { suspects: Suspect[]; answers: string[]; nicks: Record<string, string>; shared: string[] } {
   const raw = d.extras;
