@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -44,8 +44,8 @@ async function leagueInfo(leagueId: string): Promise<{ season?: string; scoring_
 
 export type PlayerLine = {
   pid: string; name: string; pos: string[]; nba: string; owner: string | null; pts: number; games: number;
-  /** Season totals [day, points, games] after each day he played, for the price chart. */
-  days: [string, number, number][];
+  /** Every game this season, oldest first: [day, fantasy points]. */
+  days: [string, number][];
 };
 
 /**
@@ -75,14 +75,11 @@ async function playerBoard(leagueId: string, week: number): Promise<PlayerLine[]
       const m = byDay.get(row.player_id) ?? byDay.set(row.player_id, new Map()).get(row.player_id)!;
       m.set(row.date ?? "", (m.get(row.date ?? "") ?? 0) + pts);
     }
-  const days = (pid: string): [string, number, number][] => {
-    let pts = 0;
-    let games = 0;
-    return [...(byDay.get(pid) ?? [])]
+  const days = (pid: string): [string, number][] =>
+    [...(byDay.get(pid) ?? [])]
       .filter(([d]) => d)
       .sort(([a], [b]) => (a < b ? -1 : 1))
-      .map(([d, p]) => [d, Math.round((pts += p) * 10) / 10, ++games]);
-  };
+      .map(([d, p]) => [d, Math.round(p * 10) / 10]);
   return [...new Set([...owner.keys(), ...tot.keys()])].map((pid) => ({
     pid, owner: owner.get(pid) ?? null, name: dir[pid]?.[0] ?? pid, pos: dir[pid]?.[1] ?? [], nba: dir[pid]?.[2] ?? "",
     pts: Math.round((tot.get(pid)?.pts ?? 0) * 10) / 10, games: tot.get(pid)?.games ?? 0, days: days(pid),
@@ -108,7 +105,7 @@ async function locksNow(lid: string): Promise<Set<string>> {
 }
 
 /** Player asset id -> fair value, for the players on the board. */
-const playerValues = (ps: PlayerLine[]) => new Map(ps.map((p) => [PLAYER + p.pid, playerFair(p.pts, p.games)]));
+const playerValues = (ps: PlayerLine[]) => new Map(ps.map((p) => [PLAYER + p.pid, formFair(p.days.map((x) => x[1]))]));
 const weekOf = (recs: TeamRecord[]) => Math.max(0, ...recs.map((r) => r.wins + r.losses + r.ties)) + 1;
 
 /** Who played whom in a week (Sleeper's schedule; only the pairings are used, never the scores). */
@@ -413,12 +410,11 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       const built: { d: string; p: number }[] = [];
       if (p.days.length) {
         let i = 0;
-        let v = playerFair(0, 0);
         // From his 5th game (before that the price is held near 15, which isn't him).
-        const start = (p.days.find((x) => x[2] >= 5) ?? p.days[p.days.length - 1])[0];
+        const start = (p.days[4] ?? p.days[p.days.length - 1])[0];
         for (let d = start; d < first && d <= today; d = nextDay(d)) {
-          while (i < p.days.length && p.days[i][0] <= d) v = playerFair(p.days[i][1], p.days[i++][2]);
-          built.push({ d, p: v });
+          while (i < p.days.length && p.days[i][0] <= d) i++;
+          built.push({ d, p: formFair(p.days.slice(0, i).map((x) => x[1])) });
         }
       }
       const live = spot(f, h);
@@ -427,7 +423,8 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       const weekAgo = [...hist].reverse().find((x) => x.d <= cut)?.p ?? hist[0]?.p ?? price;
       return {
         id, name: p.name, pos: p.pos, nba: p.nba, owner: p.owner ? nameOf(p.owner) : null, ownerId: p.owner,
-        avg: p.games ? Math.round((p.pts / p.games) * 10) / 10 : 0, games: p.games, locked: !!p.nba && locks.has(p.nba),
+        avg: p.games ? Math.round((p.pts / p.games) * 10) / 10 : 0, games: p.games,
+        last10: p.days.length ? Math.round((p.days.slice(-10).reduce((t, x) => t + x[1], 0) / Math.min(10, p.days.length)) * 10) / 10 : 0, locked: !!p.nba && locks.has(p.nba),
         fair: f, held: h, price, change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-60),
       };
     })

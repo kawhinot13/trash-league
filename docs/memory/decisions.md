@@ -4,6 +4,12 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: Player prices follow recent form
+- Owner: a season average barely moves after 20 games, so player stocks were dull. Price is now 60% the last 10
+  games' average + 40% the season average (`formFair`), still from box scores with Trash scoring, still pulled
+  toward 15 under 5 games. Injured players keep their price (owner's call: frozen, no decay for missed games).
+  Charts rebuilt the same way. The switch moved current prices once (streaks: Wagner/Klay +18-19%, Portis -17%).
+
 ## 2026-11-19: Trash Exchange shorts
 - Owner asked for shorting teams and players. Collateral-backed, capped both ways: open at the stats-only value,
   close pays 2x entry minus value then (0 to 2x), so nobody goes negative and losses never exceed what was put up.

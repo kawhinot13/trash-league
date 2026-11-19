@@ -727,7 +727,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
         <section aria-label="Players" className="mx-auto max-w-6xl px-5 md:px-10">
           <h2 className="font-display text-3xl font-black md:text-4xl">Player stocks</h2>
           <p className="mt-2 max-w-2xl text-[var(--muted)]">
-            Everyone on a Trash roster. A share costs what he averages in fantasy points a game this season, scored with Trash&apos;s settings from real
+            Everyone on a Trash roster. A share costs his fantasy points a game, 60% his last 10 games and 40% his season, scored with Trash&apos;s settings from real
             box scores. Player stocks pay no coin: buy low, sell high. A player locks once his game starts and reopens at 6 AM Eastern the next day.
           </p>
           <label htmlFor="find-player" className="sr-only">
@@ -806,7 +806,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                               <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-[var(--paper)]">Locked: game on, reopens 6 AM ET</span>
                             ) : null}
                             <span className="block text-xs text-[var(--muted)] tabular-nums">
-                              {p.avg.toFixed(1)} a game · {p.games} games
+                              {p.last10.toFixed(1)} last 10 · {p.avg.toFixed(1)} season · {p.games} games
                             </span>
                           </span>
                           <span>
@@ -847,7 +847,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                               <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                             )}
                             <p className="text-xs text-[var(--muted)]">
-                              Fair value {money(p.fair)} BB (his average, pulled toward 15 until he has 5 games). Every share the league holds adds 0.4%.
+                              Fair value {money(p.fair)} BB: 60% his last 10 games, 40% his season average (pulled toward 15 until he has 5 games; holds while he sits out). Every share the league holds adds 0.4%.
                             </p>
                             {note && open === p.id ? (
                               <p role="status" className={`text-sm font-semibold ${note.ok ? UP : DOWN}`}>

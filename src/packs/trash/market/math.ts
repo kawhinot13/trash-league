@@ -291,3 +291,20 @@ export function expectedWins(pf: number, pa: number, games: number): number {
  * buying demand (so pumping a stock can't set up a short) and earn or pay no coin.
  */
 export const shortValue = (entry: number, now: number, shares: number) => shares * Math.max(0, Math.min(2 * entry, 2 * entry - now));
+
+/**
+ * Player price from recent form (owner's call 2026-11-19): 60% his average over his last 10 games
+ * plus 40% his season average, so hot streaks and slumps move it within a week or two while one wild
+ * night doesn't. Pulled toward 15 until he has 5 games; never under 1 BB. A player who isn't playing
+ * (injured) adds no games, so his price holds where it was.
+ */
+export function formFair(points: number[]): number {
+  const n = points.length;
+  if (!n) return 1_500;
+  const season = points.reduce((a, b) => a + b, 0) / n;
+  const recent = points.slice(-10);
+  const last = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const avg = 0.6 * last + 0.4 * season;
+  const v = n >= 5 ? avg : (n * avg + (5 - n) * 15) / 5;
+  return Math.max(100, Math.round(v * 100));
+}

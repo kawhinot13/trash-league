@@ -211,3 +211,17 @@ describe("Trash Exchange shorts", () => {
     expect(shortValue(5_000, 0, 1)).toBe(10_000); // to zero: double your money
   });
 });
+
+describe("Player prices follow recent form", () => {
+  it("weights the last 10 games 60/40 against the season, pulled toward 15 early", async () => {
+    const { formFair } = await import("@/packs/trash/market/math");
+    expect(formFair([])).toBe(1_500);
+    expect(formFair(Array(20).fill(40))).toBe(4_000); // steady player: his average
+    // 10 games of 30 then a 10-game hot streak at 60: season 45, last 10 = 60 -> 54
+    expect(formFair([...Array(10).fill(30), ...Array(10).fill(60)])).toBe(5_400);
+    // a slump moves it the other way
+    expect(formFair([...Array(10).fill(60), ...Array(10).fill(30)])).toBe(3_600);
+    expect(formFair([60])).toBe(2_400); // one big night early: (60 + 4 x 15) / 5
+    expect(formFair([0.5, 0.5, 0.5, 0.5, 0.5, 0.5])).toBe(100); // never under 1 BB
+  });
+});
