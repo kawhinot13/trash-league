@@ -541,6 +541,12 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         };
       })
     : [];
+  // What each manager has put into each holding: bucks spent buying minus bucks back from selling.
+  const putIn = new Map<string, number>();
+  for (const r of await sql<{ manager: string; team: string; n: string }[]>`
+    select manager, team, sum(case when kind = 'buy' then amount else -amount end)::text as n from market_log
+    where league_id = ${lid} and kind in ('buy', 'sell') and team is not null group by manager, team`)
+    putIn.set(`${r.manager}|${r.team}`, Number(r.n));
   // Everyone's portfolio is public (like the ledger): cash, coin, hoodies, holdings and shorts at today's values.
   const portfolios = Object.fromEntries(
     wallets.map((w) => [
@@ -549,15 +555,19 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         bucks: Number(w.bucks), coins: Number(w.coins), hoodies: w.hoodies,
         worth: standings.find((x) => x.manager === w.manager)?.worth ?? 0,
         holdings: holdOf(w.manager)
-          .map((h) => ({ asset: h.team, name: assetName(h.team), shares: h.shares, value: fair.has(h.team) ? sellValue(fair.get(h.team)!, held.get(h.team) ?? h.shares, h.shares) : 0 }))
+          .map((h) => {
+            const value = fair.has(h.team) ? sellValue(fair.get(h.team)!, held.get(h.team) ?? h.shares, h.shares) : 0;
+            return { asset: h.team, name: assetName(h.team), shares: h.shares, value, gain: value - (putIn.get(`${w.manager}|${h.team}`) ?? value) };
+          })
           .sort((a, b) => b.value - a.value),
         // One line per stock shorted: total shares and what closing them all would pay.
         shorts: [...new Set(shortRows.filter((r) => r.manager === w.manager).map((r) => r.asset))].map((asset) => {
           const rows = shortRows.filter((r) => r.manager === w.manager && r.asset === asset);
           const f = fair.get(asset);
+          const value = rows.reduce((n, r) => n + (f ? shortValue(Number(r.entry), f, r.shares) : Number(r.entry) * r.shares), 0);
           return {
-            asset, name: assetName(asset), shares: rows.reduce((n, r) => n + r.shares, 0),
-            value: rows.reduce((n, r) => n + (f ? shortValue(Number(r.entry), f, r.shares) : Number(r.entry) * r.shares), 0),
+            asset, name: assetName(asset), shares: rows.reduce((n, r) => n + r.shares, 0), value,
+            gain: value - rows.reduce((n, r) => n + Number(r.entry) * r.shares, 0),
           };
         }),
       },

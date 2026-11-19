@@ -275,15 +275,22 @@ function Portfolio({ name, id, p, onClose }: { name: string; id: string; p: Foli
       document.body.style.overflow = prev;
     };
   }, [onClose]);
-  const Line = ({ label, value, tag }: { label: string; value: number; tag?: string }) => (
+  const Line = ({ label, value, gain, tag }: { label: string; value: number; gain: number; tag?: string }) => (
     <li className="flex flex-wrap items-baseline justify-between gap-x-3 py-2.5">
       <span className="min-w-0 break-words">
         {tag ? <span className="mr-1.5 rounded bg-[var(--down)]/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-[var(--down)] uppercase">{tag}</span> : null}
         {label}
       </span>
-      <span className="font-semibold tabular-nums">{money(value)} BB</span>
+      <span className="tabular-nums">
+        <span className="font-semibold">{money(value)} BB</span>{" "}
+        <span className={`text-sm ${gain >= 0 ? UP : DOWN}`}>
+          {gain >= 0 ? "+" : "−"}
+          {money(Math.abs(gain))}
+        </span>
+      </span>
     </li>
   );
+  const up = [...p.holdings, ...p.shorts].reduce((t, h) => t + h.gain, 0);
   // Rendered on <body> so no parent's stacking (or the phone tab bar) can sit on top of it.
   return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/60 sm:items-center" onClick={onClose}>
@@ -318,14 +325,22 @@ function Portfolio({ name, id, p, onClose }: { name: string; id: string; p: Foli
             <Hoodie className="size-4" /> {p.hoodies}
           </li>
         </ul>
-        <p className="mt-5 text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Holdings</p>
+        <p className="mt-5 flex flex-wrap items-baseline justify-between gap-x-3 text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">
+          <span>Holdings</span>
+          {p.holdings.length || p.shorts.length ? (
+            <span className={`tracking-normal normal-case ${up >= 0 ? UP : DOWN}`}>
+              {up >= 0 ? "Up " : "Down "}
+              {money(Math.abs(up))} BB overall
+            </span>
+          ) : null}
+        </p>
         {p.holdings.length || p.shorts.length ? (
           <ul className="mt-1 divide-y divide-[var(--line)]">
             {p.holdings.map((h) => (
-              <Line key={h.asset} label={`${h.name} · ${h.shares} ${h.shares === 1 ? "share" : "shares"}`} value={h.value} />
+              <Line key={h.asset} label={`${h.name} · ${h.shares} ${h.shares === 1 ? "share" : "shares"}`} value={h.value} gain={h.gain} />
             ))}
             {p.shorts.map((h, i) => (
-              <Line key={`s${i}`} tag="Short" label={`${h.name} · ${h.shares} ${h.shares === 1 ? "share" : "shares"}`} value={h.value} />
+              <Line key={`s${i}`} tag="Short" label={`${h.name} · ${h.shares} ${h.shares === 1 ? "share" : "shares"}`} value={h.value} gain={h.gain} />
             ))}
           </ul>
         ) : (
@@ -1085,7 +1100,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
       <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:px-10">
         <section aria-label="Standings">
           <h2 className="font-display text-3xl font-black md:text-4xl">Richest in Trash</h2>
-          <p className="mt-2 text-[var(--muted)]">Most hoodies wins. Net worth breaks ties.</p>
+          <p className="mt-2 text-[var(--muted)]">Most hoodies wins. Net worth breaks ties. Up or down is against the 1,000 everyone started with; tap a name for the details.</p>
           {s.standings!.length ? (
             <ol className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
               {s.standings!.map((r, i) => (
@@ -1102,7 +1117,14 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   <span className="flex items-center gap-1 tabular-nums">
                     <Hoodie className="size-5" /> {r.hoodies}
                   </span>
-                  <span className="w-24 text-right text-sm text-[var(--muted)] tabular-nums">{money(r.worth, 0)} BB</span>
+                  <span className="w-24 text-right text-sm tabular-nums">
+                    <span className="block text-[var(--muted)]">{money(r.worth, 0)} BB</span>
+                    {/* Everyone started with 1,000 Bushy Bucks. */}
+                    <span className={`block text-xs ${r.worth >= 100_000 ? UP : DOWN}`}>
+                      {r.worth >= 100_000 ? "+" : "−"}
+                      {money(Math.abs(r.worth - 100_000), 0)}
+                    </span>
+                  </span>
                 </li>
               ))}
             </ol>
