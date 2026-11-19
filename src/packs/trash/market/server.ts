@@ -394,6 +394,13 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     }))
     .sort((a, b) => b.hoodies - a.hoodies || b.worth - a.worth);
   const mine = manager ? wallets.find((w) => w.manager === manager) : undefined;
+  // What the viewer has put into each holding: bucks spent buying minus bucks back from selling.
+  const invested = new Map<string, number>();
+  if (mine)
+    for (const r of await sql<{ team: string; n: string }[]>`
+      select team, sum(case when kind = 'buy' then amount else -amount end)::text as n from market_log
+      where league_id = ${lid} and manager = ${manager} and kind in ('buy', 'sell') and team is not null group by team`)
+      invested.set(r.team, Number(r.n));
   return {
     teams,
     players,
@@ -409,7 +416,16 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       };
     }),
     wallet: mine
-      ? { bucks: Number(mine.bucks), coins: Number(mine.coins), hoodies: mine.hoodies, holdings: holdOf(manager!).map((h) => ({ ...h, counting: counting(h.team, h.shares) })), worth: standings.find((s) => s.manager === manager)?.worth ?? 0 }
+      ? { bucks: Number(mine.bucks), coins: Number(mine.coins), hoodies: mine.hoodies, holdings: holdOf(manager!).map((h) => {
+          const f = fair.get(h.team);
+          const value = f ? sellValue(f, held.get(h.team) ?? h.shares, h.shares) : 0;
+          return {
+            ...h, counting: counting(h.team, h.shares),
+            name: isPlayer(h.team) ? (playerName.get(h.team) ?? "Player") : `${tick.get(h.team) ?? ""} · ${nameOf(h.team)}`,
+            kind: isPlayer(h.team) ? ("player" as const) : ("team" as const),
+            value, invested: invested.get(h.team) ?? 0,
+          };
+        }), worth: standings.find((s) => s.manager === manager)?.worth ?? 0 }
       : null,
     status: season.users.size ? "open" : "closed",
   };

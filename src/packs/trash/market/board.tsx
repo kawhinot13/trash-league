@@ -115,7 +115,7 @@ function PriceChart({ h, ticker, empty, note }: { h: Pt[]; ticker: string; empty
     setHover(Math.round(f * (data.length - 1)));
   };
   return (
-    <figure className="rounded-2xl bg-black/20 p-4">
+    <figure className="rounded-2xl bg-black/20 p-4 select-none [-webkit-touch-callout:none] [-webkit-user-select:none]">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <figcaption>
           <span className="block text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">{sel ? label(sel) : `${ticker} · ${range === "All" ? "season" : range}`}</span>
@@ -138,7 +138,8 @@ function PriceChart({ h, ticker, empty, note }: { h: Pt[]; ticker: string; empty
       </div>
       <div className="mt-4 flex gap-2">
         <div
-          className="relative h-40 flex-1 touch-pan-y md:h-48"
+          className="relative h-40 flex-1 touch-pan-y select-none md:h-48"
+          onContextMenu={(e) => e.preventDefault()}
           onPointerMove={move}
           onPointerDown={move}
           onPointerLeave={() => setHover(null)}
@@ -336,6 +337,51 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   </li>
                 </ul>
               </div>
+              {/* Holdings: what you own, what it's worth now, and how it's done. */}
+              <div className="mt-6">
+                <p className="text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Your holdings</p>
+                {w.holdings.length ? (
+                  <ul className="mt-2 divide-y divide-[var(--line)] rounded-2xl bg-black/20">
+                    {[...w.holdings].sort((a, b) => b.value - a.value).map((h) => {
+                      const gain = h.value - h.invested;
+                      return (
+                        <li key={h.team}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTab(h.kind === "player" ? "players" : "teams");
+                              // Players: search him so he's on the list (it only shows the first 25).
+                              setFind(h.kind === "player" ? h.name : "");
+                              setOpen(h.team);
+                              setQ(1);
+                              setNote(null);
+                              setTimeout(() => document.getElementById(`asset-${h.team}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+                            }}
+                            className="flex w-full cursor-pointer flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3 text-left transition-colors duration-150 hover:bg-white/[0.04]"
+                          >
+                            <span className="min-w-0">
+                              <span className="font-semibold break-words">{h.name}</span>{" "}
+                              <span className="text-sm text-[var(--muted)]">
+                                {h.shares} {h.shares === 1 ? "share" : "shares"}
+                                {h.kind === "team" && h.counting < h.shares ? ` · ${h.shares - h.counting} count next week` : ""}
+                              </span>
+                            </span>
+                            <span className="text-right tabular-nums">
+                              <span className="font-semibold">{money(h.value)} BB</span>{" "}
+                              <span className={`text-sm ${gain >= 0 ? UP : DOWN}`}>
+                                {gain >= 0 ? "+" : "−"}
+                                {money(Math.abs(gain))}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm text-[var(--muted)]">Nothing yet. Pick a team or a player on the board below.</p>
+                )}
+              </div>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl bg-black/20 p-4">
                   <p className="flex items-center gap-2 font-semibold">
@@ -426,7 +472,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
             const cost = buyCost(t.fair, t.held, q);
             const pay = mine >= q ? sellValue(t.fair, t.held, q) : 0;
             return (
-              <li key={t.id}>
+              <li key={t.id} id={`asset-${t.id}`} className="scroll-mt-28">
                 <button
                   type="button"
                   aria-expanded={isOpen}
@@ -541,7 +587,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     const pay = mine >= q ? sellValue(p.fair, p.held, q) : 0;
                     const yours = !!s.me && p.ownerId === s.me;
                     return (
-                      <li key={p.id}>
+                      <li key={p.id} id={`asset-${p.id}`} className="scroll-mt-28">
                         <button
                           type="button"
                           aria-expanded={isOpen}
