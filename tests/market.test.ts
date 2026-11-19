@@ -190,3 +190,13 @@ describe("The Great Storm", () => {
     expect(stormPayout(0, 0, false)).toBe(0);
   });
 });
+
+describe("Expected wins (over/under-performing)", () => {
+  it("even points mean half the games; outscoring opponents means more", async () => {
+    const { expectedWins } = await import("@/packs/trash/market/math");
+    expect(expectedWins(1500, 1500, 4)).toBeCloseTo(2);
+    expect(expectedWins(1600, 1400, 4)).toBeGreaterThan(3);
+    expect(expectedWins(1400, 1600, 4)).toBeLessThan(1);
+    expect(expectedWins(0, 0, 0)).toBe(0);
+  });
+});

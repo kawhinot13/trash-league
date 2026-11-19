@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -135,7 +135,7 @@ async function records(leagueId: string): Promise<TeamRecord[]> {
   const rs = await rosters(leagueId);
   return rs.flatMap((r) =>
     r.owner_id
-      ? [{ team: r.owner_id, wins: r.settings?.wins ?? 0, losses: r.settings?.losses ?? 0, ties: r.settings?.ties ?? 0, pf: official(r.settings ?? {}).pf }]
+      ? [{ team: r.owner_id, wins: r.settings?.wins ?? 0, losses: r.settings?.losses ?? 0, ties: r.settings?.ties ?? 0, pf: official(r.settings ?? {}).pf, pa: official(r.settings ?? {}).pa }]
       : [],
   );
 }
@@ -363,6 +363,9 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       return {
         id: r.team, ticker: tick.get(r.team)!, name: nameOf(r.team), team: season.teams.get(r.team) ?? null,
         record: `${r.wins}-${r.losses}${r.ties ? `-${r.ties}` : ""}`, pf: Math.round(r.pf),
+        // Over/under-performing: actual wins against what official points for and against suggest.
+        xw: Math.round(expectedWins(r.pf, r.pa ?? 0, r.wins + r.losses + r.ties) * 10) / 10,
+        luck: Math.round((r.wins + r.ties / 2 - expectedWins(r.pf, r.pa ?? 0, r.wins + r.losses + r.ties)) * 10) / 10,
         fair: f, held: h, price, buy1: buyCost(f, h, 1), sell1: h > 0 ? sellValue(f, h, 1) : 0,
         change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-120),
         vs: vsNow.has(r.team) ? { id: vsNow.get(r.team)!, ticker: tick.get(vsNow.get(r.team)!) ?? null, winPays: Math.round(100 * upset(f, fair.get(vsNow.get(r.team)!) ?? f)) } : null,

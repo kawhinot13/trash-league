@@ -468,6 +468,38 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
         <p className="mt-2 max-w-2xl text-[var(--muted)]">
           One stock per team. Prices follow official points and records from Sleeper, plus how many shares the league holds. Tap a team to trade.
         </p>
+        {(() => {
+          // Over/under-performing: actual wins against what official points for and against suggest.
+          const byLuck = [...teams].filter((t) => Math.abs(t.luck) >= 0.3).sort((a, b) => b.luck - a.luck);
+          const over = byLuck.filter((t) => t.luck > 0).slice(0, 3);
+          const under = byLuck.filter((t) => t.luck < 0).reverse().slice(0, 3);
+          if (!over.length && !under.length) return null;
+          const Row = ({ t }: { t: Team }) => (
+            <li className="flex items-baseline justify-between gap-3 py-1.5">
+              <span className="min-w-0 break-words">
+                <span className="font-display text-lg font-black tracking-wide">{t.ticker}</span> <span className="text-sm text-[var(--muted)]">{t.record}</span>
+              </span>
+              <span className={`text-sm font-semibold tabular-nums ${t.luck > 0 ? UP : DOWN}`}>
+                {t.luck > 0 ? "+" : "−"}
+                {Math.abs(t.luck).toFixed(1)} wins
+              </span>
+            </li>
+          );
+          return (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl bg-black/20 p-4">
+                <p className="text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Over-performing</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">More wins than their points suggest. Due for a cool-off?</p>
+                <ul className="mt-2">{over.length ? over.map((t) => <Row key={t.id} t={t} />) : <li className="py-1.5 text-sm text-[var(--muted)]">Nobody yet.</li>}</ul>
+              </div>
+              <div className="rounded-2xl bg-black/20 p-4">
+                <p className="text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Under-performing</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">Fewer wins than their points suggest. Buy-low candidates.</p>
+                <ul className="mt-2">{under.length ? under.map((t) => <Row key={t.id} t={t} />) : <li className="py-1.5 text-sm text-[var(--muted)]">Nobody yet.</li>}</ul>
+              </div>
+            </div>
+          );
+        })()}
         <ul className="mt-6 divide-y divide-[var(--line)] border-y border-[var(--line)]">
           {teams.map((t) => {
             const mine = owned(t.id);
@@ -493,7 +525,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                       <span className="font-semibold break-words">{t.name}</span>
                     </span>
                     <span className="block text-sm break-words text-[var(--muted)]">
-                      {t.record} · {t.pf.toLocaleString("en-US")} pts{mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
+                      {t.record} · {t.pf.toLocaleString("en-US")} pts · expected {t.xw.toFixed(1)} wins{mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
                       {t.vs ? (
                         <span className="block">
                           vs {t.vs.ticker} · a win pays{" "}
@@ -541,7 +573,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                       <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                     )}
                     <p className="text-xs text-[var(--muted)]">
-                      Shares bought now earn Perren Coin starting next week (weeks start Monday). Fair value {money(t.fair)} BB. Every share the league holds adds 0.4% to the price, and selling brings it back down.
+                      Shares bought now earn Perren Coin starting next week (weeks start Monday). Fair value {money(t.fair)} BB. Every share the league holds adds 0.4% to the price, and selling brings it back down. Expected wins: what official points for and against suggest.
                       {t.team ? ` Team: ${t.team}.` : ""}
                     </p>
                     {note && open === t.id ? (

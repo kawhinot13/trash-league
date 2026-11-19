@@ -22,7 +22,7 @@ export const HOODIE_STEP = 100; // +1.00 PC for every hoodie already sold in the
 export const IMPACT = 0.004; // each share held league-wide adds 0.4% to the price
 export const MAX_QTY = 500;
 
-export type TeamRecord = { team: string; wins: number; losses: number; ties: number; pf: number };
+export type TeamRecord = { team: string; wins: number; losses: number; ties: number; pf: number; pa?: number };
 
 /**
  * Fair value of every team in Bushy Bucks (hundredths), from official totals.
@@ -272,3 +272,14 @@ export const STORM = "storm";
 export const STORM_MEMBERS = ["junkyarddoggg", "kawhinot13"];
 export const stormFair = (a: number, b: number) => Math.round((a + b) / 2);
 export const stormPayout = (a: number, b: number, bothWon: boolean) => Math.round(((a + b) / 2) * (bothWon ? 1.5 : 1));
+
+/**
+ * Expected wins from official points for and against (basketball's Pythagorean expectation,
+ * exponent 14): how many games a team "should" have won given what it scored and allowed. Actual
+ * minus expected is luck: positive = over-performing its points, negative = under-performing.
+ */
+export function expectedWins(pf: number, pa: number, games: number): number {
+  if (!games || pf <= 0 || pa <= 0) return games / 2;
+  const a = Math.pow(pf, 14);
+  return (games * a) / (a + Math.pow(pa, 14));
+}
