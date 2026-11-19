@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: Trash Exchange shorts
+- Owner asked for shorting teams and players. Collateral-backed, capped both ways: open at the stats-only value,
+  close pays 2x entry minus value then (0 to 2x), so nobody goes negative and losses never exceed what was put up.
+  Uses fair value without buying demand so a long pump can't set up a short. No coin either way. Not your own team,
+  not players on your roster (you could bench them), not STORM. Flagged to the owner as one more step toward
+  betting-like play; still play money, no prizes. Rejected: unlimited-loss margin shorts, shorts moving the price.
+
 ## 2026-11-19: The Great Storm (STORM)
 - Owner wanted a tradeable "company" for Junkyard Dog + KawhiNot, who warned the league before Season 4 they were
   coming for the top. One stock: worth the average of the two team values; pays the average of their per-share coin

@@ -242,6 +242,8 @@ function ledgerLine(f: Entry) {
   const amt = money(f.amount);
   if (f.kind === "buy") return `bought ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
+  if (f.kind === "short") return `shorted ${f.qty} ${f.ticker}, putting up ${amt} BB`;
+  if (f.kind === "cover") return `closed a ${f.qty}-share ${f.ticker} short for ${amt} BB`;
   if (f.kind === "coin") return `swapped ${amt} BB for ${f.qty} Perren Coin`;
   if (f.kind === "uncoin") return `cashed ${f.qty} Perren Coin into ${amt} BB`;
   if (f.kind === "dividend" && f.ticker === "STORM")
@@ -300,6 +302,39 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const teams = s.teams;
   const w = s.wallet ?? null;
   const owned = (id: string) => w?.holdings.find((h) => h.team === id)?.shares ?? 0;
+  // Shorts: put up the stats-only value; closing pays 2x that minus the value then (0 to 2x).
+  const shortOf = (id: string) => w?.shorts?.find((x) => x.asset === id);
+  const shortControls = (id: string, fairNow: number, label: string, blocked: string | null) => {
+    if (!w) return null;
+    const sh = shortOf(id);
+    const put = fairNow * q;
+    const back = sh && sh.shares >= q ? Math.round((sh.value / sh.shares) * q) : 0;
+    return (
+      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
+        <span className="mr-auto text-xs text-[var(--muted)]">
+          {sh ? `You're short ${sh.shares} (worth ${money(sh.value)} BB to close).` : "Think it's due to drop? Short it."}
+        </span>
+        <button
+          type="button"
+          disabled={busy || !!blocked || put > w.bucks}
+          onClick={() => void order({ kind: "short", team: id, qty: q }, `Shorted ${q} ${label}.`)}
+          className={`${chip} border border-[var(--down)]/40 text-[var(--down)] hover:bg-white/5`}
+        >
+          {blocked ?? `Short for ${money(put)} BB`}
+        </button>
+        {sh ? (
+          <button
+            type="button"
+            disabled={busy || sh.shares < q || blocked === "Locked: game on"}
+            onClick={() => void order({ kind: "cover", team: id, qty: q }, `Closed ${q} ${label} short.`)}
+            className={`${chip} bg-white/10 hover:bg-white/15`}
+          >
+            {sh.shares >= q ? `Close for ${money(back)} BB` : `Short ${sh.shares}`}
+          </button>
+        ) : null}
+      </div>
+    );
+  };
   // Shares bought this week don't earn this week's coin (they start next week).
   const fresh = (id: string) => {
     const h = w?.holdings.find((x) => x.team === id);
@@ -384,6 +419,29 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                 ) : (
                   <p className="mt-2 text-sm text-[var(--muted)]">Nothing yet. Pick a team or a player on the board below.</p>
                 )}
+                {w.shorts?.length ? (
+                  <ul className="mt-2 divide-y divide-[var(--line)] rounded-2xl bg-black/20">
+                    {w.shorts.map((sh) => {
+                      const gain = sh.value - sh.put;
+                      return (
+                        <li key={sh.asset} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3">
+                          <span className="min-w-0">
+                            <span className="mr-1.5 rounded bg-[var(--down)]/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-[var(--down)] uppercase">Short</span>
+                            <span className="font-semibold break-words">{sh.name}</span>{" "}
+                            <span className="text-sm text-[var(--muted)]">{sh.shares} {sh.shares === 1 ? "share" : "shares"}</span>
+                          </span>
+                          <span className="text-right tabular-nums">
+                            <span className="font-semibold">{money(sh.value)} BB</span>{" "}
+                            <span className={`text-sm ${gain >= 0 ? UP : DOWN}`}>
+                              {gain >= 0 ? "+" : "−"}
+                              {money(Math.abs(gain))}
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
               </div>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl bg-black/20 p-4">
@@ -569,7 +627,8 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                           </button>
                         </div>
                       </div>
-                    ) : (
+                    ) : null}
+                    {w ? shortControls(t.id, t.fair, t.ticker, t.id === s.me ? "Can't short your own team" : null) : (
                       <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                     )}
                     <p className="text-xs text-[var(--muted)]">
@@ -707,7 +766,8 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                                   </button>
                                 </div>
                               </div>
-                            ) : (
+                            ) : null}
+                            {w ? shortControls(p.id, p.fair, p.name, p.locked ? "Locked: game on" : p.ownerId === s.me ? "He's on your roster" : null) : (
                               <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                             )}
                             <p className="text-xs text-[var(--muted)]">
@@ -900,7 +960,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               <Coin /> Perren Coin
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. Buy coin at 40 BB; cashing it back in pays 30.
+              Paid out when a week goes final, for every share you owned before that week started on Monday. A win pays the loser&apos;s value ÷ the winner&apos;s, from 0.5 coin (a favourite beating a weak team) up to 3 (a big upset). A tie pays half. Shares bought mid-week start counting the next week. Buy coin at 40 BB; cashing it back in pays 30. Shorts (teams and players): put up today&apos;s value, and closing pays you what the price fell (or costs what it rose, never more than you put up); no coin either way; not your own team or roster.
             </p>
           </li>
           <li className="rounded-2xl bg-black/20 p-5">

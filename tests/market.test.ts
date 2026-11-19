@@ -200,3 +200,14 @@ describe("Expected wins (over/under-performing)", () => {
     expect(expectedWins(0, 0, 0)).toBe(0);
   });
 });
+
+describe("Trash Exchange shorts", () => {
+  it("gain what the price fell, lose what it rose, never below 0 or above double", async () => {
+    const { shortValue } = await import("@/packs/trash/market/math");
+    expect(shortValue(5_000, 5_000, 2)).toBe(10_000); // unchanged: get your collateral back
+    expect(shortValue(5_000, 4_000, 1)).toBe(6_000); // fell 10: +10
+    expect(shortValue(5_000, 6_000, 1)).toBe(4_000); // rose 10: -10
+    expect(shortValue(5_000, 12_000, 1)).toBe(0); // more than doubled: lose the collateral, no more
+    expect(shortValue(5_000, 0, 1)).toBe(10_000); // to zero: double your money
+  });
+});

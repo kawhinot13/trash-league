@@ -151,6 +151,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   The Great Storm (asset `storm`, ticker STORM; owner's lore: Junkyard Dog + KawhiNot warned the league before Season 4):
   value = average of the two team values (`stormFair`), coin = average of their per-share payouts, x1.5 when both win
   (`stormPayout`, ledger "Storm week"); same lots/curve; the two members can't buy it (`STORM_MEMBERS` usernames).
+  Shorts (teams + players, not STORM; owner's call 2026-11-19): `market_shorts`, collateral = stats-only fair value
+  (not spot, so buying can't set one up), close pays `shortValue` = 2x entry - value now, clamped 0..2x; no coin;
+  not your own team or own-roster players; player shorts obey the game lock; counted in net worth.
   Over/under-performing (Teams tab panel + "expected N wins" per row): `expectedWins` = Pythagorean (exponent 14)
   from official PF and PA; luck = actual wins minus expected. Official totals only.
   Player trading locks while his NBA team plays (`lockedTeams`: from tip-off per Sleeper's schedule, or 7 PM ET on a

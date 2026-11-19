@@ -283,3 +283,11 @@ export function expectedWins(pf: number, pa: number, games: number): number {
   const a = Math.pow(pf, 14);
   return (games * a) / (a + Math.pow(pa, 14));
 }
+
+/**
+ * Shorts (owner's call 2026-11-19). Opening puts up the stats-only value per share as collateral;
+ * closing pays back 2 x that value minus the value then, never below 0 or above 2 x. So you gain what
+ * the price fell, lose what it rose, and can't lose more than you put up. Shorts use the value without
+ * buying demand (so pumping a stock can't set up a short) and earn or pay no coin.
+ */
+export const shortValue = (entry: number, now: number, shares: number) => shares * Math.max(0, Math.min(2 * entry, 2 * entry - now));

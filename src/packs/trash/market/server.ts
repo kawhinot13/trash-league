@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, playerFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -440,7 +440,27 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       worth: netWorth({ bucks: Number(w.bucks), coins: Number(w.coins) }, holdOf(w.manager), fair, held),
     }))
     .sort((a, b) => b.hoodies - a.hoodies || b.worth - a.worth);
+  // Open shorts, valued at what closing them now would pay (stats-only value).
+  const shortRows = await sql<{ manager: string; asset: string; shares: number; entry: string }[]>`
+    select manager, asset, shares, entry::text from market_shorts where league_id = ${lid} and shares > 0`;
+  const shortWorth = (m: string) =>
+    shortRows.filter((r) => r.manager === m).reduce((t, r) => t + (fair.has(r.asset) ? shortValue(Number(r.entry), fair.get(r.asset)!, r.shares) : Number(r.entry) * r.shares), 0);
+  for (const st of standings) st.worth += shortWorth(st.manager);
+  standings.sort((a, b) => b.hoodies - a.hoodies || b.worth - a.worth);
   const mine = manager ? wallets.find((w) => w.manager === manager) : undefined;
+  const assetName = (id: string) => (isPlayer(id) ? (playerName.get(id) ?? "Player") : id === STORM ? "STORM · The Great Storm" : `${tick.get(id) ?? ""} · ${nameOf(id)}`);
+  const myShorts = manager
+    ? [...new Set(shortRows.filter((r) => r.manager === manager).map((r) => r.asset))].map((asset) => {
+        const rows = shortRows.filter((r) => r.manager === manager && r.asset === asset);
+        const f = fair.get(asset);
+        return {
+          asset, name: assetName(asset), kind: isPlayer(asset) ? ("player" as const) : ("team" as const),
+          shares: rows.reduce((n, r) => n + r.shares, 0),
+          put: rows.reduce((n, r) => n + Number(r.entry) * r.shares, 0),
+          value: rows.reduce((n, r) => n + (f ? shortValue(Number(r.entry), f, r.shares) : Number(r.entry) * r.shares), 0),
+        };
+      })
+    : [];
   // What the viewer has put into each holding: bucks spent buying minus bucks back from selling.
   const invested = new Map<string, number>();
   if (mine)
@@ -475,13 +495,13 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
             kind: isPlayer(h.team) ? ("player" as const) : h.team === STORM ? ("storm" as const) : ("team" as const),
             value, invested: invested.get(h.team) ?? 0,
           };
-        }), worth: standings.find((s) => s.manager === manager)?.worth ?? 0 }
+        }), worth: standings.find((s) => s.manager === manager)?.worth ?? 0, shorts: myShorts }
       : null,
     status: season.users.size ? "open" : "closed",
   };
 }
 
-export type Order = { kind: "buy" | "sell"; team: string; qty: number } | { kind: "coin" | "uncoin"; qty: number } | { kind: "hoodie"; qty: number };
+export type Order = { kind: "buy" | "sell" | "short" | "cover"; team: string; qty: number } | { kind: "coin" | "uncoin"; qty: number } | { kind: "hoodie"; qty: number };
 
 /** One order for one manager, all or nothing. Returns a plain message on refusal. */
 export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof marketSeason>>>, manager: string, o: Order): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -490,7 +510,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   const recs = await records(lid);
   const storm = stormIds(season);
   const { board, fair: values } = await allValues(lid, recs, storm);
-  if (isPlayer(o.kind === "buy" || o.kind === "sell" ? o.team : "")) {
+  if (isPlayer("team" in o ? o.team : "")) {
     const nba = board.find((p) => PLAYER + p.pid === (o as { team: string }).team)?.nba;
     // Fail closed: if the schedule can't be read, player trades wait.
     const locks = await locksNow(lid).catch(() => null);
@@ -540,6 +560,39 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
           if (c.shares > 0) await tx`update market_lots set shares = ${c.shares} where id = ${c.id}`;
           else await tx`delete from market_lots where id = ${c.id}`;
         await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'sell', ${o.team}, ${o.qty}, ${pay})`;
+      }
+    } else if (o.kind === "short" || o.kind === "cover") {
+      // Shorts work off the stats-only value (no buying demand), pay no coin, and can't lose more than was put up.
+      const f = fair.get(o.team);
+      // Opening needs a value; closing one whose value is gone returns the collateral (no gain or loss).
+      if (!f && o.kind === "short") return { ok: false as const, error: "That isn't on the board." };
+      if (o.team === STORM) return { ok: false as const, error: "The Great Storm can't be shorted." };
+      if (o.kind === "short") {
+        if (o.team === manager) return { ok: false as const, error: "You can't short your own team." };
+        if (isPlayer(o.team) && board.some((p) => PLAYER + p.pid === o.team && p.owner === manager))
+          return { ok: false as const, error: "You can't short a player on your own roster." };
+        const put = f! * o.qty;
+        if (put > bucks) return { ok: false as const, error: "Not enough Bushy Bucks to put up for that short." };
+        await tx`update market_wallets set bucks = bucks - ${put} where league_id = ${lid} and manager = ${manager}`;
+        await tx`insert into market_shorts (league_id, manager, asset, shares, entry) values (${lid}, ${manager}, ${o.team}, ${o.qty}, ${f!})`;
+        await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'short', ${o.team}, ${o.qty}, ${put})`;
+      } else {
+        const lots = await tx<{ id: string; shares: number; entry: string }[]>`
+          select id::text, shares, entry::text from market_shorts where league_id = ${lid} and manager = ${manager} and asset = ${o.team} and shares > 0
+          order by opened_at, id for update`;
+        if (lots.reduce((n, l) => n + l.shares, 0) < o.qty) return { ok: false as const, error: "You aren't short that many shares." };
+        let left = o.qty;
+        let back = 0;
+        for (const l of lots) {
+          if (!left) break;
+          const take = Math.min(left, l.shares);
+          back += shortValue(Number(l.entry), f ?? Number(l.entry), take);
+          if (take === l.shares) await tx`delete from market_shorts where id = ${l.id}`;
+          else await tx`update market_shorts set shares = shares - ${take} where id = ${l.id}`;
+          left -= take;
+        }
+        await tx`update market_wallets set bucks = bucks + ${back} where league_id = ${lid} and manager = ${manager}`;
+        await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'cover', ${o.team}, ${o.qty}, ${back})`;
       }
     } else if (o.kind === "coin") {
       const cost = COIN_RATE * o.qty;

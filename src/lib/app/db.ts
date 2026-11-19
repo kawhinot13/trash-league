@@ -293,6 +293,17 @@ create table if not exists market_lots (
   bought_at timestamptz not null default now()
 );
 create index if not exists market_lots_team on market_lots(league_id, team);
+-- Short positions: collateral = the stats-only value at opening (entry, hundredths) per share.
+create table if not exists market_shorts (
+  id        bigserial primary key,
+  league_id text not null,
+  manager   text not null,
+  asset     text not null,
+  shares    int not null,
+  entry     bigint not null,
+  opened_at timestamptz not null default now()
+);
+create index if not exists market_shorts_league on market_shorts(league_id, manager);
 -- What a payout was for (e.g. "beat KAWH x1.80"), shown in the ledger.
 alter table market_log add column if not exists note text;
 `;
