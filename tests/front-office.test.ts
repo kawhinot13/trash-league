@@ -93,6 +93,21 @@ describe("team analyzer", () => {
   });
 });
 
+describe("team analyzer labels", () => {
+  it("a team with a top-third starting nine is never called 'Deep, no ceiling'", () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const { P, T } = league(seed);
+      for (const worth of [undefined, fullStrength]) {
+        const all = T.map((t) => profile(t, P, NBA_SLOTS, "nba", worth));
+        for (const me of all) {
+          const d = diagnose(me, all, P, T, [], NBA_SLOTS, "nba", !!worth);
+          if (d.strengths.includes("Starting nine")) expect(d.archetype).not.toBe("Deep, no ceiling");
+        }
+      }
+    }
+  });
+});
+
 describe("power rankings momentum", () => {
   it("weights the last three results 3, 2, 1, newest first", async () => {
     const { momentumOf } = await import("@/lib/core/power");

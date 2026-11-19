@@ -163,7 +163,8 @@ export function diagnose(
     pitch = nfl
       ? "Real stars, thin depth. Bye weeks and injuries will leave holes in your lineup. Add cheap depth without giving up a star."
       : "Real stars, thin depth. On days your stars sit or get hurt, there's no one good to swap in. Add cheap depth without giving up a star.";
-  } else if (top("depth") && !top("stars")) {
+  } else if (top("depth") && !top("stars") && !top("lineup")) {
+    // A top-third starting nine is a ceiling, so a deep team with one is a Contender, not "no ceiling".
     archetype = "Deep, no ceiling";
     pitch = nfl
       ? "Plenty of bodies, not enough difference-makers. Only your starters score, so consolidate: package two pieces for one star."
