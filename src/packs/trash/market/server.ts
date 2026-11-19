@@ -518,13 +518,14 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     };
   })();
   tick.set(STORM, "STORM");
-  // Player stocks: everyone on a Trash roster now (no coin; the price follows how he plays).
+  // Player stocks: every active NBA player (on an NBA team, has played this season), anyone on a Trash
+  // roster, and anyone still held (no coin; the price follows how he plays). NBA free agents stay out.
   const cut = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
   const playerName = new Map(board.map((p) => [PLAYER + p.pid, p.name]));
   const locks = await locksNow(lid).catch(() => new Set<string>());
   const today = todayET();
   const players = board
-    .filter((p) => p.owner || (held.get(PLAYER + p.pid) ?? 0) > 0)
+    .filter((p) => p.owner || (held.get(PLAYER + p.pid) ?? 0) > 0 || (!!p.nba && p.nba !== "FA" && p.games > 0))
     .map((p) => {
       const id = PLAYER + p.pid;
       const f = fair.get(id)!;

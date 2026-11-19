@@ -859,7 +859,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
         <section aria-label="Players" className="mx-auto max-w-6xl px-5 md:px-10">
           <h2 className="font-display text-3xl font-black md:text-4xl">Player stocks</h2>
           <p className="mt-2 max-w-2xl text-[var(--muted)]">
-            Everyone on a Trash roster. A share costs his fantasy points a game, 60% his last 5 games and 40% his season, scored with Trash&apos;s settings from real
+            Every active NBA player, on a Trash roster or not (NBA free agents aren&apos;t listed). A share costs his fantasy points a game, 60% his last 5 games and 40% his season, scored with Trash&apos;s settings from real
             box scores. Player stocks pay no coin: buy low, sell high. A player locks once his game starts and reopens at 6 AM Eastern the next day.
           </p>
           <label htmlFor="find-player" className="sr-only">
