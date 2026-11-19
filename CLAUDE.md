@@ -158,6 +158,12 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   The Great Storm (asset `storm`, ticker STORM; owner's lore: Junkyard Dog + KawhiNot warned the league before Season 4):
   value = average of the two team values (`stormFair`), coin = average of their per-share payouts, x1.5 when both win
   (`stormPayout`, ledger "Storm week"); same lots/curve; the two members can't buy it (`STORM_MEMBERS` usernames).
+  NBA team stocks (owner's call 2026-11-19, play money, price only, NO coin for real wins): asset `nba:<ABBR>`, all 30
+  teams, "NBA teams" tab. Strength = half win %, half Pythagorean (exp 14) from points for/against; 80% season + 20%
+  last 10 (`NBA_RECENT_WEIGHT`, less recency than players: records swing more); under 10 games blends from last
+  season's strength (`nbaPrior`). Price = 10 + 80 x strength (`nbaFair`). Results only from Sleeper's schedule finals,
+  checked (`nbaResults`: finals = quarter sums, W-L = Sleeper's record within 1 game for the NBA Cup final; throws
+  otherwise). Trade daily like players (`isDaily`), lock while their game is on, shortable; Mix counts them in "NBA".
   Shorts (teams + players, not STORM; owner's call 2026-11-19): `market_shorts`, collateral = stats-only fair value
   (not spot, so buying can't set one up), close pays `shortValue` = 2x entry - value now, clamped 0..2x; no coin;
   not your own team or own-roster players; player shorts obey the game lock; counted in net worth.

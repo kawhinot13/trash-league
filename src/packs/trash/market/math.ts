@@ -366,3 +366,89 @@ export function repriceTrades(trades: PastTrade[], fairAt: (asset: string, day: 
   }
   return { amounts, owed };
 }
+
+/* ── NBA team stocks (owner's call 2026-11-19: price only, no coin) ─────────────────────── */
+export const NBA = "nba:";
+export const isNbaTeam = (id: string) => id.startsWith(NBA);
+/** Stocks that trade any day, locking while their NBA game is on (players and NBA teams). */
+export const isDaily = (id: string) => isPlayer(id) || isNbaTeam(id);
+/** One game from a team's side: its date, points scored and allowed. */
+export type TeamGame = { date: string; pf: number; pa: number };
+/** Recent games that count for NBA_RECENT_WEIGHT of a team's strength (less than players: records swing more). */
+export const NBA_RECENT = 10;
+export const NBA_RECENT_WEIGHT = 0.2;
+
+/**
+ * How good a team is, 0 to 1: half its win %, half what its point differential says it should win
+ * (Pythagorean, exponent 14, the NBA's usual one). Point differential is steadier than the record.
+ */
+export function nbaStrength(gs: TeamGame[]): number {
+  if (!gs.length) return 0.5;
+  const w = gs.reduce((n, g) => n + (g.pf > g.pa ? 1 : g.pf === g.pa ? 0.5 : 0), 0) / gs.length;
+  const pf = gs.reduce((n, g) => n + g.pf, 0);
+  const pa = gs.reduce((n, g) => n + g.pa, 0);
+  const py = pf + pa ? pf ** 14 / (pf ** 14 + pa ** 14) : 0.5;
+  return 0.5 * w + 0.5 * py;
+}
+
+/**
+ * NBA team price (hundredths): 10 + 80 x strength, so a .500 team is 50 BB, the best near 90.
+ * Strength = 80% the season + 20% the last 10 games. Until 10 games it starts from last season's
+ * strength (0.5 without one), each game moving it a tenth of the way.
+ */
+export function nbaFair(gs: TeamGame[], prior?: number | null): number {
+  const base = prior ?? 0.5;
+  const n = gs.length;
+  const now = n ? (1 - NBA_RECENT_WEIGHT) * nbaStrength(gs) + NBA_RECENT_WEIGHT * nbaStrength(gs.slice(-NBA_RECENT)) : base;
+  const s = n >= NBA_RECENT ? now : (n * now + (NBA_RECENT - n) * base) / NBA_RECENT;
+  return Math.round((10 + 80 * s) * 100);
+}
+
+/** A finished game as Sleeper's schedule has it. */
+export type RawGame = {
+  date: string; status: string;
+  home?: { team?: string; points?: number; record?: string; scoring?: { points: number }[] };
+  away?: { team?: string; points?: number; record?: string; scoring?: { points: number }[] };
+};
+
+/**
+ * Every team's finished games from Sleeper's schedule, checked: each final must equal its quarters
+ * (overtime included), and each team's wins and losses must match the record Sleeper shows (one game
+ * of slack: the NBA Cup final doesn't count in records). Throws if anything doesn't add up, so a
+ * wrong score never becomes a price.
+ */
+export function nbaResults(raw: RawGame[]): Map<string, TeamGame[]> {
+  const out = new Map<string, TeamGame[]>();
+  const rec = new Map<string, { w: number; l: number; shown?: string; at: string }>();
+  for (const g of [...raw].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))) {
+    if (g.status !== "complete" || !g.home?.team || !g.away?.team) continue;
+    const sides = [g.home, g.away];
+    for (const s of sides) {
+      const q = (s.scoring ?? []).reduce((n, x) => n + x.points, 0);
+      if (typeof s.points !== "number" || !s.scoring?.length || q !== s.points) throw new Error(`score check failed: ${g.date} ${s.team}`);
+    }
+    for (const [me, them] of [[g.home, g.away], [g.away, g.home]] as const) {
+      (out.get(me.team!) ?? out.set(me.team!, []).get(me.team!)!).push({ date: g.date, pf: me.points!, pa: them.points! });
+      const r = rec.get(me.team!) ?? { w: 0, l: 0, at: "" };
+      if (me.points! > them.points!) r.w++;
+      else r.l++;
+      if (me.record) r.shown = me.record;
+      rec.set(me.team!, r);
+    }
+  }
+  for (const [team, r] of rec) {
+    const [w, l] = (r.shown ?? "").split("-").map(Number);
+    if (!Number.isFinite(w) || !Number.isFinite(l) || Math.abs(w - r.w) + Math.abs(l - r.l) > 1) throw new Error(`record check failed: ${team}`);
+  }
+  return out;
+}
+
+/** NBA team names by Sleeper's abbreviation. */
+export const NBA_TEAMS: Record<string, string> = {
+  ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
+  CLE: "Cleveland Cavaliers", DAL: "Dallas Mavericks", DEN: "Denver Nuggets", DET: "Detroit Pistons", GSW: "Golden State Warriors",
+  HOU: "Houston Rockets", IND: "Indiana Pacers", LAC: "LA Clippers", LAL: "Los Angeles Lakers", MEM: "Memphis Grizzlies",
+  MIA: "Miami Heat", MIL: "Milwaukee Bucks", MIN: "Minnesota Timberwolves", NOP: "New Orleans Pelicans", NYK: "New York Knicks",
+  OKC: "Oklahoma City Thunder", ORL: "Orlando Magic", PHI: "Philadelphia 76ers", PHX: "Phoenix Suns", POR: "Portland Trail Blazers",
+  SAC: "Sacramento Kings", SAS: "San Antonio Spurs", TOR: "Toronto Raptors", UTA: "Utah Jazz", WAS: "Washington Wizards",
+};

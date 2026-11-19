@@ -360,7 +360,7 @@ function Portfolio({ name, id, p, onClose }: { name: string; id: string; p: Foli
 const MIX = [
   ["Bushy Bucks", "#3987e5"],
   ["Teams", "#d95926"],
-  ["Players", "#199e70"],
+  ["NBA", "#199e70"],
   ["Perren Coin", "#c98500"],
   ["Companies", "#d55181"],
   ["Shorts", "#9085e9"],
@@ -441,7 +441,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const [coinQ, setCoinQ] = useState(1);
   const [hoodQ, setHoodQ] = useState(1);
   const [allFeed, setAllFeed] = useState(false);
-  const [tab, setTab] = useState<"teams" | "players" | "companies">("teams");
+  const [tab, setTab] = useState<"teams" | "players" | "nba" | "companies">("teams");
   const [find, setFind] = useState("");
   const [shown, setShown] = useState(25);
   const [sort, setSort] = useState<"price" | "up" | "down">("price");
@@ -574,7 +574,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                           <button
                             type="button"
                             onClick={() => {
-                              setTab(h.kind === "player" ? "players" : h.kind === "storm" ? "companies" : "teams");
+                              setTab(h.kind === "player" ? "players" : h.kind === "nba" ? "nba" : h.kind === "storm" ? "companies" : "teams");
                               // Players: search him so he's on the list (it only shows the first 25).
                               setFind(h.kind === "player" ? h.name : "");
                               setOpen(h.team);
@@ -637,7 +637,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               {/* Portfolio mix: where your money sits. */}
               {(() => {
                 const by = (k: string) => w.holdings.filter((h) => h.kind === k).reduce((t, h) => t + h.value, 0);
-                const parts = [w.bucks, by("team"), by("player"), Math.round((w.coins * (s.coinBack ?? 3000)) / 100), by("storm"), (w.shorts ?? []).reduce((t, x) => t + x.value, 0)];
+                const parts = [w.bucks, by("team"), by("player") + by("nba"), Math.round((w.coins * (s.coinBack ?? 3000)) / 100), by("storm"), (w.shorts ?? []).reduce((t, x) => t + x.value, 0)];
                 return parts.some((x, i) => i > 0 && x > 0) ? (
                   <div className="rounded-2xl bg-black/20 p-4 md:p-5">
                     <p className="mb-4 text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Portfolio mix</p>
@@ -706,7 +706,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
       {/* The board: teams or players */}
       <div className="mx-auto max-w-6xl px-5 md:px-10">
         <div role="tablist" aria-label="Board" className="inline-flex flex-wrap gap-1 rounded-full bg-black/25 p-1">
-          {(["teams", "players", "companies"] as const).map((k) => (
+          {(["teams", "players", "nba", "companies"] as const).map((k) => (
             <button
               key={k}
               role="tab"
@@ -719,7 +719,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               }}
               className={`h-11 cursor-pointer rounded-full px-5 text-sm font-semibold transition-colors duration-150 ${tab === k ? "bg-[var(--paper)] text-[var(--bin)]" : "text-[var(--muted)] hover:text-[var(--paper)]"}`}
             >
-              {k === "teams" ? "Teams" : k === "players" ? "Players" : "Companies"}
+              {k === "teams" ? "Teams" : k === "players" ? "Players" : k === "nba" ? "NBA teams" : "Companies"}
             </button>
           ))}
         </div>
@@ -1015,6 +1015,100 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
               </>
             );
           })()}
+        </section>
+      ) : null}
+
+      {/* NBA team stocks: the 30 real teams, priced from this season's results (no coin). */}
+      {tab === "nba" ? (
+        <section aria-label="NBA teams" className="mx-auto max-w-6xl px-5 md:px-10">
+          <h2 className="font-display text-3xl font-black md:text-4xl">NBA teams</h2>
+          <p className="mt-2 max-w-2xl text-[var(--muted)]">
+            All 30 NBA teams, priced on how they&apos;re playing this season: half their win %, half what their point differential says they should win. The
+            last 10 games count a little extra (20%). A .500 team is about 50 BB, the best near 90. No coin, just the price: buy low, sell high, or short. A team
+            locks once its game starts and reopens at 6 AM Eastern the next day.
+          </p>
+          {!(s.nba ?? []).length ? <p className="mt-5 text-[var(--muted)]">NBA prices are loading. Try again in a minute.</p> : null}
+          <ul className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+            {(s.nba ?? []).map((t) => {
+              const mine = owned(t.id);
+              const isOpen = open === t.id;
+              const cost = buyCost(t.fair, t.held, q);
+              const pay = mine >= q ? sellValue(t.fair, t.held, q) : 0;
+              return (
+                <li key={t.id} id={`asset-${t.id}`} className="scroll-mt-28">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() => {
+                      setOpen(isOpen ? null : t.id);
+                      setQ(1);
+                      setNote(null);
+                    }}
+                    className="grid w-full cursor-pointer grid-cols-[auto_1fr_auto_auto] items-center gap-3 py-3 text-left transition-colors duration-150 hover:bg-white/[0.03] md:gap-5"
+                  >
+                    <span className="font-display grid size-11 place-items-center rounded-full bg-black/30 text-sm font-black">{t.ticker}</span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold break-words">{t.name}</span>
+                      <span className="block text-sm break-words text-[var(--muted)]">
+                        {t.record} · {t.diff > 0 ? "+" : ""}
+                        {t.diff.toFixed(1)} a game · last 10: {t.last10}
+                        {mine ? <span className="text-[var(--paper)]"> · you own {mine}</span> : null}
+                      </span>
+                      {t.locked ? (
+                        <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-[var(--paper)]">Locked: game on, reopens 6 AM ET</span>
+                      ) : null}
+                    </span>
+                    <span>
+                      <Spark h={t.history} up={t.change >= 0} />
+                    </span>
+                    <span className="text-right">
+                      <span className="block font-display text-2xl leading-none font-black tabular-nums">{money(t.price)}</span>
+                      <span className={`text-sm tabular-nums ${t.change >= 0 ? UP : DOWN}`}>{pct(t.change)} wk</span>
+                    </span>
+                  </button>
+                  {isOpen ? (
+                    <div className="space-y-3 pb-5">
+                      <PriceChart h={t.history} ticker={t.ticker} empty={`The ${t.name} chart fills in as they play.`} note="Their value after each day's games, from Sleeper's final scores, with today's pricing." />
+                      {w ? (
+                        <div className="flex flex-col gap-3 rounded-2xl bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <Qty q={q} setQ={setQ} max={MAX_QTY} />
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              disabled={busy || cost > w.bucks || t.locked}
+                              onClick={() => void order({ kind: "buy", team: t.id, qty: q }, `Bought ${q} ${t.ticker}.`)}
+                              className={`${chip} bg-[var(--paper)] text-[var(--bin)]`}
+                            >
+                              {t.locked ? "Locked: game on" : `Buy for ${money(cost)} BB`}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy || mine < q || t.locked}
+                              onClick={() => void order({ kind: "sell", team: t.id, qty: q }, `Sold ${q} ${t.ticker}.`)}
+                              className={`${chip} bg-white/10 hover:bg-white/15`}
+                            >
+                              {mine >= q ? `Sell for ${money(pay)} BB` : mine ? `You own ${mine}` : "Nothing to sell"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                      {w ? shortControls(t.id, t.fair, t.ticker, t.locked ? "Locked: game on" : null) : (
+                        <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
+                      )}
+                      <p className="text-xs text-[var(--muted)]">
+                        Fair value {money(t.fair)} BB from {t.games} games (until 10 games it starts from last season and moves a tenth of the way per game). Every share the league holds adds 0.4%.
+                      </p>
+                      {note && open === t.id ? (
+                        <p role="status" className={`text-sm font-semibold ${note.ok ? UP : DOWN}`}>
+                          {note.text}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
         </section>
       ) : null}
 

@@ -280,3 +280,33 @@ describe("Re-pricing past player trades", () => {
     expect(owed.get("b")).toBe(2_200 - buyCost(2_500, 2, 1));
   });
 });
+
+describe("NBA team stocks", () => {
+  const g = (pf: number, pa: number, i = 0) => ({ date: `2026-11-${String(i + 1).padStart(2, "0")}`, pf, pa });
+  it("a .500 team with an even point differential is 50 BB", async () => {
+    const { nbaFair } = await import("@/packs/trash/market/math");
+    expect(nbaFair(Array.from({ length: 20 }, (_, i) => (i % 2 ? g(110, 100, i) : g(100, 110, i))))).toBe(5_000);
+  });
+  it("starts from last season and moves a tenth of the way per game", async () => {
+    const { nbaFair } = await import("@/packs/trash/market/math");
+    expect(nbaFair([], 0.75)).toBe(7_000); // 10 + 80 x 0.75
+    expect(nbaFair([], null)).toBe(5_000);
+    // One blowout loss: strength ~0 for that game, 9 tenths still last season's 0.75.
+    expect(nbaFair([g(90, 130)], 0.75)).toBeCloseTo(10_00 + 80 * 100 * 0.9 * 0.75, -1);
+  });
+  it("recent games matter, but less than for players (20%)", async () => {
+    const { nbaFair, nbaStrength } = await import("@/packs/trash/market/math");
+    const season = [...Array.from({ length: 20 }, (_, i) => g(115, 105, i)), ...Array.from({ length: 10 }, (_, i) => g(100, 112, i))];
+    const s = 0.8 * nbaStrength(season) + 0.2 * nbaStrength(season.slice(-10));
+    expect(nbaFair(season)).toBe(Math.round((10 + 80 * s) * 100));
+  });
+  it("only takes scores that add up", async () => {
+    const { nbaResults } = await import("@/packs/trash/market/math");
+    const side = (team: string, q: number[], record: string) => ({ team, points: q.reduce((a, b) => a + b, 0), record, scoring: q.map((points) => ({ points })) });
+    const ok = [{ date: "2026-10-20", status: "complete", home: side("DET", [30, 30, 30, 31], "1-0"), away: side("BOS", [28, 28, 28, 29], "0-1") }];
+    expect(nbaResults(ok).get("DET")).toEqual([{ date: "2026-10-20", pf: 121, pa: 113 }]);
+    expect(() => nbaResults([{ ...ok[0], home: { ...ok[0].home, points: 125 } }])).toThrow();
+    expect(() => nbaResults([{ ...ok[0], home: { ...ok[0].home, record: "5-0" } }])).toThrow();
+    expect(nbaResults([{ ...ok[0], status: "pre_game" }]).size).toBe(0);
+  });
+});

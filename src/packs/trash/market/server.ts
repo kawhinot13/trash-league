@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PRIOR_GAMES, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, repriceTrades, type PastTrade, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, TICKERS, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PRIOR_GAMES, PLAYER, NBA, NBA_TEAMS, isNbaTeam, isDaily, nbaFair, nbaStrength, nbaResults, type RawGame, type TeamGame, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, repriceTrades, type PastTrade, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, TICKERS, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -131,6 +131,33 @@ async function locksNow(lid: string): Promise<Set<string>> {
   const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
   return lockedTeams(await nbaGames(season), et(now), et(new Date(now.getTime() - 86_400_000)), hour);
 }
+
+/** Every NBA team's finished games this season (checked scores, see nbaResults). */
+async function nbaTeamGames(season: string): Promise<Record<string, TeamGame[]>> {
+  "use cache: remote";
+  cacheLife({ stale: 300, revalidate: 900, expire: 86_400 });
+  const raw = await sleeper<RawGame[] | null>(`/schedule/nba/regular/${season}`);
+  if (!raw?.length) throw new Error(`no NBA schedule for ${season}`);
+  return Object.fromEntries(nbaResults(raw));
+}
+
+/** Each NBA team's strength over last season (its starting level this season). Past seasons don't change. */
+async function nbaPrior(season: string): Promise<Record<string, number>> {
+  "use cache: remote";
+  cacheLife("days");
+  const raw = await sleeper<RawGame[] | null>(`/schedule/nba/regular/${season}`);
+  if (!raw || raw.filter((g) => g.status === "complete").length < 1000) throw new Error(`season ${season} schedule incomplete`);
+  return Object.fromEntries([...nbaResults(raw)].map(([t, gs]) => [t, nbaStrength(gs)]));
+}
+
+/** All 30 NBA teams: games this season and last season's strength. */
+async function nbaBoard(lid: string) {
+  const season = (await leagueInfo(lid))?.season;
+  if (!season) throw new Error(`league ${lid} has no season`);
+  const [games, prior] = await Promise.all([nbaTeamGames(season), nbaPrior(String(Number(season) - 1))]);
+  return Object.keys(NBA_TEAMS).map((abbr) => ({ abbr, games: games[abbr] ?? [], prior: prior[abbr] ?? null }));
+}
+type NbaLine = Awaited<ReturnType<typeof nbaBoard>>[number];
 
 /** Player asset id -> fair value, for the players on the board. */
 const playerValues = (ps: PlayerLine[]) => new Map(ps.map((p) => [PLAYER + p.pid, formFair(p.days.map((x) => x[1]), p.prior)]));
@@ -389,11 +416,11 @@ async function savePrices(tx: Sql, lid: string, fair: Map<string, number>, only?
 
 /** Fair value of every asset: teams from official totals, players from box scores (computed outside any transaction). */
 async function allValues(lid: string, recs: TeamRecord[], storm: string[]) {
-  const board = await playerBoard(lid, weekOf(recs));
+  const [board, nba] = await Promise.all([playerBoard(lid, weekOf(recs)), nbaBoard(lid)]);
   const teams = fairValues(recs);
-  const fair = new Map([...teams, ...playerValues(board)]);
+  const fair = new Map([...teams, ...playerValues(board), ...nba.map((t) => [NBA + t.abbr, nbaFair(t.games, t.prior)] as [string, number])]);
   if (storm.length === 2 && teams.has(storm[0]) && teams.has(storm[1])) fair.set(STORM, stormFair(teams.get(storm[0])!, teams.get(storm[1])!));
-  return { board, fair };
+  return { board, nba, fair };
 }
 
 /** Whether anything needs writing: new official results, or no prices saved yet today. Reads only. */
@@ -448,7 +475,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   // Most views write nothing: only new official results (dividends), a new day's prices or a
   // manager's first visit (their desk) open a write.
   const storm = stormIds(season);
-  const { board, fair } = await allValues(lid, recs, storm);
+  const { board, nba, fair } = await allValues(lid, recs, storm);
   // Player formula changes re-price past player trades once each, as if the new formula had always applied.
   const done = new Set((await sql<{ key: string }[]>`select key from market_meta where league_id = ${lid} and key like 'reprice-players-%'`).map((r) => r.key));
   for (const key of REPRICES) if (!done.has(key) && ready(key, board)) await sql.begin((tx) => repriceOnce(tx as unknown as Sql, lid, board, fair, key));
@@ -592,6 +619,36 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       };
     })
     .sort((a, b) => b.price - a.price);
+  // NBA team stocks: all 30, priced from this season's checked results (no coin). Charts redrawn daily
+  // from the games, like players; today is the live price.
+  const nbaTeams = nba
+    .map((t: NbaLine) => {
+      const id = NBA + t.abbr;
+      const f = fair.get(id)!;
+      const h = held.get(id) ?? 0;
+      const price = spot(f, h);
+      const built: { d: string; p: number }[] = [];
+      if (t.games.length) {
+        let i = 0;
+        for (let d = t.games[0].date; d < today; d = nextDay(d)) {
+          while (i < t.games.length && t.games[i].date <= d) i++;
+          built.push({ d, p: nbaFair(t.games.slice(0, i), t.prior) });
+        }
+      }
+      const hist = built.concat({ d: today, p: price });
+      const weekAgo = [...hist].reverse().find((x) => x.d <= cut)?.p ?? hist[0]?.p ?? price;
+      const w = t.games.filter((g) => g.pf > g.pa).length;
+      const l10 = t.games.slice(-10);
+      const diff = t.games.length ? t.games.reduce((n, g) => n + g.pf - g.pa, 0) / t.games.length : 0;
+      return {
+        id, ticker: t.abbr, name: NBA_TEAMS[t.abbr], record: `${w}-${t.games.length - w}`,
+        last10: `${l10.filter((g) => g.pf > g.pa).length}-${l10.filter((g) => g.pf < g.pa).length}`,
+        diff: Math.round(diff * 10) / 10, games: t.games.length, locked: locks.has(t.abbr),
+        fair: f, held: h, price, change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-120),
+      };
+    })
+    .sort((a, b) => b.price - a.price);
+  for (const t of nbaTeams) tick.set(t.id, t.ticker);
   const hoodiesSold = wallets.reduce((s, w) => s + w.hoodies, 0);
   const holdOf = (m: string) => holdings.filter((h) => h.manager === m).map((h) => ({ team: h.team, shares: h.shares }));
   const standings = wallets
@@ -619,14 +676,16 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     ? (await sql<{ kind: string; asset: string; qty: number; reserved: string }[]>`
         select kind, asset, qty, reserved::text from market_orders where league_id = ${lid} and manager = ${manager} order by created_at`).map((r) => ({ kind: r.kind, asset: r.asset, qty: r.qty, reserved: Number(r.reserved) }))
     : [];
-  const assetName = (id: string) => (isPlayer(id) ? (playerName.get(id) ?? "Player") : id === STORM ? "STORM · The Great Storm" : `${tick.get(id) ?? ""} · ${nameOf(id)}`);
+  const assetName = (id: string) =>
+    isPlayer(id) ? (playerName.get(id) ?? "Player") : isNbaTeam(id) ? `${id.slice(NBA.length)} · ${NBA_TEAMS[id.slice(NBA.length)] ?? "NBA team"}` : id === STORM ? "STORM · The Great Storm" : `${tick.get(id) ?? ""} · ${nameOf(id)}`;
+  const kindOf = (id: string) => (isPlayer(id) ? ("player" as const) : isNbaTeam(id) ? ("nba" as const) : id === STORM ? ("storm" as const) : ("team" as const));
   const myShorts = manager
     ? [...new Set(allShorts.filter((r) => r.manager === manager).map((r) => r.asset))].map((asset) => {
         const rows = shortRows.filter((r) => r.manager === manager && r.asset === asset);
         const wait = waitingOf(manager).filter((r) => r.asset === asset);
         const f = fair.get(asset);
         return {
-          asset, name: assetName(asset), kind: isPlayer(asset) ? ("player" as const) : ("team" as const),
+          asset, name: assetName(asset), kind: kindOf(asset),
           shares: rows.reduce((n, r) => n + r.shares, 0),
           put: rows.reduce((n, r) => n + Number(r.entry) * r.shares, 0),
           value: rows.reduce((n, r) => n + (f ? shortValue(Number(r.entry), f, r.shares) : Number(r.entry) * r.shares), 0),
@@ -678,6 +737,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     teams,
     storm: stormStock,
     players,
+    nba: nbaTeams,
     hoodiesSold,
     nextHoodie: hoodiePrice(hoodiesSold),
     coinRate: COIN_RATE,
@@ -700,8 +760,8 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
           const value = f ? sellValue(f, held.get(h.team) ?? h.shares, h.shares) : 0;
           return {
             ...h, counting: counting(h.team, h.shares),
-            name: isPlayer(h.team) ? (playerName.get(h.team) ?? "Player") : h.team === STORM ? "STORM · The Great Storm" : `${tick.get(h.team) ?? ""} · ${nameOf(h.team)}`,
-            kind: isPlayer(h.team) ? ("player" as const) : h.team === STORM ? ("storm" as const) : ("team" as const),
+            name: assetName(h.team),
+            kind: kindOf(h.team),
             value, invested: invested.get(h.team) ?? 0,
           };
         }), worth: standings.find((s) => s.manager === manager)?.worth ?? 0, shorts: myShorts, orders: myOrders }
@@ -719,12 +779,13 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   const recs = await records(lid);
   const storm = stormIds(season);
   const { board, fair: values } = await allValues(lid, recs, storm);
-  if (isPlayer("team" in o ? o.team : "")) {
-    const nba = board.find((p) => PLAYER + p.pid === (o as { team: string }).team)?.nba;
+  if (isDaily("team" in o ? o.team : "")) {
+    const id = (o as { team: string }).team;
+    const nba = isNbaTeam(id) ? id.slice(NBA.length) : board.find((p) => PLAYER + p.pid === id)?.nba;
     // Fail closed: if the schedule can't be read, player trades wait.
     const locks = await locksNow(lid).catch(() => null);
     if (!locks) return { ok: false, error: "Player trading is paused for a minute. Try again shortly." };
-    if (nba && locks.has(nba)) return { ok: false, error: "His game is on. Trading on him reopens at 6 AM Eastern." };
+    if (nba && locks.has(nba)) return { ok: false, error: `${isNbaTeam(id) ? "Their" : "His"} game is on. Trading reopens at 6 AM Eastern.` };
   }
   const sql = await db();
   return sql.begin(async (t) => {
@@ -738,7 +799,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
     if (recent.n >= 30) return { ok: false as const, error: "Easy, trader. Too many orders in a minute; try again shortly." };
     const ctx: Ctx = { lid, fair, held, board, storm };
     // Team stocks trade on Mondays only (see teamWindowOpen); the rest of the week they're closed.
-    if ("team" in o && !isPlayer(o.team) && o.kind !== "cancel" && !(await teamWindowOpen(tx, lid)))
+    if ("team" in o && !isDaily(o.team) && o.kind !== "cancel" && !(await teamWindowOpen(tx, lid)))
       return { ok: false as const, error: "Team stocks trade on Mondays before 7 PM Eastern, once last week's results are in." };
     return execute(tx, ctx, manager, o);
   });

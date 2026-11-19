@@ -38,6 +38,13 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-19: NBA team stocks
+- Owner asked for real NBA teams on the Exchange. Price only, no Perren Coin per real win (that would make it
+  "back a real team in a real game and get paid", too close to betting). Strength = half win %, half
+  point-differential Pythagorean; recency lessened to 20% (owner: records swing more than player averages).
+  Scores from Sleeper's schedule finals, verified (quarters sum, records match) instead of summing box scores.
+  Rejected: coin for wins; 60/40 recency like players.
+
 ## 2026-11-19: Player prices start from last season
 - Owner: with a flat 15 start, every star opened a season at 15 and climbed to his level over 5 games (free
   money on opening night, and injured stars back from injury sat near 15). Now a player with 10+ games last
