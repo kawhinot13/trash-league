@@ -545,9 +545,15 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         holdings: holdOf(w.manager)
           .map((h) => ({ asset: h.team, name: assetName(h.team), shares: h.shares, value: fair.has(h.team) ? sellValue(fair.get(h.team)!, held.get(h.team) ?? h.shares, h.shares) : 0 }))
           .sort((a, b) => b.value - a.value),
-        shorts: shortRows
-          .filter((r) => r.manager === w.manager)
-          .map((r) => ({ asset: r.asset, name: assetName(r.asset), shares: r.shares, value: fair.has(r.asset) ? shortValue(Number(r.entry), fair.get(r.asset)!, r.shares) : Number(r.entry) * r.shares })),
+        // One line per stock shorted: total shares and what closing them all would pay.
+        shorts: [...new Set(shortRows.filter((r) => r.manager === w.manager).map((r) => r.asset))].map((asset) => {
+          const rows = shortRows.filter((r) => r.manager === w.manager && r.asset === asset);
+          const f = fair.get(asset);
+          return {
+            asset, name: assetName(asset), shares: rows.reduce((n, r) => n + r.shares, 0),
+            value: rows.reduce((n, r) => n + (f ? shortValue(Number(r.entry), f, r.shares) : Number(r.entry) * r.shares), 0),
+          };
+        }),
       },
     ]),
   );
