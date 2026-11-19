@@ -144,7 +144,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
   Player stocks (owner's call 2026-11-18, play money only, no entry fee/prizes, Trash only): asset id `p:<pid>`, price =
   fantasy points per game this season (Trash scoring on Sleeper box scores, `playerBoard`, pulled toward 15 under 5
-  games, `playerFair`); NO coin/dividends; same curve and lots; can't buy players on your own roster. Board covers
+  games, `playerFair`); NO coin/dividends; same curve and lots; you CAN buy players on your own roster (owner's call), never your own team. Board covers
   rostered players plus anyone who has played (dropped players stay sellable); computed outside the order lock.
   Player charts are daily: value after each day's games from box scores (from his 5th game), then market closes;
   every chart (teams too) ends on today's live price.

@@ -559,7 +559,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
           <h2 className="font-display text-3xl font-black md:text-4xl">Player stocks</h2>
           <p className="mt-2 max-w-2xl text-[var(--muted)]">
             Everyone on a Trash roster. A share costs what he averages in fantasy points a game this season, scored with Trash&apos;s settings from real
-            box scores. Player stocks pay no coin: buy low, sell high. You can&apos;t buy players on your own roster. A player locks once his game starts and reopens at 6 AM Eastern the next day.
+            box scores. Player stocks pay no coin: buy low, sell high. A player locks once his game starts and reopens at 6 AM Eastern the next day.
           </p>
           <label htmlFor="find-player" className="sr-only">
             Find a player
@@ -614,7 +614,6 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                     const isOpen = open === p.id;
                     const cost = buyCost(p.fair, p.held, q);
                     const pay = mine >= q ? sellValue(p.fair, p.held, q) : 0;
-                    const yours = !!s.me && p.ownerId === s.me;
                     return (
                       <li key={p.id} id={`asset-${p.id}`} className="scroll-mt-28">
                         <button
@@ -658,11 +657,11 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                                 <div className="flex flex-wrap gap-2">
                                   <button
                                     type="button"
-                                    disabled={busy || cost > w.bucks || yours || p.locked}
+                                    disabled={busy || cost > w.bucks || p.locked}
                                     onClick={() => void order({ kind: "buy", team: p.id, qty: q }, `Bought ${q} ${p.name}.`)}
                                     className={`${chip} bg-[var(--paper)] text-[var(--bin)]`}
                                   >
-                                    {p.locked ? "Locked: game on" : yours ? "He's on your roster" : `Buy for ${money(cost)} BB`}
+                                    {p.locked ? "Locked: game on" : `Buy for ${money(cost)} BB`}
                                   </button>
                                   <button
                                     type="button"

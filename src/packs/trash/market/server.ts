@@ -467,9 +467,6 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       if (o.kind === "buy") {
         // Nobody invests in themselves: you can't buy your own team (you can still sell shares you have).
         if (o.team === manager) return { ok: false as const, error: "You can't buy your own team." };
-        // Player stocks: not players on your own roster either (you set their lineup).
-        if (isPlayer(o.team) && board.some((p) => PLAYER + p.pid === o.team && p.owner === manager))
-          return { ok: false as const, error: "You can't buy players on your own roster." };
         const cost = buyCost(f, h, o.qty);
         if (cost > bucks) return { ok: false as const, error: "Not enough Bushy Bucks for that." };
         await tx`update market_wallets set bucks = bucks - ${cost} where league_id = ${lid} and manager = ${manager}`;
