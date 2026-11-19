@@ -947,7 +947,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                         </button>
                         {isOpen ? (
                           <div className="space-y-3 pb-5">
-                            <PriceChart h={p.history} ticker={p.name} empty={`${p.name}'s chart fills in as he plays.`} note="Before the market opened: his value after each day's games, from box scores." />
+                            <PriceChart h={p.history} ticker={p.name} empty={`${p.name}'s chart fills in as he plays.`} note="His value after each day's games, from box scores, with today's pricing (60% last 5 games, 40% season)." />
                             {w ? (
                               <div className="flex flex-col gap-3 rounded-2xl bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <Qty q={q} setQ={setQ} max={MAX_QTY} />

@@ -474,8 +474,9 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       const h = held.get(id) ?? 0;
       // Every day of the season: his value after each day's games (box scores), carried over days he
       // didn't play; the market's own closing prices once it has them; and today's live price last.
-      const market = history.get(id) ?? [];
-      const first = market[0]?.d ?? "9999";
+      // Every past day is redrawn with today's formula from his box scores (saved closing prices used
+      // whatever formula was live then, which made fake dips when it changed); today is the live price.
+      const first = "9999";
       const built: { d: string; p: number }[] = [];
       if (p.days.length) {
         let i = 0;
@@ -487,7 +488,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         }
       }
       const live = spot(f, h);
-      const hist = [...built, ...market].filter((x) => x.d !== today).concat({ d: today, p: live });
+      const hist = built.filter((x) => x.d !== today).concat({ d: today, p: live });
       const price = spot(f, h);
       const weekAgo = [...hist].reverse().find((x) => x.d <= cut)?.p ?? hist[0]?.p ?? price;
       return {

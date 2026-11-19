@@ -149,7 +149,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   60% last-5-games average (`RECENT_GAMES`) + 40% season average (Trash scoring on Sleeper box scores, `playerBoard`, `formFair`;
   pulled toward 15 under 5 games; injured players hold, since no new games); NO coin/dividends; same curve and lots; you CAN buy players on your own roster (owner's call), never your own team. Board covers
   rostered players plus anyone who has played (dropped players stay sellable); computed outside the order lock.
-  Player charts are daily: value after each day's games from box scores (from his 5th game), then market closes;
+  Player charts are daily, always redrawn with the current formula from box scores (from his 5th game; saved closing
+  prices are not used for players, so a formula change can't leave fake dips);
   every chart (teams too) ends on today's live price.
   The Great Storm (asset `storm`, ticker STORM; owner's lore: Junkyard Dog + KawhiNot warned the league before Season 4):
   value = average of the two team values (`stormFair`), coin = average of their per-share payouts, x1.5 when both win
