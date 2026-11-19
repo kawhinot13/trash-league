@@ -356,8 +356,8 @@ function Mix({ parts, total }: { parts: number[]; total: number }) {
   const arcs = lens.map((len, i) => ({ i, len, at: lens.slice(0, i).reduce((a, b) => a + b, 0) }));
   const sel = hover === null ? null : { name: MIX[hover][0], v: parts[hover] };
   return (
-    <figure className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
-      <div className="relative size-44 shrink-0">
+    <figure className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+      <div className="relative size-40 shrink-0">
         <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="img" aria-label={`Portfolio mix: ${MIX.map(([n], i) => (parts[i] > 0 ? `${n} ${Math.round((parts[i] / sum) * 100)}%` : null)).filter(Boolean).join(", ")}`}>
           {arcs
             .filter((a) => a.len > 0)
@@ -385,13 +385,24 @@ function Mix({ parts, total }: { parts: number[]; total: number }) {
           <span className="text-[10px] text-[var(--muted)]">{sel ? `${Math.round((sel.v / sum) * 100)}%` : "BB"}</span>
         </div>
       </div>
-      <ul className="grid w-full grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-1">
+      <ul className="w-full min-w-0 space-y-2.5 text-sm">
         {MIX.map(([name, color], i) =>
           parts[i] > 0 ? (
-            <li key={name} className="flex items-center gap-2" onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(null)}>
-              <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
-              <span className="min-w-0 flex-1 break-words text-[var(--muted)]">{name}</span>
-              <span className="font-semibold tabular-nums">{Math.round((parts[i] / sum) * 100)}%</span>
+            <li
+              key={name}
+              onPointerEnter={() => setHover(i)}
+              onPointerLeave={() => setHover(null)}
+              className={`transition-opacity duration-150 ${hover !== null && hover !== i ? "opacity-50" : ""}`}
+            >
+              <div className="flex items-baseline gap-2">
+                <span aria-hidden className="size-2.5 shrink-0 self-center rounded-full" style={{ background: color }} />
+                <span className="min-w-0 flex-1 break-words">{name}</span>
+                <span className="text-[var(--muted)] tabular-nums">{money(parts[i], 0)} BB</span>
+                <span className="w-10 text-right font-semibold tabular-nums">{Math.round((parts[i] / sum) * 100)}%</span>
+              </div>
+              <div aria-hidden className="mt-1 ml-[18px] h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="h-full rounded-full" style={{ width: `${(parts[i] / sum) * 100}%`, background: color }} />
+              </div>
             </li>
           ) : null,
         )}
@@ -530,8 +541,9 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   </li>
                 </ul>
               </div>
+              <div className="mt-6 grid items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
               {/* Holdings: what you own, what it's worth now, and how it's done. */}
-              <div className="mt-6">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Your holdings</p>
                 {w.holdings.length ? (
                   <ul className="mt-2 divide-y divide-[var(--line)] rounded-2xl bg-black/20">
@@ -607,13 +619,14 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                 const by = (k: string) => w.holdings.filter((h) => h.kind === k).reduce((t, h) => t + h.value, 0);
                 const parts = [w.bucks, by("team"), by("player"), Math.round((w.coins * (s.coinBack ?? 3000)) / 100), by("storm"), (w.shorts ?? []).reduce((t, x) => t + x.value, 0)];
                 return parts.some((x, i) => i > 0 && x > 0) ? (
-                  <div className="mt-6 rounded-2xl bg-black/20 p-4">
-                    <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Portfolio mix</p>
+                  <div className="rounded-2xl bg-black/20 p-4 md:p-5">
+                    <p className="mb-4 text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Portfolio mix</p>
                     <Mix parts={parts} total={w.worth} />
-                    <p className="mt-3 text-xs text-[var(--muted)]">Coin at what cashing it in pays. Hoodies aren&apos;t counted: they&apos;re never sold.</p>
+                    <p className="mt-4 text-xs text-[var(--muted)]">Coin at what cashing it in pays. Hoodies aren&apos;t counted: they&apos;re never sold.</p>
                   </div>
                 ) : null;
               })()}
+              </div>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl bg-black/20 p-4">
                   <p className="flex items-center gap-2 font-semibold">
