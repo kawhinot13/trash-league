@@ -1100,7 +1100,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
       <div className="mx-auto grid max-w-6xl gap-12 px-5 md:grid-cols-2 md:px-10">
         <section aria-label="Standings">
           <h2 className="font-display text-3xl font-black md:text-4xl">Richest in Trash</h2>
-          <p className="mt-2 text-[var(--muted)]">Most hoodies wins. Net worth breaks ties. Up or down is against the 1,000 everyone started with; tap a name for the details.</p>
+          <p className="mt-2 text-[var(--muted)]">Most hoodies wins. Net worth breaks ties. Tap a name to see their portfolio and how each investment is doing.</p>
           {s.standings!.length ? (
             <ol className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
               {s.standings!.map((r, i) => (
@@ -1117,14 +1117,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   <span className="flex items-center gap-1 tabular-nums">
                     <Hoodie className="size-5" /> {r.hoodies}
                   </span>
-                  <span className="w-24 text-right text-sm tabular-nums">
-                    <span className="block text-[var(--muted)]">{money(r.worth, 0)} BB</span>
-                    {/* Everyone started with 1,000 Bushy Bucks. */}
-                    <span className={`block text-xs ${r.worth >= 100_000 ? UP : DOWN}`}>
-                      {r.worth >= 100_000 ? "+" : "−"}
-                      {money(Math.abs(r.worth - 100_000), 0)}
-                    </span>
-                  </span>
+                  <span className="w-24 text-right text-sm text-[var(--muted)] tabular-nums">{money(r.worth, 0)} BB</span>
                 </li>
               ))}
             </ol>
