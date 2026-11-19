@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useReducedMotion } from "motion/react";
 import { PlayGate } from "@/components/app/play-gate";
 import { LivePlayerPhoto, MgrPhoto } from "@/components/trash/brand";
@@ -257,6 +258,80 @@ function ledgerLine(f: Entry) {
 const when = (at: string) =>
   new Date(at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
+type Folio = NonNullable<MarketState["portfolios"]>[string];
+function Portfolio({ name, id, p, onClose }: { name: string; id: string; p: Folio; onClose: () => void }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", esc);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+  const Line = ({ label, value, tag }: { label: string; value: number; tag?: string }) => (
+    <li className="flex flex-wrap items-baseline justify-between gap-x-3 py-2.5">
+      <span className="min-w-0 break-words">
+        {tag ? <span className="mr-1.5 rounded bg-[var(--down)]/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-[var(--down)] uppercase">{tag}</span> : null}
+        {label}
+      </span>
+      <span className="font-semibold tabular-nums">{money(value)} BB</span>
+    </li>
+  );
+  // Rendered on <body> so no parent's stacking (or the phone tab bar) can sit on top of it.
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/60 sm:items-center" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${name}'s portfolio`}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[85vh] w-full overflow-y-auto rounded-t-[28px] border border-white/10 bg-[var(--bin-2)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-[28px] md:p-7"
+      >
+        <div className="flex items-center gap-3">
+          <MgrPhoto id={id} alt="" width={44} height={44} className="size-11 rounded-full object-cover" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Portfolio</p>
+            <p className="font-display text-3xl leading-none font-black break-words">{name}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className={`${chip} bg-white/10 hover:bg-white/15`}>
+            ✕
+          </button>
+        </div>
+        <p className="mt-4 font-display text-4xl leading-none font-black tabular-nums">
+          {money(p.worth, 0)} <span className="text-lg text-[var(--muted)]">BB net worth</span>
+        </p>
+        <ul className="mt-3 flex flex-wrap gap-2 text-sm">
+          <li className="flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1.5">
+            <Bucks className="size-4" /> {money(p.bucks)}
+          </li>
+          <li className="flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1.5">
+            <Coin className="size-4" /> {money(p.coins)}
+          </li>
+          <li className="flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1.5">
+            <Hoodie className="size-4" /> {p.hoodies}
+          </li>
+        </ul>
+        <p className="mt-5 text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Holdings</p>
+        {p.holdings.length || p.shorts.length ? (
+          <ul className="mt-1 divide-y divide-[var(--line)]">
+            {p.holdings.map((h) => (
+              <Line key={h.asset} label={`${h.name} · ${h.shares} ${h.shares === 1 ? "share" : "shares"}`} value={h.value} />
+            ))}
+            {p.shorts.map((h, i) => (
+              <Line key={`s${i}`} tag="Short" label={`${h.name} · ${h.shares} ${h.shares === 1 ? "share" : "shares"}`} value={h.value} />
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-[var(--muted)]">Nothing on the books. All cash.</p>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /* ── The board ─────────────────────────────────────────────────────── */
 export function MarketBoard({ leagueId }: { leagueId: string }) {
   const url = `/api/l/${leagueId}/market`;
@@ -272,6 +347,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const [find, setFind] = useState("");
   const [shown, setShown] = useState(25);
   const [sort, setSort] = useState<"price" | "up" | "down">("price");
+  const [peek, setPeek] = useState<string | null>(null);
 
   const load = useCallback(() => {
     void fetch(url, { cache: "no-store" })
@@ -902,7 +978,13 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                 <li key={r.manager} className={`flex items-center gap-3 py-3 ${r.manager === s.me ? "bg-white/[0.04]" : ""}`}>
                   <span className="w-6 text-right font-display text-xl font-black text-[var(--muted)] tabular-nums">{i + 1}</span>
                   <MgrPhoto id={r.manager} alt="" width={36} height={36} className="size-9 rounded-full object-cover" />
-                  <span className="min-w-0 flex-1 font-semibold break-words">{r.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPeek(r.manager)}
+                    className="min-w-0 flex-1 cursor-pointer text-left font-semibold break-words underline decoration-[var(--line)] underline-offset-4 hover:decoration-[var(--paper)]"
+                  >
+                    {r.name}
+                  </button>
                   <span className="flex items-center gap-1 tabular-nums">
                     <Hoodie className="size-5" /> {r.hoodies}
                   </span>
@@ -923,7 +1005,14 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                 {(allFeed ? s.feed! : s.feed!.slice(0, 12)).map((f, i) => (
                   <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2.5 text-sm">
                     <span className="min-w-0 break-words">
-                      <span className="font-semibold">{f.name}</span> <span className="text-[var(--muted)]">{ledgerLine(f)}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPeek(f.manager)}
+                        className="cursor-pointer font-semibold underline decoration-[var(--line)] underline-offset-4 hover:decoration-[var(--paper)]"
+                      >
+                        {f.name}
+                      </button>{" "}
+                      <span className="text-[var(--muted)]">{ledgerLine(f)}</span>
                     </span>
                     <time dateTime={f.at} className="shrink-0 text-xs text-[var(--muted)] tabular-nums">
                       {when(f.at)}
@@ -942,6 +1031,16 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
           )}
         </section>
       </div>
+
+      {/* Anyone's portfolio (everything here is public, like the ledger). */}
+      {peek && s.portfolios?.[peek] ? (
+        <Portfolio
+          name={s.standings?.find((x) => x.manager === peek)?.name ?? "Manager"}
+          id={peek}
+          p={s.portfolios[peek]}
+          onClose={() => setPeek(null)}
+        />
+      ) : null}
 
       <section aria-label="How it works" className="mx-auto max-w-6xl px-5 md:px-10">
         <h2 className="font-display text-3xl font-black md:text-4xl">How it works</h2>

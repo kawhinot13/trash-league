@@ -140,7 +140,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   league-wide); buy/sell along the same curve, so a round trip is exact. Money in hundredths; orders and dividends run
   under a per-league lock. Managers only, as their linked Sleeper user (PlayGate); nobody can buy their own team. Other leagues: 404 / disabled.
   Coin goes only to shares owned before the paid week began (Monday 12am ET; `market_lots`, `ownedBefore`); sells take
-  the newest shares first. Every transaction (buys, sells, swaps, hoodies, payouts) is public in "The ledger".
+  the newest shares first. Every transaction (buys, sells, swaps, hoodies, payouts) is public in "The ledger"; tapping a name (standings or
+  ledger) opens that manager's public portfolio (`portfolios`: cash, coin, hoodies, holdings, shorts at today's values).
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
   Player stocks (owner's call 2026-11-18, play money only, no entry fee/prizes, Trash only): asset id `p:<pid>`, price =
   fantasy points per game this season (Trash scoring on Sleeper box scores, `playerBoard`, pulled toward 15 under 5

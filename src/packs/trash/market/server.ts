@@ -461,6 +461,22 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         };
       })
     : [];
+  // Everyone's portfolio is public (like the ledger): cash, coin, hoodies, holdings and shorts at today's values.
+  const portfolios = Object.fromEntries(
+    wallets.map((w) => [
+      w.manager,
+      {
+        bucks: Number(w.bucks), coins: Number(w.coins), hoodies: w.hoodies,
+        worth: standings.find((x) => x.manager === w.manager)?.worth ?? 0,
+        holdings: holdOf(w.manager)
+          .map((h) => ({ asset: h.team, name: assetName(h.team), shares: h.shares, value: fair.has(h.team) ? sellValue(fair.get(h.team)!, held.get(h.team) ?? h.shares, h.shares) : 0 }))
+          .sort((a, b) => b.value - a.value),
+        shorts: shortRows
+          .filter((r) => r.manager === w.manager)
+          .map((r) => ({ asset: r.asset, name: assetName(r.asset), shares: r.shares, value: fair.has(r.asset) ? shortValue(Number(r.entry), fair.get(r.asset)!, r.shares) : Number(r.entry) * r.shares })),
+      },
+    ]),
+  );
   // What the viewer has put into each holding: bucks spent buying minus bucks back from selling.
   const invested = new Map<string, number>();
   if (mine)
@@ -477,10 +493,11 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
     coinRate: COIN_RATE,
     coinBack: COIN_BACK,
     standings,
+    portfolios,
     feed: log.map((l) => {
       const [opp, x] = l.note?.split("|") ?? [];
       return {
-        name: nameOf(l.manager), kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? playerName.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString(),
+        name: nameOf(l.manager), manager: l.manager, kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? playerName.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString(),
         upset: opp && x ? { vs: tick.get(opp) ?? null, x: Number(x) } : null,
         stormWeek: l.note === "storm",
       };
