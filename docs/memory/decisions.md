@@ -4,6 +4,11 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: Team stocks closed outside Mondays (no waiting orders)
+- Waiting orders showed an estimated price that might not fill (a 1-share order could get 0 if the price rose).
+  Owner: just don't allow team or company trades until Monday. Team buys, sells, shorts and closes work only Monday
+  before 7 PM ET once results are in; buttons read "Opens Monday" otherwise. Anything waiting was refunded once.
+
 ## 2026-11-19: Team stocks trade on Mondays
 - Mixed rules confused the owner (instant buys at mid-week prices earning coin a week later; waiting shorts; instant
   sells that could dodge a known loss). Now every team order goes through only Monday before 7 PM ET once last week's

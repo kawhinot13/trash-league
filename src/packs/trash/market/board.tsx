@@ -337,6 +337,69 @@ function Portfolio({ name, id, p, onClose }: { name: string; id: string; p: Foli
   );
 }
 
+/** Where a desk's money sits, as a donut (fixed slot order; validated categorical palette, dark). */
+const MIX = [
+  ["Bushy Bucks", "#3987e5"],
+  ["Teams", "#d95926"],
+  ["Players", "#199e70"],
+  ["Perren Coin", "#c98500"],
+  ["Companies", "#d55181"],
+  ["Shorts", "#9085e9"],
+] as const;
+function Mix({ parts, total }: { parts: number[]; total: number }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const sum = parts.reduce((a, b) => a + b, 0);
+  if (sum <= 0) return null;
+  const R = 42;
+  const C = 2 * Math.PI * R;
+  const lens = parts.map((v) => (v / sum) * C);
+  const arcs = lens.map((len, i) => ({ i, len, at: lens.slice(0, i).reduce((a, b) => a + b, 0) }));
+  const sel = hover === null ? null : { name: MIX[hover][0], v: parts[hover] };
+  return (
+    <figure className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+      <div className="relative size-44 shrink-0">
+        <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="img" aria-label={`Portfolio mix: ${MIX.map(([n], i) => (parts[i] > 0 ? `${n} ${Math.round((parts[i] / sum) * 100)}%` : null)).filter(Boolean).join(", ")}`}>
+          {arcs
+            .filter((a) => a.len > 0)
+            .map((a) => (
+              <circle
+                key={a.i}
+                cx="50"
+                cy="50"
+                r={R}
+                fill="none"
+                stroke={MIX[a.i][1]}
+                strokeWidth={hover === a.i ? 14 : 12}
+                strokeDasharray={`${Math.max(0, a.len - (parts.filter((x) => x > 0).length > 1 ? 1.2 : 0))} ${C}`}
+                strokeDashoffset={-a.at}
+                onPointerEnter={() => setHover(a.i)}
+                onPointerLeave={() => setHover(null)}
+                onClick={() => setHover(hover === a.i ? null : a.i)}
+                className="cursor-pointer transition-[stroke-width] duration-150"
+              />
+            ))}
+        </svg>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          <span className="text-[10px] font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">{sel ? sel.name : "Net worth"}</span>
+          <span className="font-display text-2xl leading-none font-black tabular-nums">{money(sel ? sel.v : total, 0)}</span>
+          <span className="text-[10px] text-[var(--muted)]">{sel ? `${Math.round((sel.v / sum) * 100)}%` : "BB"}</span>
+        </div>
+      </div>
+      <ul className="grid w-full grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-1">
+        {MIX.map(([name, color], i) =>
+          parts[i] > 0 ? (
+            <li key={name} className="flex items-center gap-2" onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(null)}>
+              <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
+              <span className="min-w-0 flex-1 break-words text-[var(--muted)]">{name}</span>
+              <span className="font-semibold tabular-nums">{Math.round((parts[i] / sum) * 100)}%</span>
+            </li>
+          ) : null,
+        )}
+      </ul>
+    </figure>
+  );
+}
+
 /* ── The board ─────────────────────────────────────────────────────── */
 export function MarketBoard({ leagueId }: { leagueId: string }) {
   const url = `/api/l/${leagueId}/market`;
@@ -539,6 +602,18 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   </ul>
                 ) : null}
               </div>
+              {/* Portfolio mix: where your money sits. */}
+              {(() => {
+                const by = (k: string) => w.holdings.filter((h) => h.kind === k).reduce((t, h) => t + h.value, 0);
+                const parts = [w.bucks, by("team"), by("player"), Math.round((w.coins * (s.coinBack ?? 3000)) / 100), by("storm"), (w.shorts ?? []).reduce((t, x) => t + x.value, 0)];
+                return parts.some((x, i) => i > 0 && x > 0) ? (
+                  <div className="mt-6 rounded-2xl bg-black/20 p-4">
+                    <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-[var(--muted)] uppercase">Portfolio mix</p>
+                    <Mix parts={parts} total={w.worth} />
+                    <p className="mt-3 text-xs text-[var(--muted)]">Coin at what cashing it in pays. Hoodies aren&apos;t counted: they&apos;re never sold.</p>
+                  </div>
+                ) : null;
+              })()}
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl bg-black/20 p-4">
                   <p className="flex items-center gap-2 font-semibold">

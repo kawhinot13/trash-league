@@ -154,12 +154,13 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Shorts (teams + players, not STORM; owner's call 2026-11-19): `market_shorts`, collateral = stats-only fair value
   (not spot, so buying can't set one up), close pays `shortValue` = 2x entry - value now, clamped 0..2x; no coin;
   not your own team or own-roster players; player shorts obey the game lock; counted in net worth.
-  Team stocks (teams + STORM) trade Mondays only (owner's call 2026-11-19): every team order (buy, sell, short,
-  close) goes through right away only Monday ET before 7 PM once last week's results posted (`teamWindowOpen`,
-  `market_teams.result_at`); otherwise it waits (`market_orders`, BB set aside; shorts in `market_shorts.pending`) and
-  fills at the new prices when the next result posts (`fillOrders`, `fillPending`); cancel any time. Coin counts shares
-  owned before Monday 7 PM of the paid week (`GAME_TIME_MS`). Team buys/shorts from Nov 16-19 were backdated to that
-  Monday 6:59 PM (`backdateOnce`, `market_meta`). Player stocks stay daily (game lock only).
+  Team stocks (teams + STORM/companies) trade Mondays only (owner's call 2026-11-19): every team order (buy, sell,
+  short, close) works only Monday ET before 7 PM once last week's results posted (`teamWindowOpen`,
+  `market_teams.result_at`); closed the rest of the week, no waiting orders (any were refunded once,
+  `refundWaitingOnce`). Coin counts shares owned before Monday 7 PM of the paid week (`GAME_TIME_MS`). Team buys/shorts
+  from Nov 16-19 were backdated to that Monday 6:59 PM (`backdateOnce`, `market_meta`). Player stocks stay daily.
+  Desk shows holdings, then a "Portfolio mix" donut (`Mix`: Bushy Bucks, Teams, Players, Perren Coin at 30,
+  Companies, Shorts; fixed slot order, palette validated on --bin-2 with the dataviz validator; hoodies not counted).
   Over/under-performing (Teams tab panel + "expected N wins" per row): `expectedWins` = Pythagorean (exponent 14)
   from official PF and PA; luck = actual wins minus expected. Official totals only.
   Player trading locks while his NBA team plays (`lockedTeams`: from tip-off per Sleeper's schedule, or 7 PM ET on a
