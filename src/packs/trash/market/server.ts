@@ -155,6 +155,19 @@ const GAME_TIME_MS = 19 * 3_600_000;
  * shorts placed during the week of Nov 16 are treated as if they happened that Monday before games, so
  * they count for that week. Waiting team shorts open at the value they were placed at.
  */
+async function refundWaitingOnce(tx: Sql, lid: string) {
+  const done = await tx`insert into market_meta (league_id, key) values (${lid}, 'no-waiting-orders-2026-11-19') on conflict do nothing returning key`;
+  if (!done.length) return;
+  // Owner's call: no waiting orders. Everything set aside goes back to its owner.
+  for (const r of await tx<{ manager: string; n: string }[]>`
+    select manager, sum(reserved)::text as n from (
+      select manager, reserved from market_orders where league_id = ${lid}
+      union all select manager, reserved from market_shorts where league_id = ${lid} and pending) x group by manager`)
+    await tx`update market_wallets set bucks = bucks + ${Number(r.n)} where league_id = ${lid} and manager = ${r.manager}`;
+  await tx`delete from market_orders where league_id = ${lid}`;
+  await tx`delete from market_shorts where league_id = ${lid} and pending`;
+}
+
 async function backdateOnce(tx: Sql, lid: string) {
   const done = await tx`insert into market_meta (league_id, key) values (${lid}, 'monday-only-2026-11-16') on conflict do nothing returning key`;
   if (!done.length) return;
@@ -208,6 +221,7 @@ async function settle(tx: Sql, lid: string, recs: TeamRecord[], fair: Map<string
   // A week's coin counts shares owned before that week's games: Monday 7 PM Eastern (the end of the trading window).
   const paidWeek = new Date((await weekStart(tx)).getTime() - 7 * 86_400_000 + GAME_TIME_MS);
   await backdateOnce(tx, lid);
+  await refundWaitingOnce(tx, lid);
   const before = new Map(
     (await tx<{ team: string; wins: number; losses: number; ties: number; pf: string }[]>`
       select team, wins, losses, ties, pf from market_teams where league_id = ${lid}`).map((r) => [r.team, { ...r, pf: Number(r.pf) }]),
@@ -605,9 +619,9 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
       select count(*)::int as n from market_log where league_id = ${lid} and manager = ${manager} and kind <> 'dividend' and at > now() - interval '1 minute'`;
     if (recent.n >= 30) return { ok: false as const, error: "Easy, trader. Too many orders in a minute; try again shortly." };
     const ctx: Ctx = { lid, fair, held, board, storm };
-    // Team stocks trade on Mondays (see teamWindowOpen); placed any other time, an order waits for Monday's price.
-    if ("team" in o && !isPlayer(o.team) && (o.kind === "buy" || o.kind === "sell" || o.kind === "cover") && !(await teamWindowOpen(tx, lid)))
-      return queueOrder(tx, ctx, manager, o as { kind: "buy" | "sell" | "cover"; team: string; qty: number });
+    // Team stocks trade on Mondays only (see teamWindowOpen); the rest of the week they're closed.
+    if ("team" in o && !isPlayer(o.team) && o.kind !== "cancel" && !(await teamWindowOpen(tx, lid)))
+      return { ok: false as const, error: "Team stocks trade on Mondays before 7 PM Eastern, once last week's results are in." };
     return execute(tx, ctx, manager, o);
   });
 }
@@ -622,34 +636,6 @@ async function teamWindowOpen(tx: Sql, lid: string): Promise<boolean> {
   const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(now));
   const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
   return teamShortOpenNow(day, hour, posted);
-}
-
-/** A team order placed outside the window: set the bucks (or check the shares) aside and wait for Monday. */
-async function queueOrder(tx: Sql, ctx: Ctx, manager: string, o: { kind: "buy" | "sell" | "cover"; team: string; qty: number }) {
-  const { lid, fair, held, storm } = ctx;
-  const f = fair.get(o.team);
-  if (!f) return { ok: false as const, error: "That isn't on the board." };
-  const [{ queued }] = await tx<{ queued: number }[]>`
-    select coalesce(sum(qty), 0)::int as queued from market_orders where league_id = ${lid} and manager = ${manager} and asset = ${o.team} and kind = ${o.kind}`;
-  let reserved = 0;
-  if (o.kind === "buy") {
-    if (o.team === manager) return { ok: false as const, error: "You can't buy your own team." };
-    if (o.team === STORM && storm.includes(manager)) return { ok: false as const, error: "You're part of The Great Storm, so you can't buy it." };
-    reserved = buyCost(f, held.get(o.team) ?? 0, o.qty);
-    const [w] = await tx<{ bucks: string }[]>`select bucks::text from market_wallets where league_id = ${lid} and manager = ${manager} for update`;
-    if (reserved > Number(w.bucks)) return { ok: false as const, error: "Not enough Bushy Bucks to set aside for that." };
-    await tx`update market_wallets set bucks = bucks - ${reserved} where league_id = ${lid} and manager = ${manager}`;
-  } else if (o.kind === "sell") {
-    const [mine] = await tx<{ shares: number }[]>`select shares from market_holdings where league_id = ${lid} and manager = ${manager} and team = ${o.team}`;
-    if (!mine || mine.shares - queued < o.qty) return { ok: false as const, error: "You don't have that many shares to sell." };
-  } else {
-    const [mine] = await tx<{ n: number }[]>`
-      select coalesce(sum(shares), 0)::int as n from market_shorts where league_id = ${lid} and manager = ${manager} and asset = ${o.team} and not pending`;
-    if (mine.n - queued < o.qty) return { ok: false as const, error: "You aren't short that many shares." };
-  }
-  await tx`insert into market_orders (league_id, manager, kind, asset, qty, reserved) values (${lid}, ${manager}, ${o.kind}, ${o.team}, ${o.qty}, ${reserved})`;
-  await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, ${"q-" + o.kind}, ${o.team}, ${o.qty}, ${reserved})`;
-  return { ok: true as const };
 }
 
 /** Monday's open: every waiting team order goes through at the new prices, oldest first. */
@@ -741,14 +727,6 @@ async function execute(tx: Sql, ctx: Ctx, manager: string, o: Order): Promise<{ 
         const put = f! * o.qty;
         if (put > bucks) return { ok: false as const, error: "Not enough Bushy Bucks to put up for that short." };
         await tx`update market_wallets set bucks = bucks - ${put} where league_id = ${lid} and manager = ${manager}`;
-        if (!isPlayer(o.team)) {
-          // Team shorts: right away only Monday before game time with last week's result in; otherwise they wait.
-          if (!(await teamWindowOpen(tx, lid))) {
-            await tx`insert into market_shorts (league_id, manager, asset, shares, entry, pending, reserved) values (${lid}, ${manager}, ${o.team}, ${o.qty}, 0, true, ${put})`;
-            await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'shortq', ${o.team}, ${o.qty}, ${put})`;
-            return { ok: true as const };
-          }
-        }
         await tx`insert into market_shorts (league_id, manager, asset, shares, entry) values (${lid}, ${manager}, ${o.team}, ${o.qty}, ${f!})`;
         await tx`insert into market_log (league_id, manager, kind, team, qty, amount) values (${lid}, ${manager}, 'short', ${o.team}, ${o.qty}, ${put})`;
       } else {
