@@ -213,7 +213,12 @@ describe("Trash Exchange shorts", () => {
 });
 
 describe("Player prices follow recent form", () => {
-  it("weights the last 10 games 60/40 against the season, pulled toward 15 early", async () => {
+  it("only the last 5 games count as recent", async () => {
+    const { formFair } = await import("@/packs/trash/market/math");
+    // 15 games of 40, then 5 at 70: season 47.5, last 5 = 70 -> 0.6*70 + 0.4*47.5 = 61
+    expect(formFair([...Array(15).fill(40), ...Array(5).fill(70)])).toBe(6_100);
+  });
+  it("weights recent games 60/40 against the season, pulled toward 15 early", async () => {
     const { formFair } = await import("@/packs/trash/market/math");
     expect(formFair([])).toBe(1_500);
     expect(formFair(Array(20).fill(40))).toBe(4_000); // steady player: his average

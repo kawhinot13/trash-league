@@ -493,7 +493,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
       return {
         id, name: p.name, pos: p.pos, nba: p.nba, owner: p.owner ? nameOf(p.owner) : null, ownerId: p.owner,
         avg: p.games ? Math.round((p.pts / p.games) * 10) / 10 : 0, games: p.games,
-        last10: p.days.length ? Math.round((p.days.slice(-10).reduce((t, x) => t + x[1], 0) / Math.min(10, p.days.length)) * 10) / 10 : 0, locked: !!p.nba && locks.has(p.nba),
+        last5: p.days.length ? Math.round((p.days.slice(-5).reduce((t, x) => t + x[1], 0) / Math.min(5, p.days.length)) * 10) / 10 : 0, locked: !!p.nba && locks.has(p.nba),
         fair: f, held: h, price, change: weekAgo ? (price - weekAgo) / weekAgo : 0, history: hist.slice(-60),
       };
     })

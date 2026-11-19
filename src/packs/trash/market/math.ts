@@ -304,16 +304,19 @@ export function expectedWins(pf: number, pa: number, games: number): number {
 export const shortValue = (entry: number, now: number, shares: number) => shares * Math.max(0, Math.min(2 * entry, 2 * entry - now));
 
 /**
- * Player price from recent form (owner's call 2026-11-19): 60% his average over his last 10 games
+ * Player price from recent form (owner's call 2026-11-19, last 5 from 11-20): 60% his average over his last 5 games
  * plus 40% his season average, so hot streaks and slumps move it within a week or two while one wild
  * night doesn't. Pulled toward 15 until he has 5 games; never under 1 BB. A player who isn't playing
  * (injured) adds no games, so his price holds where it was.
  */
+/** How many recent games count for 60% of a player's price. */
+export const RECENT_GAMES = 5;
+
 export function formFair(points: number[]): number {
   const n = points.length;
   if (!n) return 1_500;
   const season = points.reduce((a, b) => a + b, 0) / n;
-  const recent = points.slice(-10);
+  const recent = points.slice(-RECENT_GAMES);
   const last = recent.reduce((a, b) => a + b, 0) / recent.length;
   const avg = 0.6 * last + 0.4 * season;
   const v = n >= 5 ? avg : (n * avg + (5 - n) * 15) / 5;

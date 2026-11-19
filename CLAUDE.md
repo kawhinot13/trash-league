@@ -143,7 +143,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   ledger) opens that manager's public portfolio (`portfolios`: cash, coin, hoodies, holdings, shorts at today's values).
   Nothing can be bought with or cashed out for real money; keep it that way. Resets each season (keyed by league id).
   Player stocks (owner's call 2026-11-18, play money only, no entry fee/prizes, Trash only): asset id `p:<pid>`, price =
-  60% last-10-games average + 40% season average (Trash scoring on Sleeper box scores, `playerBoard`, `formFair`;
+  60% last-5-games average (`RECENT_GAMES`) + 40% season average (Trash scoring on Sleeper box scores, `playerBoard`, `formFair`;
   pulled toward 15 under 5 games; injured players hold, since no new games); NO coin/dividends; same curve and lots; you CAN buy players on your own roster (owner's call), never your own team. Board covers
   rostered players plus anyone who has played (dropped players stay sellable); computed outside the order lock.
   Player charts are daily: value after each day's games from box scores (from his 5th game), then market closes;
