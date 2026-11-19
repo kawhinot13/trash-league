@@ -434,7 +434,9 @@ async function backfill(lid: string, saved: { day: string; team: string; pf: num
 }
 
 /** One key per player-formula change; each re-prices past player trades once (newest formula). */
-const REPRICES = ["reprice-players-last5", "reprice-players-prior"];
+const REPRICES = ["reprice-players-last5", "reprice-players-prior2"];
+/** Formula keys that need data the board may not have yet (a board cached before the change). */
+const ready = (key: string, board: PlayerLine[]) => !key.includes("prior") || board.some((p) => p.prior != null);
 
 export type MarketState = Awaited<ReturnType<typeof marketState>>;
 
@@ -449,7 +451,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   const { board, fair } = await allValues(lid, recs, storm);
   // Player formula changes re-price past player trades once each, as if the new formula had always applied.
   const done = new Set((await sql<{ key: string }[]>`select key from market_meta where league_id = ${lid} and key like 'reprice-players-%'`).map((r) => r.key));
-  for (const key of REPRICES) if (!done.has(key)) await sql.begin((tx) => repriceOnce(tx as unknown as Sql, lid, board, fair, key));
+  for (const key of REPRICES) if (!done.has(key) && ready(key, board)) await sql.begin((tx) => repriceOnce(tx as unknown as Sql, lid, board, fair, key));
   if (await needsSettle(sql, lid, recs)) await sql.begin((tx) => settle(tx as unknown as Sql, lid, recs, fair, true, storm));
   if (manager && season.users.has(manager))
     await sql`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
@@ -728,7 +730,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   return sql.begin(async (t) => {
     const tx = t as unknown as Sql;
     // Every order settles new results first; the full day's prices are written only when they're due.
-    for (const key of REPRICES) await repriceOnce(tx, lid, board, values, key);
+    for (const key of REPRICES) if (ready(key, board)) await repriceOnce(tx, lid, board, values, key);
     const { fair, held } = await settle(tx, lid, recs, values, await needsSettle(tx, lid, recs), storm);
     await tx`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
     const [recent] = await tx<{ n: number }[]>`

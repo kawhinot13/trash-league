@@ -43,7 +43,8 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   money on opening night, and injured stars back from injury sat near 15). Now a player with 10+ games last
   season starts from his last-season points per game (Trash scoring, box scores; `priorLevels`); rookies still
   15. Each game still moves it a fifth of the way. Moved 44 current prices (Butler 15 -> 48.5, Kawhi 26.7 -> 53.8).
-  Past player trades re-priced once more (`REPRICES` key `reprice-players-prior`). Rejected: 20 for rookies
+  Past player trades re-priced once more (`REPRICES` key `reprice-players-prior2`, run only once the board carries last-season levels: the
+  first key may have run on a board cached from before the deploy, a no-op). Rejected: 20 for rookies
   (owner kept 15).
 
 ## 2026-11-19: Player prices follow recent form
