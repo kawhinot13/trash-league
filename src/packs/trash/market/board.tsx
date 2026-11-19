@@ -267,6 +267,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const [tab, setTab] = useState<"teams" | "players">("teams");
   const [find, setFind] = useState("");
   const [shown, setShown] = useState(25);
+  const [sort, setSort] = useState<"price" | "up" | "down">("price");
 
   const load = useCallback(() => {
     void fetch(url, { cache: "no-store" })
@@ -574,9 +575,37 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
             autoComplete="off"
             className="mt-5 h-12 w-full max-w-md rounded-full border border-[var(--line)] bg-[var(--bin-2)] px-5 text-base placeholder:text-[var(--muted)] focus:border-[var(--wood)] focus:outline-none"
           />
+          <div role="group" aria-label="Sort players" className="mt-3 flex flex-wrap gap-2">
+            {(
+              [
+                ["price", "Top price"],
+                ["up", "Trending up ▲"],
+                ["down", "Trending down ▼"],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={sort === k}
+                onClick={() => {
+                  setSort(k);
+                  setShown(25);
+                  setOpen(null);
+                }}
+                className={`h-10 cursor-pointer rounded-full px-4 text-sm font-semibold transition-colors duration-150 ${sort === k ? "bg-[var(--paper)] text-[var(--bin)]" : "bg-white/10 text-[var(--muted)] hover:text-[var(--paper)]"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {(() => {
             const qx = find.trim().toLowerCase();
-            const list = (s.players ?? []).filter((p) => !qx || `${p.name} ${p.nba} ${p.owner ?? ""}`.toLowerCase().includes(qx));
+            const found = (s.players ?? []).filter((p) => !qx || `${p.name} ${p.nba} ${p.owner ?? ""}`.toLowerCase().includes(qx));
+            // Trending: biggest change in price over the last 7 days (players with a week of history first).
+            const list =
+              sort === "price"
+                ? found
+                : [...found].sort((a, b) => (sort === "up" ? b.change - a.change : a.change - b.change) || b.price - a.price);
             return (
               <>
                 <ul className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
