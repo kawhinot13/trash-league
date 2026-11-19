@@ -244,6 +244,8 @@ function ledgerLine(f: Entry) {
   if (f.kind === "buy") return `bought ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "short") return `shorted ${f.qty} ${f.ticker}, putting up ${amt} BB`;
+  if (f.kind === "shortq") return `placed a ${f.qty}-share ${f.ticker} short to open at next week's price (${amt} BB set aside)`;
+  if (f.kind === "cancel") return `cancelled a waiting ${f.ticker} short (${amt} BB back)`;
   if (f.kind === "cover") return `closed a ${f.qty}-share ${f.ticker} short for ${amt} BB`;
   if (f.kind === "coin") return `swapped ${amt} BB for ${f.qty} Perren Coin`;
   if (f.kind === "uncoin") return `cashed ${f.qty} Perren Coin into ${amt} BB`;
@@ -380,7 +382,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const owned = (id: string) => w?.holdings.find((h) => h.team === id)?.shares ?? 0;
   // Shorts: put up the stats-only value; closing pays 2x that minus the value then (0 to 2x).
   const shortOf = (id: string) => w?.shorts?.find((x) => x.asset === id);
-  const shortControls = (id: string, fairNow: number, label: string, blocked: string | null) => {
+  const shortControls = (id: string, fairNow: number, label: string, blocked: string | null, waits = false) => {
     if (!w) return null;
     const sh = shortOf(id);
     const put = fairNow * q;
@@ -388,7 +390,9 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
     return (
       <div className="flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
         <span className="mr-auto text-xs text-[var(--muted)]">
-          {sh ? `You're short ${sh.shares} (worth ${money(sh.value)} BB to close).` : "Think it's due to drop? Short it."}
+          {sh?.shares ? `You're short ${sh.shares} (worth ${money(sh.value)} BB to close). ` : !sh?.waiting ? "Think it's due to drop? Short it. " : ""}
+          {sh?.waiting ? `${sh.waiting} waiting to open at next week's price (${money(sh.waitingPut)} BB set aside). ` : ""}
+          {waits ? "Team shorts open Mondays before game time; placed now, it waits for next week's result." : ""}
         </span>
         <button
           type="button"
@@ -396,9 +400,19 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
           onClick={() => void order({ kind: "short", team: id, qty: q }, `Shorted ${q} ${label}.`)}
           className={`${chip} border border-[var(--down)]/40 text-[var(--down)] hover:bg-white/5`}
         >
-          {blocked ?? `Short for ${money(put)} BB`}
+          {blocked ?? (waits ? `Short next week (${money(put)} BB)` : `Short for ${money(put)} BB`)}
         </button>
-        {sh ? (
+        {sh?.waiting ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void order({ kind: "cancel", team: id, qty: 1 }, `Cancelled the waiting ${label} short.`)}
+            className={`${chip} bg-white/10 hover:bg-white/15`}
+          >
+            Cancel waiting
+          </button>
+        ) : null}
+        {sh?.shares ? (
           <button
             type="button"
             disabled={busy || sh.shares < q || blocked === "Locked: game on"}
@@ -499,15 +513,19 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                   <ul className="mt-2 divide-y divide-[var(--line)] rounded-2xl bg-black/20">
                     {w.shorts.map((sh) => {
                       const gain = sh.value - sh.put;
+                      const shownValue = sh.value + sh.waitingPut;
                       return (
                         <li key={sh.asset} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-3">
                           <span className="min-w-0">
                             <span className="mr-1.5 rounded bg-[var(--down)]/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-[var(--down)] uppercase">Short</span>
                             <span className="font-semibold break-words">{sh.name}</span>{" "}
-                            <span className="text-sm text-[var(--muted)]">{sh.shares} {sh.shares === 1 ? "share" : "shares"}</span>
+                            <span className="text-sm text-[var(--muted)]">
+                              {sh.shares ? `${sh.shares} ${sh.shares === 1 ? "share" : "shares"}` : ""}
+                              {sh.waiting ? `${sh.shares ? " · " : ""}${sh.waiting} waiting for next week` : ""}
+                            </span>
                           </span>
                           <span className="text-right tabular-nums">
-                            <span className="font-semibold">{money(sh.value)} BB</span>{" "}
+                            <span className="font-semibold">{money(shownValue)} BB</span>{" "}
                             <span className={`text-sm ${gain >= 0 ? UP : DOWN}`}>
                               {gain >= 0 ? "+" : "−"}
                               {money(Math.abs(gain))}
@@ -704,7 +722,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                         </div>
                       </div>
                     ) : null}
-                    {w ? shortControls(t.id, t.fair, t.ticker, t.id === s.me ? "Can't short your own team" : null) : (
+                    {w ? shortControls(t.id, t.fair, t.ticker, t.id === s.me ? "Can't short your own team" : null, !t.shortNow) : (
                       <p className="text-sm text-[var(--muted)]">Sign in as yourself at the top of the page to trade.</p>
                     )}
                     <p className="text-xs text-[var(--muted)]">

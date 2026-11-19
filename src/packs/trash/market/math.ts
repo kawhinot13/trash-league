@@ -308,3 +308,17 @@ export function formFair(points: number[]): number {
   const v = n >= 5 ? avg : (n * avg + (5 - n) * 15) / 5;
   return Math.max(100, Math.round(v * 100));
 }
+
+/**
+ * Team shorts follow the weekly schedule (owner's call 2026-11-19): they open right away only on Monday
+ * (Eastern) after last week's result has posted and before 7 PM game time. Otherwise they wait and open
+ * at the price after the next result, so knowing who's winning late in a week is worth nothing.
+ */
+export const teamShortOpenNow = (weekdayET: number, hourET: number, resultPostedThisWeek: boolean) =>
+  weekdayET === 1 && hourET < 19 && resultPostedThisWeek;
+
+/** Filling a pending short at the new value: as many shares as the set-aside bucks cover (up to the order). */
+export function fillPending(qty: number, reserved: number, value: number): { shares: number; refund: number } {
+  const shares = value > 0 ? Math.min(qty, Math.floor(reserved / value)) : 0;
+  return { shares, refund: reserved - shares * value };
+}

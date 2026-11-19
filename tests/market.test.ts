@@ -225,3 +225,16 @@ describe("Player prices follow recent form", () => {
     expect(formFair([0.5, 0.5, 0.5, 0.5, 0.5, 0.5])).toBe(100); // never under 1 BB
   });
 });
+
+describe("Team shorts follow the weekly schedule", () => {
+  it("open now only on Monday before 7 PM ET once the result is in; pending ones fill at the new price", async () => {
+    const { teamShortOpenNow, fillPending } = await import("@/packs/trash/market/math");
+    expect(teamShortOpenNow(1, 10, true)).toBe(true);
+    expect(teamShortOpenNow(1, 10, false)).toBe(false); // result not posted yet
+    expect(teamShortOpenNow(1, 19, true)).toBe(false); // game time
+    expect(teamShortOpenNow(6, 12, true)).toBe(false); // Saturday
+    expect(fillPending(2, 24_000, 11_000)).toEqual({ shares: 2, refund: 2_000 }); // price fell: refund the rest
+    expect(fillPending(2, 24_000, 13_000)).toEqual({ shares: 1, refund: 11_000 }); // price rose: fewer shares
+    expect(fillPending(2, 24_000, 30_000)).toEqual({ shares: 0, refund: 24_000 });
+  });
+});

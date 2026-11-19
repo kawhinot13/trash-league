@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: Team shorts follow the weekly schedule
+- Gap: short a team late in a week once its loss is obvious, close after the result posts. Owner's fix: team shorts
+  open right away only on Monday before 7 PM ET (after last week's result posted); otherwise they wait, with the BB
+  set aside, and open at the price after the next result (as many shares as the set-aside covers, rest refunded).
+  Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
+  held until final (doesn't remove the edge; my earlier suggestion was wrong).
+
 ## 2026-11-19: Player prices follow recent form
 - Owner: a season average barely moves after 20 games, so player stocks were dull. Price is now 60% the last 10
   games' average + 40% the season average (`formFair`), still from box scores with Trash scoring, still pulled

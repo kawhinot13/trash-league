@@ -35,14 +35,14 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/ma
   if (!sameOrigin(req)) return Response.json({ error: "bad request" }, { status: 403 });
   const b = (await req.json().catch(() => null)) as { kind?: string; team?: string; qty?: number } | null;
   const kind = b?.kind;
-  if (!b || !["buy", "sell", "short", "cover", "coin", "uncoin", "hoodie"].includes(kind ?? "") || typeof b.qty !== "number") return Response.json({ error: "bad request" }, { status: 400 });
-  if ((kind === "buy" || kind === "sell" || kind === "short" || kind === "cover") && !(typeof b.team === "string" && (/^(p:)?\d{1,24}$/.test(b.team) || b.team === "storm"))) return Response.json({ error: "bad request" }, { status: 400 });
+  if (!b || !["buy", "sell", "short", "cover", "cancel", "coin", "uncoin", "hoodie"].includes(kind ?? "") || typeof b.qty !== "number") return Response.json({ error: "bad request" }, { status: 400 });
+  if ((kind === "buy" || kind === "sell" || kind === "short" || kind === "cover" || kind === "cancel") && !(typeof b.team === "string" && (/^(p:)?\d{1,24}$/.test(b.team) || b.team === "storm"))) return Response.json({ error: "bad request" }, { status: 400 });
   try {
     const season = await marketSeason(leagueId);
     if (!season) return off();
     const v = await viewerOf(req, season.familyId);
     if (!v.member || !v.manager) return Response.json({ error: "Only the league's managers can trade, as themselves." }, { status: 403 });
-    const order = (kind === "buy" || kind === "sell" || kind === "short" || kind === "cover" ? { kind, team: b.team!, qty: b.qty } : { kind, qty: b.qty }) as Order;
+    const order = (kind === "buy" || kind === "sell" || kind === "short" || kind === "cover" || kind === "cancel" ? { kind, team: b.team!, qty: b.qty } : { kind, qty: b.qty }) as Order;
     const r = await placeOrder(season, v.manager, order);
     if (!r.ok) return Response.json({ error: r.error }, { status: 409 });
     return Response.json({ ok: true });

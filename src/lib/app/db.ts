@@ -304,6 +304,11 @@ create table if not exists market_shorts (
   opened_at timestamptz not null default now()
 );
 create index if not exists market_shorts_league on market_shorts(league_id, manager);
+-- Team shorts placed outside the Monday window wait (pending) for the next weekly result; reserved = BB set aside.
+alter table market_shorts add column if not exists pending boolean not null default false;
+alter table market_shorts add column if not exists reserved bigint not null default 0;
+-- When a team's record last changed (a weekly result posted), for the Monday short window.
+alter table market_teams add column if not exists result_at timestamptz;
 -- What a payout was for (e.g. "beat KAWH x1.80"), shown in the ledger.
 alter table market_log add column if not exists note text;
 `;

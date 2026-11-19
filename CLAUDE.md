@@ -155,6 +155,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Shorts (teams + players, not STORM; owner's call 2026-11-19): `market_shorts`, collateral = stats-only fair value
   (not spot, so buying can't set one up), close pays `shortValue` = 2x entry - value now, clamped 0..2x; no coin;
   not your own team or own-roster players; player shorts obey the game lock; counted in net worth.
+  Team shorts follow the weekly schedule (`teamShortOpenNow`): open now only Monday ET before 7 PM once last week's
+  result posted (`market_teams.result_at`); otherwise pending (`market_shorts.pending`, BB reserved) and filled at the
+  new value when the team's next result posts (`fillPending`, refund the rest); cancellable any time.
   Over/under-performing (Teams tab panel + "expected N wins" per row): `expectedWins` = Pythagorean (exponent 14)
   from official PF and PA; luck = actual wins minus expected. Official totals only.
   Player trading locks while his NBA team plays (`lockedTeams`: from tip-off per Sleeper's schedule, or 7 PM ET on a
