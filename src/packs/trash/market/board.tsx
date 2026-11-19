@@ -445,6 +445,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   const [find, setFind] = useState("");
   const [shown, setShown] = useState(25);
   const [sort, setSort] = useState<"price" | "up" | "down">("price");
+  const [rostered, setRostered] = useState(false);
   const [peek, setPeek] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -876,7 +877,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
             autoComplete="off"
             className="mt-5 h-12 w-full max-w-md rounded-full border border-[var(--line)] bg-[var(--bin-2)] px-5 text-base placeholder:text-[var(--muted)] focus:border-[var(--wood)] focus:outline-none"
           />
-          <div role="group" aria-label="Sort players" className="mt-3 flex flex-wrap gap-2">
+          <div role="group" aria-label="Sort and filter players" className="mt-3 flex flex-wrap gap-2">
             {(
               [
                 ["price", "Top price"],
@@ -898,10 +899,23 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
                 {label}
               </button>
             ))}
+            <span aria-hidden className="mx-1 hidden w-px self-stretch bg-[var(--line)] sm:block" />
+            <button
+              type="button"
+              aria-pressed={rostered}
+              onClick={() => {
+                setRostered(!rostered);
+                setShown(25);
+                setOpen(null);
+              }}
+              className={`h-10 cursor-pointer rounded-full px-4 text-sm font-semibold transition-colors duration-150 ${rostered ? "bg-[var(--paper)] text-[var(--bin)]" : "bg-white/10 text-[var(--muted)] hover:text-[var(--paper)]"}`}
+            >
+              On Trash rosters
+            </button>
           </div>
           {(() => {
             const qx = find.trim().toLowerCase();
-            const found = (s.players ?? []).filter((p) => !qx || `${p.name} ${p.nba} ${p.owner ?? ""}`.toLowerCase().includes(qx));
+            const found = (s.players ?? []).filter((p) => (!rostered || p.owner) && (!qx || `${p.name} ${p.nba} ${p.owner ?? ""}`.toLowerCase().includes(qx)));
             // Trending: biggest change in price over the last 7 days (players with a week of history first).
             const list =
               sort === "price"
