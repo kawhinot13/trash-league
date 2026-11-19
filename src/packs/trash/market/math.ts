@@ -336,3 +336,27 @@ export function fillPending(qty: number, reserved: number, value: number): { sha
   const shares = value > 0 ? Math.min(qty, Math.floor(reserved / value)) : 0;
   return { shares, refund: reserved - shares * value };
 }
+
+/**
+ * Re-pricing past player trades under the current formula (owner's call 2026-11-19, after the price
+ * formula changed twice): replay each player's trades in order, with the league's holdings at the time,
+ * and price each one from `fairAt` (his value that day under today's formula). Returns each trade's new
+ * amount and, per manager, what they're owed (+) or owe (-).
+ */
+export type PastTrade = { id: string; manager: string; asset: string; kind: "buy" | "sell"; qty: number; amount: number; day: string };
+export function repriceTrades(trades: PastTrade[], fairAt: (asset: string, day: string) => number) {
+  const held = new Map<string, number>();
+  const amounts = new Map<string, number>();
+  const owed = new Map<string, number>();
+  for (const t of trades) {
+    const h = held.get(t.asset) ?? 0;
+    const f = fairAt(t.asset, t.day);
+    const now = t.kind === "buy" ? buyCost(f, h, t.qty) : sellValue(f, h, t.qty);
+    amounts.set(t.id, now);
+    // A cheaper buy (or a richer sell) is owed back to them; a dearer buy (or poorer sell) they owe.
+    const diff = t.kind === "buy" ? t.amount - now : now - t.amount;
+    owed.set(t.manager, (owed.get(t.manager) ?? 0) + diff);
+    held.set(t.asset, Math.max(0, h + (t.kind === "buy" ? t.qty : -t.qty)));
+  }
+  return { amounts, owed };
+}

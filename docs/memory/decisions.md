@@ -4,6 +4,13 @@ Why things are the way they are, newest first. One entry per significant decisio
 approaches that were tried and dropped. This repo is public: no secrets, personal data or private
 URLs in here. Add an entry whenever a choice would surprise someone reading the code later.
 
+## 2026-11-19: Past player trades re-priced under the current formula
+- The player formula changed twice (season avg -> last 10 -> last 5), so early buyers got windfalls or hits from
+  the rule, not the games. Owner asked for fairness: every past player buy/sell was re-priced at what the current
+  formula says the player was worth that day (box scores before that day, the league's holdings then), log amounts
+  updated, and each manager refunded or charged the difference (player shares given back at today's value if cash
+  ran short; never negative). Open player shorts' entries reset the same way. One-time (`market_meta`).
+
 ## 2026-11-19: Dumpster Dive "Big numbers" gets easier, plus "Big nights"
 - Owner: "averaged 80+ per lock-in" had only ~10 answers. From 2026-11-20 the average question's bar is the
   highest that leaves 25+ answers (Trash site 65+, Rafterlore 70+), and a new "Big nights" question asks for a single

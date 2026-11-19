@@ -7,7 +7,7 @@ import { loadPack } from "@/packs";
 import { fantasyPoints } from "@/lib/app/replay";
 import { playerDirectory, weekStats } from "@/lib/app/sleeper-cache";
 import {
-  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, TICKERS, type TeamRecord,
+  buyCost, COIN_RATE, COIN_BACK, priceHistory, weeklyBackfill, dividend, payoutPerShare, upset, ownedBefore, isPlayer, formFair, PLAYER, lockedTeams, type NbaGame, STORM, STORM_MEMBERS, stormFair, stormPayout, expectedWins, shortValue, teamShortOpenNow, fillPending, repriceTrades, type PastTrade, sellNewestFirst, type Lot, fairValues, hoodiePrice, MAX_QTY, netWorth, sellValue, spot, START_BUCKS, tickers, TICKERS, type TeamRecord,
 } from "@/packs/trash/market/math";
 
 /**
@@ -166,6 +166,61 @@ async function refundWaitingOnce(tx: Sql, lid: string) {
     await tx`update market_wallets set bucks = bucks + ${Number(r.n)} where league_id = ${lid} and manager = ${r.manager}`;
   await tx`delete from market_orders where league_id = ${lid}`;
   await tx`delete from market_shorts where league_id = ${lid} and pending`;
+}
+
+/**
+ * One-time (owner's call 2026-11-19): every player trade before the formula settled (60% last 5 games)
+ * is re-priced as if today's formula had always been in place, using his box scores before that day
+ * and the league's holdings at the time. Each manager gets back, or gives back, the difference; open
+ * player shorts get their entry reset the same way. Anyone who'd owe more than their cash gives back
+ * shares of their players at today's value instead, so nobody goes negative.
+ */
+async function repriceOnce(tx: Sql, lid: string, board: PlayerLine[], fair: Map<string, number>) {
+  await tx`select pg_advisory_xact_lock(hashtext(${"market:" + lid}))`;
+  const done = await tx`insert into market_meta (league_id, key) values (${lid}, 'reprice-players-last5') on conflict do nothing returning key`;
+  if (!done.length) return;
+  const etDay = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
+  const games = new Map(board.map((p) => [PLAYER + p.pid, p.days]));
+  const fairAt = (asset: string, day: string) => formFair((games.get(asset) ?? []).filter((g) => g[0] < day).map((g) => g[1]));
+  const rows = await tx<{ id: string; manager: string; team: string; kind: "buy" | "sell"; qty: number; amount: string; at: Date }[]>`
+    select id::text, manager, team, kind, qty, amount::text, at from market_log
+    where league_id = ${lid} and kind in ('buy', 'sell') and team like 'p:%' order by id`;
+  const trades: PastTrade[] = rows.map((r) => ({ id: r.id, manager: r.manager, asset: r.team, kind: r.kind, qty: r.qty, amount: Number(r.amount), day: etDay(r.at) }));
+  const { amounts, owed } = repriceTrades(trades, fairAt);
+  for (const t of trades) if (amounts.get(t.id) !== t.amount) await tx`update market_log set amount = ${amounts.get(t.id)!} where id = ${t.id}`;
+  // Open player shorts: collateral at the re-priced entry.
+  for (const sh of await tx<{ id: string; manager: string; asset: string; shares: number; entry: string; opened_at: Date }[]>`
+    select id::text, manager, asset, shares, entry::text, opened_at from market_shorts where league_id = ${lid} and asset like 'p:%' and not pending`) {
+    const e = fairAt(sh.asset, etDay(sh.opened_at));
+    owed.set(sh.manager, (owed.get(sh.manager) ?? 0) + (Number(sh.entry) - e) * sh.shares);
+    await tx`update market_shorts set entry = ${e} where id = ${sh.id}`;
+  }
+  for (const [manager, diff] of owed) {
+    if (!diff) continue;
+    const [w] = await tx<{ bucks: string }[]>`select bucks::text from market_wallets where league_id = ${lid} and manager = ${manager} for update`;
+    let bucks = Number(w?.bucks ?? 0) + diff;
+    // Short of cash: give back player shares at today's value until it's covered.
+    if (bucks < 0) {
+      const hs = await tx<{ team: string; shares: number }[]>`
+        select team, shares from market_holdings where league_id = ${lid} and manager = ${manager} and team like 'p:%' and shares > 0 order by shares desc`;
+      for (const h of hs) {
+        if (bucks >= 0) break;
+        const f = fair.get(h.team) ?? 0;
+        if (!f) continue;
+        const n = Math.min(h.shares, Math.ceil(-bucks / f));
+        bucks += n * f;
+        await tx`update market_holdings set shares = shares - ${n} where league_id = ${lid} and manager = ${manager} and team = ${h.team}`;
+        const lots = await tx<{ id: string; shares: number; bought_at: Date }[]>`
+          select id::text, shares, bought_at from market_lots where league_id = ${lid} and manager = ${manager} and team = ${h.team} and shares > 0 for update`;
+        for (const c of sellNewestFirst(lots.map((l) => ({ id: Number(l.id), shares: l.shares, at: l.bought_at.getTime() })), n) ?? [])
+          if (c.shares > 0) await tx`update market_lots set shares = ${c.shares} where id = ${c.id}`;
+          else await tx`delete from market_lots where id = ${c.id}`;
+      }
+      bucks = Math.max(0, bucks);
+    }
+    await tx`update market_wallets set bucks = ${bucks} where league_id = ${lid} and manager = ${manager}`;
+    await tx`insert into market_log (league_id, manager, kind, qty, amount, note) values (${lid}, ${manager}, 'reprice', 0, ${Math.abs(diff)}, ${diff > 0 ? "+" : "-"})`;
+  }
 }
 
 async function backdateOnce(tx: Sql, lid: string) {
@@ -361,6 +416,8 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
   // manager's first visit (their desk) open a write.
   const storm = stormIds(season);
   const { board, fair } = await allValues(lid, recs, storm);
+  const [repriced] = await sql`select 1 as x from market_meta where league_id = ${lid} and key = 'reprice-players-last5'`;
+  if (!repriced) await sql.begin((tx) => repriceOnce(tx as unknown as Sql, lid, board, fair));
   if (await needsSettle(sql, lid, recs)) await sql.begin((tx) => settle(tx as unknown as Sql, lid, recs, fair, true, storm));
   if (manager && season.users.has(manager))
     await sql`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
@@ -598,6 +655,7 @@ export async function marketState(leagueId: string, season: NonNullable<Awaited<
         name: nameOf(l.manager), manager: l.manager, kind: l.kind, ticker: l.team ? (tick.get(l.team) ?? playerName.get(l.team) ?? null) : null, qty: l.qty, amount: Number(l.amount), at: l.at.toISOString(),
         upset: opp && x ? { vs: tick.get(opp) ?? null, x: Number(x) } : null,
         stormWeek: l.note === "storm",
+        sign: l.note === "+" ? 1 : l.note === "-" ? -1 : 0,
       };
     }),
     wallet: mine
@@ -636,6 +694,7 @@ export async function placeOrder(season: NonNullable<Awaited<ReturnType<typeof m
   return sql.begin(async (t) => {
     const tx = t as unknown as Sql;
     // Every order settles new results first; the full day's prices are written only when they're due.
+    await repriceOnce(tx, lid, board, values);
     const { fair, held } = await settle(tx, lid, recs, values, await needsSettle(tx, lid, recs), storm);
     await tx`insert into market_wallets (league_id, manager, bucks) values (${lid}, ${manager}, ${START_BUCKS}) on conflict do nothing`;
     const [recent] = await tx<{ n: number }[]>`

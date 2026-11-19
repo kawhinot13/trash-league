@@ -254,3 +254,21 @@ describe("Owner-chosen tickers", () => {
     expect(new Set(t.values()).size).toBe(3);
   });
 });
+
+describe("Re-pricing past player trades", () => {
+  it("prices each trade at that day's value with the league's holdings then, and settles the difference", async () => {
+    const { repriceTrades, buyCost, sellValue } = await import("@/packs/trash/market/math");
+    const fair = (_a: string, d: string) => (d === "2026-11-17" ? 3_000 : 2_500);
+    const trades = [
+      { id: "1", manager: "a", asset: "p:1", kind: "buy" as const, qty: 2, amount: 4_000, day: "2026-11-17" },
+      { id: "2", manager: "b", asset: "p:1", kind: "buy" as const, qty: 1, amount: 2_200, day: "2026-11-18" },
+      { id: "3", manager: "a", asset: "p:1", kind: "sell" as const, qty: 1, amount: 2_300, day: "2026-11-18" },
+    ];
+    const { amounts, owed } = repriceTrades(trades, fair);
+    expect(amounts.get("1")).toBe(buyCost(3_000, 0, 2));
+    expect(amounts.get("2")).toBe(buyCost(2_500, 2, 1));
+    expect(amounts.get("3")).toBe(sellValue(2_500, 3, 1));
+    expect(owed.get("a")).toBe(4_000 - buyCost(3_000, 0, 2) + (sellValue(2_500, 3, 1) - 2_300));
+    expect(owed.get("b")).toBe(2_200 - buyCost(2_500, 2, 1));
+  });
+});

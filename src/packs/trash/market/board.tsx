@@ -244,6 +244,10 @@ function ledgerLine(f: Entry) {
   if (f.kind === "buy") return `bought ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "sell") return `sold ${f.qty} ${f.ticker} for ${amt} BB`;
   if (f.kind === "short") return `shorted ${f.qty} ${f.ticker}, putting up ${amt} BB`;
+  if (f.kind === "reprice")
+    return f.sign >= 0
+      ? `got ${amt} BB back: past player trades re-priced with today's pricing`
+      : `gave back ${amt} BB: past player trades re-priced with today's pricing`;
   if (f.kind === "q-buy") return `ordered ${f.qty} ${f.ticker} at Monday's price (${amt} BB set aside)`;
   if (f.kind === "q-sell") return `ordered to sell ${f.qty} ${f.ticker} at Monday's price`;
   if (f.kind === "q-cover") return `ordered to close a ${f.qty}-share ${f.ticker} short at Monday's price`;
