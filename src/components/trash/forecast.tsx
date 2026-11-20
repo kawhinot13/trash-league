@@ -43,6 +43,12 @@ export function Forecast({ rows, line, weeksLeft, runs, playoffTeams, recentWeek
               below it. {clearing === 1 ? "1 team is" : `${clearing} teams are`} projected to clear it this season.
             </p>
           </div>
+          <p className="mt-4 max-w-2xl rounded-2xl bg-black/25 px-4 py-3 text-sm text-[var(--paper)]/80">
+            <span className="font-semibold text-[var(--paper)]">How to read it:</span> 100 is an average team. 110 means 10% more
+            points a week than average, 90 means 10% fewer. So if the average team scores 1,000 a week, a champion here has
+            scored at least {Math.round(10 * line.line).toLocaleString()}. Each team below shows where it&apos;s projected to land
+            (the dot) against this line (the gold mark).
+          </p>
           <ul className="mt-5 flex flex-wrap gap-2">
             {line.champs.map((c) => (
               <li key={c.code} className="rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-xs sm:text-sm">
