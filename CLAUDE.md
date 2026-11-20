@@ -34,6 +34,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   answer (top 20%, 5+) not already a 100 elsewhere; `distinctTops` makes one day's five 100s all different.
   One-off day resets (owner's call): `RESETS` in `lib/app/game-resets.ts` deletes that day's scores once and PlayGate
   clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive only.
+  Saved dives were re-scored once per league with the current boards (`rescoreDiveOnce`, `rescorePicks`, marker
+  `rescore-dive2-b` in `game_resets`); PlayGate's restore then puts the new scores in each browser.
   Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now
   titled "Test Trash Fantasy" (test copy).
 - Starting Nine (Rafterlore home, basketball; `core/grid.ts`, `components/trash/grid.tsx`, game id "grid"): daily 3x3,
