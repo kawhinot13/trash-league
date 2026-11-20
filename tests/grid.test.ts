@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GUESSES, MAX_CELL, MIN_CELL, cell, cellPoints, dayGrid, gridData } from "@/lib/core/grid";
+import { GUESSES, MAX_CELL, MIN_CELL, OWN_KINDS, cell, cellPoints, dayGrid, gridData } from "@/lib/core/grid";
 import { TRASH } from "@/lib/extras";
 
 const data = gridData(TRASH);
@@ -12,11 +12,17 @@ describe("Starting Nine", () => {
       expect(g, addDays("2026-11-21", k)).not.toBeNull();
       expect(g.rows.length).toBe(3);
       expect(g.cols.length).toBe(3);
-      expect(g.rows.filter((r) => r.kind === "mgr").length).toBeGreaterThanOrEqual(2);
-      expect(new Set(g.cols.map((c) => c.kind)).size).toBe(3);
+      const six = [...g.rows, ...g.cols];
+      expect(six.filter((c) => OWN_KINDS.includes(c.kind)).length).toBeLessThanOrEqual(1);
+      expect(new Set(six.map((c) => c.kind)).size).toBe(6);
       for (const a of g.rows) for (const b of g.cols) { expect(cell(a, b).gate).toBeGreaterThanOrEqual(MIN_CELL); expect(cell(a, b).gate).toBeLessThanOrEqual(MAX_CELL); }
     }
     expect(GUESSES).toBe(9);
+  });
+  it("mostly broad categories: most grids have no 'whose team' square at all", () => {
+    let none = 0;
+    for (let k = 0; k < 40; k++) if (![...dayGrid(data, addDays("2026-11-21", k))!.rows, ...dayGrid(data, addDays("2026-11-21", k))!.cols].some((c) => OWN_KINDS.includes(c.kind))) none++;
+    expect(none).toBeGreaterThanOrEqual(20);
   });
   it("is the same grid all day, and changes between days", () => {
     const a = dayGrid(data, "2026-11-25")!;

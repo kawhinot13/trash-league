@@ -17,7 +17,7 @@ type Viewer = { configured: boolean; signedIn: boolean; linked: boolean; member:
 type Played = Record<string, { score: number; label: string; state: Record<string, unknown> | null }>;
 type Who = { enabled: boolean; viewer?: Viewer; played?: Played; pick?: { current: string[]; taken: string[] } | null; resets?: Record<string, string> } | null;
 /** What each board's game saves in the browser for a day (cleared when that day's game is reset). */
-const SAVED_AS: Record<string, (day: string) => string[]> = { dive2: (day) => [`dive3:${day}`] };
+const SAVED_AS: Record<string, (day: string) => string[]> = { dive2: (day) => [`dive3:${day}`], grid: (day) => [`grid:${day}`] };
 
 /** A day's game was reset (everyone plays again): forget this browser's finished copy, once per reset. */
 function clearResets(v: Who, prefix: string, day: string) {

@@ -275,33 +275,40 @@ export function cell(a: Criterion, b: Criterion) {
   return { ids, gate: gateIds.length, gateIds };
 }
 
+/** "Whose team" categories: hard to recall, so a grid has at most one (owner's call 2026-11-20). */
+export const OWN_KINDS: GridKind[] = ["mgr", "drafter", "champ", "runnerup"];
+/** Kinds that make silly squares together (a Celtic is always an Eastern Conference team). */
+const CLASH: [GridKind, GridKind][] = [["nba", "conf"], ["once", "every"], ["never", "starts"], ["never", "playoff"], ["traded", "traded2"], ["first", "late"]];
+
 /**
- * The day's grid: rows mostly managers (at least two), columns from the "what" categories (at most one
- * NBA team and one position, the rest all different kinds), every square with MIN_CELL to MAX_CELL
- * answers from finished seasons (both checked on finished seasons only, so the pick never moves). Seeded by the day; null if the league's history can't fill one.
+ * The day's grid: six categories of six different kinds, broad ones first. At most one "whose team"
+ * category (rostered by, drafted by, title or runner-up team), in a little under half the grids; the rest
+ * are things anyone can reason about (NBA teams, stats, tiers, positions, seasons...). Every square has
+ * MIN_CELL to MAX_CELL answers from finished seasons (checked on finished seasons only, so the pick never
+ * moves). Kinds are drawn first, then a category of that kind, so 30 NBA teams don't crowd out the rest.
  */
 export function dayGrid(data: GridData, day: string): DayGrid | null {
-  const r = rng(Number(day.replaceAll("-", "")) * 7 + 3);
+  const r = rng(Number(day.replaceAll("-", "")) * 11 + 5);
   const by = (k: GridKind) => data.criteria.filter((c) => c.kind === k && c.gate >= MIN_CELL);
-  // Pick a kind first, then one of its categories, so 30 NBA teams don't crowd out everything else.
-  const rowKinds = ROW_KINDS.filter((k) => k !== "mgr" && by(k).length);
-  const colKinds = COL_KINDS.filter((k) => by(k).length);
-  const mgrs = by("mgr");
-  if (mgrs.length < 2 || colKinds.length < 3) return null;
+  const all = [...new Set([...ROW_KINDS, ...COL_KINDS])];
+  const broad = all.filter((k) => !OWN_KINDS.includes(k) && by(k).length);
+  const own = OWN_KINDS.filter((k) => by(k).length);
+  if (broad.length < 5) return null;
   const pick = <T,>(xs: T[]) => xs[Math.floor(r() * xs.length)];
-  for (let tries = 0; tries < 4000; tries++) {
-    const rows: Criterion[] = [];
-    let g1 = 0;
-    while (rows.length < 3 && g1++ < 50) {
-      // Two managers, and the third row half the time another manager, half something else.
-      const c = rows.length < 2 || !rowKinds.length || r() < 0.5 ? pick(mgrs) : pick(by(pick(rowKinds)));
-      if (!rows.includes(c)) rows.push(c);
-    }
-    if (rows.length < 3) continue;
-    const kinds = [...colKinds].sort(() => r() - 0.5).slice(0, 3);
-    const cols = kinds.map((k) => pick(by(k)));
-    if (cols.length < 3) continue;
-    if (rows.every((a) => cols.every((b) => cell(a, b).gate >= MIN_CELL && cell(a, b).gateIds.length <= MAX_CELL))) return { rows: [...rows].sort(() => r() - 0.5), cols };
+  const clash = (ks: GridKind[]) => CLASH.some(([x, y]) => ks.includes(x) && ks.includes(y));
+  // Decided once per day (a little under half the days), so easier-to-fill grids can't tilt the share.
+  let h = 2166136261; // FNV-1a of the day: consecutive days get unrelated coins
+  for (const ch of `own:${day}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const ownDay = own.length > 0 && h % 100 < 40;
+  for (let tries = 0; tries < 24000; tries++) {
+    const withOwn = tries < 20000 ? ownDay : !ownDay && own.length > 0;
+    const kinds = [...broad].sort(() => r() - 0.5).slice(0, withOwn ? 5 : 6);
+    if (withOwn) kinds.splice(Math.floor(r() * 3), 0, pick(own)); // the "whose team" one sits in the rows
+    if (clash(kinds)) continue;
+    const cs = kinds.map((k) => pick(by(k)));
+    const rows = cs.slice(0, 3);
+    const cols = cs.slice(3);
+    if (rows.every((a) => cols.every((b) => cell(a, b).gate >= MIN_CELL && cell(a, b).gateIds.length <= MAX_CELL))) return { rows, cols };
   }
   return null;
 }

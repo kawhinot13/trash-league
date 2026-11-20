@@ -33,13 +33,16 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   100-point answers are spread (owner's call 2026-11-20): `spreadKrillions` gives each prompt's 100 to its deepest
   answer (top 20%, 5+) not already a 100 elsewhere; `distinctTops` makes one day's five 100s all different.
   One-off day resets (owner's call): `RESETS` in `lib/app/game-resets.ts` deletes that day's scores once and PlayGate
-  clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive only.
+  clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive, then
+  Trash's Starting Nine (redone grid).
   Saved dives were re-scored once per league with the current boards (`rescoreDiveOnce`, `rescorePicks`, marker
   `rescore-dive2-b` in `game_resets`); PlayGate's restore then puts the new scores in each browser.
   Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now
   titled "Test Trash Fantasy" (test copy).
 - Starting Nine (Rafterlore home, basketball; `core/grid.ts`, `components/trash/grid.tsx`, game id "grid"): daily 3x3,
-  rows = 2-3 managers ("Rostered by") or drafted-by / title / runner-up / season; columns = one each of many kinds
+  six categories of six different kinds, broad first: at most ONE "whose team" square (`OWN_KINDS`: rostered by /
+  drafted by / title / runner-up team), on ~40% of days (FNV coin per day), owner's call 2026-11-20 (too hard to
+  recall); no clashing pairs (`CLASH`). Kinds include
   (NBA team, conference, big-lock-in tiers 50+..., starts / points / avg tiers, waivers, trades, first-round, late
   round, positions, journeymen, playoff starters, never started, one season, every season, real NBA averages from
   `extras.nbaSeasons` (grade step): PPG/RPG/APG/3s/steals/blocks/minutes tiers, 40/50-point games). The day's grid

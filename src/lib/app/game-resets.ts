@@ -10,9 +10,13 @@ type Sql = Awaited<ReturnType<typeof db>>;
  * day's scores are deleted, and every browser clears its saved game for that day (see PlayGate).
  * 2026-11-20: Trash's Dumpster Dive rejected players picked up and dropped mid-week.
  */
-const RESETS: { family: string; game: "dive2"; day: string }[] = [{ family: "1020516596416155648", game: "dive2", day: "2026-11-20" }];
+const RESETS: { family: string; game: "dive2" | "grid"; day: string }[] = [
+  { family: "1020516596416155648", game: "dive2", day: "2026-11-20" },
+  // Starting Nine's first grid had too many "whose team" squares; the redone grid replaces it.
+  { family: "1020516596416155648", game: "grid", day: "2026-11-20" },
+];
 /** Board ids stored for each game (the dive's board moved from "dive" to "dive2"). */
-const STORED: Record<string, string[]> = { dive2: ["dive", "dive2"] };
+const STORED: Record<string, string[]> = { dive2: ["dive", "dive2"], grid: ["grid"] };
 
 let applied = false;
 async function applyResets(sql: Sql) {
