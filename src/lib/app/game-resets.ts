@@ -39,12 +39,12 @@ export async function resetsFor(sql: Sql, familyId: string, day: string): Promis
  * with their answers can be re-scored; a right answer that has left a board keeps its old score.
  */
 const rescored = new Set<string>();
-export async function rescoreDiveOnce(sql: Sql, leagueId: string, familyId: string) {
-  if (rescored.has(familyId)) return;
+export async function rescoreDiveOnce(sql: Sql, leagueId: string, familyId: string): Promise<string> {
+  if (rescored.has(familyId)) return "cached";
   const fresh = await sql`
     insert into game_resets (family_id, game, day) values (${familyId}, 'rescore-dive2', '2026-11-20'::date) on conflict do nothing returning 1`;
   rescored.add(familyId);
-  if (!fresh.length) return;
+  if (!fresh.length) return "done before";
   try {
     const got = await loadLeague(leagueId, { dataset: true });
     const d = got.status === "ok" ? got.page.dataset : null;
@@ -52,22 +52,34 @@ export async function rescoreDiveOnce(sql: Sql, leagueId: string, familyId: stri
     const pool = divePool(d);
     const rows = await sql<{ manager: string; day: Date; score: number; state: Record<string, unknown> | null }[]>`
       select manager, day, score, state from game_scores where family_id = ${familyId} and game = 'dive2' and state is not null`;
+    let changed = 0;
+    let skipped = 0;
     for (const r of rows) {
       const day = r.day.toISOString().slice(0, 10);
       const k = `dive3:${day}`;
       const st = r.state?.[k] as { picks?: { pid: string | null; typed: string; score: number | null }[]; qs?: string[]; done?: boolean } | undefined;
-      if (!st?.picks?.length) continue;
+      if (!st?.picks?.length) {
+        skipped++;
+        continue;
+      }
       const qs = st.qs?.length ? st.qs : dailyPrompts(pool, day, d.diveCalendar).map((q) => q.prompt);
       const out = rescorePicks(pool, qs, st.picks);
-      if (!out || out.total === r.score) continue;
+      if (!out) {
+        skipped++;
+        continue;
+      }
+      if (out.total === r.score) continue;
+      changed++;
       const state = { ...r.state, [k]: { ...st, picks: out.picks } };
       await sql`update game_scores set score = ${out.total}, label = ${out.label.slice(0, 40)}, state = ${sql.json(state as never)}
         where family_id = ${familyId} and game = 'dive2' and day = ${day}::date and manager = ${r.manager}`;
     }
+    return `rescored ${changed} of ${rows.length} (skipped ${skipped})`;
   } catch (e) {
     // Try again on a later visit.
     await sql`delete from game_resets where family_id = ${familyId} and game = 'rescore-dive2'`;
     rescored.delete(familyId);
     logError(`rescore dive ${familyId}`, e);
+    return "failed";
   }
 }

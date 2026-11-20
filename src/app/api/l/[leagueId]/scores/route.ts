@@ -33,7 +33,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
   if (u.searchParams.get("who") === "1") {
     const fid = await familyIdOf(leagueId).catch(() => null);
     if (!fid) return Response.json({ enabled: false });
-    await rescoreDiveOnce(await db(), leagueId, fid).catch(() => {});
+    const rescore = await rescoreDiveOnce(await db(), leagueId, fid).catch(() => "failed");
     const { accountId: _a, ...viewer } = await viewerOf(req, fid);
     void _a;
     // With ?day: the games this manager already finished that day, so every device shows the same result.
@@ -58,7 +58,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
         pick = { current, taken: rows.map((r) => r.sleeper_user) };
       }
     }
-    return Response.json({ enabled: true, viewer, played, pick, resets }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ enabled: true, viewer, played, pick, resets, rescore }, { headers: { "cache-control": "no-store" } });
   }
   if (!GAMES.has(game) || !DAY.test(day)) return Response.json({ error: "bad request" }, { status: 400 });
   try {
