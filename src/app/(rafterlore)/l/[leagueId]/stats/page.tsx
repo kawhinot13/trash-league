@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { LeagueGate, LeagueLoading } from "@/components/app/gate";
 import { Pickups } from "@/components/app/league";
 import { Intro, Pending } from "@/components/app/site";
+import { GmRatings } from "@/components/trash/gm-rating";
 import { PlayoffReport } from "@/components/trash/playoff-report";
 import { RedraftBoard } from "@/components/trash/redraft";
 import { SectionHead } from "@/components/trash/section-head";
@@ -10,6 +11,7 @@ import { TradeCourt } from "@/components/trash/trade-court";
 import { Trapezoid } from "@/components/trash/trapezoid";
 import type { LeaguePage } from "@/lib/app/league-page";
 import { redrafts, tradeCourt } from "@/lib/core/extras";
+import { gmRatings } from "@/lib/core/gm-rating";
 import { backtest, playoffReport, trapezoidViews } from "@/lib/core/trapezoid";
 
 export const metadata: Metadata = { title: "Stats" };
@@ -38,9 +40,19 @@ function Stats({ p }: { p: LeaguePage }) {
   return (
     <main className="overflow-x-clip">
       <Intro title="Stats">
-        Who scores and wins like a champion, who shows up in the playoffs, who wins trades and who drafts well. Built from the
-        Sleeper record.
+        Who the best GM is, who scores and wins like a champion, who shows up in the playoffs, who wins trades and who drafts
+        well. Built from the Sleeper record.
       </Intro>
+
+      <section aria-labelledby="gm" className="py-14 md:py-32">
+        <SectionHead id="gm" title="GM rating">
+          Who&apos;s the best manager in the league? One all-time grade from drafting, the waiver wire, trades, lineups and
+          results.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <GmRatings rows={gmRatings(d)} people={d.league.managers} />
+        </div>
+      </section>
 
       <section aria-labelledby="trapezoid" className="py-14 md:py-32">
         <SectionHead id="trapezoid" title="Trapezoid of Excellence">

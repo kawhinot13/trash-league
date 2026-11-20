@@ -38,6 +38,11 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-20: GM rating
+- Owner picked it from the advanced-data list (with the boom index; not the playoff schedule edge, which was
+  built then dropped unshipped). Skill-based, not activity-based (the quiz traits count trades/adds made): draft
+  spots gained, pickup starter points, trade court net, lineup efficiency, results. Top of the Stats page.
+
 ## 2026-11-20: The forecast (title chances)
 - Owner asked for a model of how teams stack up and what it takes to win. Built on the Live page: "the title
   line" (every Trash champion scored 104.9%+ of league average, official; seeds 5, 5, 2), each team's projection

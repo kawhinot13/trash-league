@@ -140,6 +140,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   scoring index (+ last 3 proven weeks as form, 25%) and best healthy lineup index (results weight games/(games+5));
   rest of the schedule (`scheduleWeeks`) + bracket (league's playoff size, seeded by record then PF) simulated 5,000
   times, seeded; weekly spread = league's median CV from weekly scores (per Sleeper). Says "chances", never "odds".
+- GM rating (Rafterlore Stats page, first; `core/gm-rating.ts`, `components/trash/gm-rating.tsx`): all-time grade per
+  active manager, z-scored vs the league (50 = average): draft 20% (spots gained, rounds 1-6, finished seasons),
+  waivers 20% (starter points from pickups a season), trades 20% (trade court net a season), lineups 15% (efficiency),
+  results 25% (win rate + rings a season). Trades and lineups are per Sleeper.
 - Stats page (`/stats`, `/l/[id]/stats`; split from History, which keeps the story): Trapezoid of Excellence,
   Playoff report, trade court, re-draft (+ best pickups on Rafterlore).
 - Trapezoid of Excellence + Playoff report (Stats page, both sites): pure math in `core/trapezoid.ts`, UI in
