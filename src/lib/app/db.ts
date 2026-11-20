@@ -234,6 +234,14 @@ create table if not exists yahoo_leagues (
 alter table families add column if not exists use_ack text;
 -- The finished game itself (what the player answered), so another device shows the same result instead of a replay.
 alter table game_scores add column if not exists state jsonb;
+-- One-off resets of a day's daily game (owner's call): scores deleted once; browsers clear their saved game.
+create table if not exists game_resets (
+  family_id text not null,
+  game      text not null,
+  day       date not null,
+  at        timestamptz not null default now(),
+  primary key (family_id, game, day)
+);
 -- Standings links are proven with the same team-name code; the code remembers which account asked.
 alter table removal_challenges add column if not exists account_id text;
 alter table families add column if not exists use_ack_at timestamptz;

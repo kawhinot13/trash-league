@@ -38,6 +38,13 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-20: Dive counts mid-week pickups; today's Dive reset
+- Kennard and Patrick Williams (picked up and dropped within week 5) were rejected for "on a Trash roster this
+  season": roster questions only used end-of-week rosters, and the week in progress wasn't read at all. Every
+  roster question now also counts every pickup (`RawSeason.added`). Owner asked to reset today's Dumpster Dive
+  only (other daily games kept): one-time `RESETS` entry; scores deleted once, browsers drop the saved game.
+  Rejected: re-scoring saved games (owner chose a replay).
+
 ## 2026-11-19: NBA team stocks
 - Owner asked for real NBA teams on the Exchange. Price only, no Perren Coin per real win (that would make it
   "back a real team in a real game and get paid", too close to betting). Strength = half win %, half

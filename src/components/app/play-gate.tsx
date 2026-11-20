@@ -15,7 +15,22 @@ import { STATE_NAME } from "@/lib/core/game-state";
  */
 type Viewer = { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; suggest?: string | null };
 type Played = Record<string, { score: number; label: string; state: Record<string, unknown> | null }>;
-type Who = { enabled: boolean; viewer?: Viewer; played?: Played; pick?: { current: string[]; taken: string[] } | null } | null;
+type Who = { enabled: boolean; viewer?: Viewer; played?: Played; pick?: { current: string[]; taken: string[] } | null; resets?: Record<string, string> } | null;
+/** What each board's game saves in the browser for a day (cleared when that day's game is reset). */
+const SAVED_AS: Record<string, (day: string) => string[]> = { dive2: (day) => [`dive3:${day}`] };
+
+/** A day's game was reset (everyone plays again): forget this browser's finished copy, once per reset. */
+function clearResets(v: Who, prefix: string, day: string) {
+  for (const [game, token] of Object.entries(v?.resets ?? {})) {
+    try {
+      const mark = `${prefix}reset:${game}:${day}`;
+      if (localStorage.getItem(mark) === token) continue;
+      for (const k of SAVED_AS[game]?.(day) ?? []) localStorage.removeItem(prefix + k);
+      localStorage.removeItem(`${prefix}posted:${game}:${day}`);
+      localStorage.setItem(mark, token);
+    } catch {}
+  }
+}
 
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 /** The game ids behind each section. */
@@ -45,6 +60,7 @@ function load(url: string) {
     .then((r) => r.json() as Promise<Who>)
     .catch(() => ({ enabled: false }))
     .then((v) => {
+      clearResets(v, e.prefix, day);
       restore(v, e.prefix, day);
       e.v = v;
       e.loading = false;

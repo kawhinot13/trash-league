@@ -81,8 +81,9 @@ export function buildDataset(
     const lineups: Record<string, [number, number, number][]> = {};
     const guys: RawSeason["guys"] = {};
     const adds: Record<string, number> = {};
-    // Everyone picked up this season, even if dropped before a week ended (weekly rosters miss them).
-    const added = new Set<string>();
+    // Everyone each team picked up (waivers / free agency), with the week, even if dropped before the
+    // week's rosters were taken; the week in progress too (weekly rosters miss all of these).
+    const added: NonNullable<RawSeason["added"]> = {};
     const playoffs: RawSeason["playoffs"] = [];
     const weekly: NonNullable<RawSeason["weekly"]> = {};
     const bracketPairs = new Set(
@@ -120,7 +121,7 @@ export function buildDataset(
         }
       }
       for (const [rid, pid] of w.adds) {
-        added.add(pid);
+        (added[W(rid)] ??= []).push([pid, w.week]);
         adds[W(rid)] = (adds[W(rid)] ?? 0) + 1;
         addsBy.set(W(rid), (addsBy.get(W(rid)) ?? 0) + 1);
         need.add(pid);
@@ -142,6 +143,11 @@ export function buildDataset(
           .slice(0, 5);
         weekly[String(w.week)] = { games, top, adds: wadds };
       }
+    }
+
+    for (const [rid, pid] of current?.adds ?? []) {
+      (added[W(rid)] ??= []).push([pid, current!.week]);
+      need.add(pid);
     }
 
     // Trades, with each side's graded gain [average lock-in x weeks rostered and played afterwards, weeks held, weeks counted].
@@ -233,7 +239,7 @@ export function buildDataset(
       lineups,
       playoffs,
       guys,
-      added: [...added],
+      added,
       weekly,
     });
   });

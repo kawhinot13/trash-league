@@ -83,16 +83,24 @@ describe("NBA-team questions count every team a player has played for", () => {
   });
 });
 
-describe("Season rosters count every pickup", () => {
-  it("accepts a player picked up and dropped mid-week", () => {
-    const q = (d: typeof TRASH) => divePool(d).find((x) => x.kind === "Season rosters" && x.prompt.includes("this season"))!;
-    const before = new Set(q(TRASH).answers.map(([p]) => p));
+describe("pickups the weekly rosters missed count everywhere", () => {
+  it("a player picked up and dropped mid-week is a right answer in every roster question", () => {
     const last = TRASH.extras.seasons.length - 1;
-    // A player who's in the directory but never on a weekly roster this season.
-    const pid = Object.keys(TRASH.extras.players).find((p) => TRASH.extras.players[p]?.[0] && !before.has(p))!;
-    const seasons = TRASH.extras.seasons.map((s, i) => (i === last ? { ...s, added: [pid] } : s));
-    const after = q({ ...TRASH, extras: { ...TRASH.extras, seasons } });
-    expect(after.prompt).toBe(q(TRASH).prompt);
-    expect(after.answers.some(([p]) => p === pid)).toBe(true);
+    const cur = TRASH.extras.seasons[last];
+    const seen = new Set(TRASH.extras.seasons.flatMap((s) => Object.values(s.guys).flatMap((g) => Object.keys(g))));
+    // Someone in the directory with a position and NBA team who was never on a weekly roster.
+    const pid = Object.keys(TRASH.extras.players).find((p) => !seen.has(p) && TRASH.extras.players[p]?.[1]?.includes("C") && TRASH.extras.players[p]?.[2])!;
+    const m = Object.keys(cur.guys)[0];
+    const week = Math.max(...Object.keys(cur.rosters ?? { 1: {} }).map(Number));
+    const seasons = TRASH.extras.seasons.map((s, i) => (i === last ? { ...s, added: { [m]: [[pid, week] as [string, number]] } } : s));
+    const pool = divePool({ ...TRASH, extras: { ...TRASH.extras, seasons } });
+    const has = (pred: (q: (typeof pool)[number]) => boolean) => pool.filter(pred).some((q) => q.answers.some(([p]) => p === pid));
+    expect(has((q) => q.kind === "Season rosters" && q.prompt.includes("this season"))).toBe(true);
+    expect(has((q) => q.kind === "Positions" && q.prompt.includes("center"))).toBe(true);
+    expect(has((q) => q.kind === "NBA teams")).toBe(true);
+    expect(has((q) => q.kind === "Waiver wire")).toBe(true);
+    if (pool.some((q) => q.kind === "Locker room" && q.who === m && q.prompt.includes("this season")))
+      expect(has((q) => q.kind === "Locker room" && q.who === m && q.prompt.includes("this season"))).toBe(true);
+    if (pool.some((q) => q.kind === "Cut list" && q.who === m)) expect(has((q) => q.kind === "Cut list" && q.who === m)).toBe(true);
   });
 });

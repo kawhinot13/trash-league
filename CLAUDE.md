@@ -28,6 +28,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   built in the grade step; Rafterlore only) plus his team today. From `BIG_NIGHT_FROM` (2026-11-20): the season-average
   question uses a lower bar (25+ answers) and "Big nights" asks for one N+ start (lock-in leagues: "had an N+ lock-in";
   bar = highest with 100+ answers, Trash 80+; `extras.bigNights` from Sleeper's starter points, Rafterlore only).
+  Roster questions (Locker room, Season rosters, NBA teams, Positions, Waiver wire, Cut list) also count pickups the
+  weekly rosters miss (dropped mid-week, or picked up in the week in progress): `RawSeason.added` (dataset.ts, Rafterlore).
+  One-off day resets (owner's call): `RESETS` in `lib/app/game-resets.ts` deletes that day's scores once and PlayGate
+  clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive only.
   Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now
   titled "Test Trash Fantasy" (test copy).
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.

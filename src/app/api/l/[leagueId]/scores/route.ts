@@ -8,6 +8,7 @@ import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
 import { cleanState } from "@/lib/core/game-state";
 import { viewerOf } from "@/lib/app/viewer";
+import { resetsFor } from "@/lib/app/game-resets";
 
 /**
  * Daily-game standings for one Rafterlore league, in Postgres:
@@ -36,6 +37,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
     void _a;
     // With ?day: the games this manager already finished that day, so every device shows the same result.
     let played: Record<string, { score: number; label: string; state: Record<string, unknown> | null }> = {};
+    // Games reset today: the browser drops its saved game for them so they can be played again.
+    const resets = DAY.test(day) ? await resetsFor(await db(), fid, day).catch(() => ({})) : {};
     if (viewer.member && viewer.manager && DAY.test(day)) {
       const sql = await db();
       const rows = await sql<{ game: string; score: number; label: string; state: Record<string, unknown> | null }[]>`
@@ -54,7 +57,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
         pick = { current, taken: rows.map((r) => r.sleeper_user) };
       }
     }
-    return Response.json({ enabled: true, viewer, played, pick }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ enabled: true, viewer, played, pick, resets }, { headers: { "cache-control": "no-store" } });
   }
   if (!GAMES.has(game) || !DAY.test(day)) return Response.json({ error: "bad request" }, { status: 400 });
   try {

@@ -40,7 +40,7 @@ type Raw = {
     rosters?: Record<string, Record<string, string[]>>;
     playoffs: { starters: [string, number][] }[];
     guys: Record<string, Record<string, [number, number, number]>>;
-    added?: string[];
+    added?: Record<string, [string, number][]>;
   }[];
 };
 /** Percentile rank in [0, 1] of each value among the map's values (higher value -> closer to 1). */
@@ -114,6 +114,15 @@ export function divePool(d: Dataset): Prompt[] {
     if (answers.length >= 8) out.push({ kind, prompt, answers, ...extra });
   };
   const sum = (m: Map<string, number>, k: string, v: number) => m.set(k, (m.get(k) ?? 0) + v);
+  type S = (typeof raw.seasons)[number];
+  // Everyone on a manager's roster that season: weeks rostered, plus pickups the weekly rosters missed
+  // (picked up and dropped mid-week, or picked up this week), which count as half a week.
+  const rostered = (s: S, m: string) => {
+    const mp = new Map(Object.entries(s.guys[m] ?? {}).map(([pid, [w]]) => [pid, w] as [string, number]));
+    for (const [pid] of s.added?.[m] ?? []) if (!mp.has(pid)) mp.set(pid, 0.5);
+    return mp;
+  };
+  const managersOf = (s: S) => [...new Set([...Object.keys(s.guys), ...Object.keys(s.added ?? {})])];
 
   for (const m of active) {
     const starts = new Map<string, number>();
@@ -125,12 +134,12 @@ export function divePool(d: Dataset): Prompt[] {
     add("Starters", `Name a player ${nick(m)} has started.`, starts, 0.55, { who: m, t: "started" });
     add("Draft night", `Name a player ${nick(m)} has drafted.`, picks, 0.6, { who: m, t: "mgr-drafted" });
     for (const s of raw.seasons.filter((x) => x.status === "complete")) {
-      const wk = new Map(Object.entries(s.guys[m] ?? {}).map(([pid, [w]]) => [pid, w] as [string, number]));
+      const wk = rostered(s, m);
       add("Locker room", `Name a player who was on ${nick(m)}'s roster in ${years[s.code]}.`, wk, 0.55, { who: m, t: "roster" });
     }
     // This season so far (v3: only the schedule from the restart uses it). Answers grow as the season goes.
     for (const s of raw.seasons.filter((x) => x.status !== "complete")) {
-      const wk = new Map(Object.entries(s.guys[m] ?? {}).map(([pid, [w]]) => [pid, w] as [string, number]));
+      const wk = rostered(s, m);
       add("Locker room", `Name a player who has been on ${nick(m)}'s roster this season (${years[s.code]}).`, wk, 0.55, { v: 3, who: m, t: "roster-now" });
     }
   }
@@ -212,6 +221,14 @@ export function divePool(d: Dataset): Prompt[] {
           season.set(p, Math.max(season.get(p) ?? 0, s.guys[m]?.[p]?.[2] ?? 0));
         }
     }
+    // Pickups the weekly rosters missed (dropped again mid-week, or picked up this week).
+    for (const [m, ps] of Object.entries(s.added ?? {}))
+      for (const [p] of ps) {
+        if (drafted.has(`${m}|${p}`) || traded.has(`${m}|${p}`) || s.guys[m]?.[p]) continue;
+        const mine = pickedBy.get(m) ?? pickedBy.set(m, new Map()).get(m)!;
+        if (!mine.has(`${s.code}|${p}`)) mine.set(`${s.code}|${p}`, 0.5);
+        if (!season.has(p)) season.set(p, 0);
+      }
     add("Waiver wire", `Name a player picked up off waivers in ${years[s.code]}.`, season, 0.5, { ...v3, t: "waivers-season" });
   }
   // Cut list: players a manager let go (on his roster one week, gone the next, not traded away). Works from
@@ -236,6 +253,14 @@ export function divePool(d: Dataset): Prompt[] {
         }
       }
     }
+    // Picked up and dropped within a finished week: never on a weekly roster, not traded away.
+    const lastWeek = weeks[weeks.length - 1] ?? 0;
+    for (const [m, ps] of Object.entries(s.added ?? {}))
+      for (const [p, wk] of ps) {
+        if (wk > lastWeek || s.guys[m]?.[p] || gave.has(`${m}|${p}`)) continue;
+        const mine = dropped.get(m) ?? dropped.set(m, new Map()).get(m)!;
+        if (!mine.has(p)) mine.set(p, 0.5);
+      }
   }
   for (const m of active) add("Cut list", `Name a player ${nick(m)} has dropped.`, dropped.get(m) ?? new Map(), 0.55, { ...v3, who: m, t: "mgr-dropped" });
 
@@ -312,7 +337,7 @@ export function divePool(d: Dataset): Prompt[] {
   // NBA teams: players who have played for that team (or play there now) and been on a league roster.
   if (d.sport !== "nfl") {
     const weeksIn = new Map<string, number>();
-    for (const s of raw.seasons) for (const ps of Object.values(s.guys)) for (const [pid, [w]] of Object.entries(ps)) sum(weeksIn, pid, w);
+    for (const s of raw.seasons) for (const m of managersOf(s)) for (const [pid, w] of rostered(s, m)) sum(weeksIn, pid, w);
     const byTeam = new Map<string, Map<string, number>>();
     // Every team he has played for (box scores, where the league has them) plus his team today.
     const played = d.extras.teamsPlayed ?? {};
@@ -332,9 +357,7 @@ export function divePool(d: Dataset): Prompt[] {
     const latest = league.seasons[league.seasons.length - 1]?.code;
     for (const s of raw.seasons) {
       const ps = new Map<string, number>();
-      for (const g of Object.values(s.guys)) for (const [pid, [w]] of Object.entries(g)) sum(ps, pid, w);
-      // Picked up and dropped mid-week still counts: he was on a roster.
-      for (const pid of s.added ?? []) if (!ps.has(pid)) ps.set(pid, 0.5);
+      for (const m of managersOf(s)) for (const [pid, w] of rostered(s, m)) sum(ps, pid, w);
       const when = s.code === latest ? `this season (${years[s.code]})` : `in ${years[s.code]}`;
       add("Season rosters", `Name a player who was on a ${d.name} roster ${when}.`, ps, 0.5, { v: 4, t: "season-roster" });
     }
