@@ -273,6 +273,19 @@ export function diagnose(
 }
 
 /** Trade evaluation: how each side's best lineup changes per week, plus raw value in and out. */
+/**
+ * Stars over depth (owner's call 2026-11-20): only the starting lineup scores, so nobody who knows the
+ * game hands over the best player in a deal for two lesser ones, even at more total value. A side
+ * gives up the deal's best player only if it gets back someone close to him (STAR_KEEP of his value).
+ * `out`: players this side sends; `inn`: players it gets.
+ */
+export const STAR_KEEP = 0.9;
+export function keepsStar(out: string[], inn: string[], worth: (id: string) => number) {
+  const bestOut = Math.max(0, ...out.map(worth));
+  const bestIn = Math.max(0, ...inn.map(worth));
+  return bestOut <= bestIn || bestIn >= bestOut * STAR_KEEP;
+}
+
 export function evaluateTrade(
   give: string[],
   get: string[],
@@ -305,7 +318,10 @@ export function evaluateTrade(
   const meDelta = meA.lu.total - meB.total;
   const themDelta = themA.lu.total - themB.total;
   const verdict = meDelta >= 12 * k ? "win" : meDelta <= -12 * k ? "lose" : "fair";
-  const accept = themDelta >= -8 * k ? "likely" : themDelta >= -25 * k ? "maybe" : "unlikely";
+  const hv = (id: string) => (P[id] ? healthy(P[id]) : 0);
+  // They'd be sending the best player in the deal and getting nobody close back: a no, whatever the totals.
+  const starLoss = !keepsStar(get, give, hv);
+  const accept = starLoss ? "unlikely" : themDelta >= -8 * k ? "likely" : themDelta >= -25 * k ? "maybe" : "unlikely";
   return {
     meDelta,
     themDelta,
@@ -315,6 +331,7 @@ export function evaluateTrade(
     themDrops: themA.drops,
     verdict,
     accept,
+    starLoss,
     meAfter: meA.lu,
     meBefore: meB,
   };
@@ -439,6 +456,8 @@ export function tradeFinder(me: FOTeam, teams: FOTeam[], P: Record<string, FOPla
     for (const x of twos.slice(0, 30)) cands.push([x.give, x.get]);
 
     for (const [give, get] of cands) {
+      // Stars over depth, both ways: neither side gives the deal's best player for lesser pieces.
+      if (!keepsStar(get, give, h) || !keepsStar(give, get, h)) continue;
       const valueOut = sum(give);
       const valueIn = sum(get);
       // Fair on paper both ways: you don't take more than ~15% extra, and don't overpay by half.

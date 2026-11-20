@@ -132,6 +132,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   football "starts" (both "Lineup Index"). Never hard-code Trash's years or lineup size in shared copy.
   No live in-week scores for basketball (Sleeper's are wrong; owner's rule: only show scoring that's verified).
   Football live scores are shown: weekly matchup scores sum to the official totals (checked).
+- Trade finder / analyzer (`lib/fo-analysis.ts`): stars over depth (owner's call 2026-11-20): a side never gives the
+  deal's best player unless it gets back someone within 90% of him (`keepsStar`, `STAR_KEEP`), whatever the totals.
 - Stats page (`/stats`, `/l/[id]/stats`; split from History, which keeps the story): Trapezoid of Excellence,
   Playoff report, trade court, re-draft (+ best pickups on Rafterlore).
 - Trapezoid of Excellence + Playoff report (Stats page, both sites): pure math in `core/trapezoid.ts`, UI in

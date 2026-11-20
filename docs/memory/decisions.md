@@ -38,6 +38,12 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-20: Trade finder: stars over depth
+- Owner: nobody who knows the game trades the best player in a deal for depth (3 x 40 for a 70 is a no), even
+  for more total value, because only the starting nine scores. `keepsStar`: a side gives up the deal's best
+  player only if it gets back someone within 90% (`STAR_KEEP`). The finder skips trades breaking it either way;
+  the analyzer marks them "probably say no" with the reason. Rejected: weighting stars inside the lineup total.
+
 ## 2026-11-20: Different 100-point answers
 - Owner: one obscure player (Braden Smith, Trevon Brazile, Moussa Cisse) was the 100-point answer for up to 7
   questions. Now each prompt's 100 goes to a deep answer not already used (`spreadKrillions`, pool order), and a

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestLineup, diagnose, evaluateTrade, fullStrength, healthy, lineupTotal, profile, tradeFinder } from "@/lib/fo-analysis";
+import { bestLineup, diagnose, evaluateTrade, fullStrength, healthy, keepsStar, lineupTotal, profile, tradeFinder } from "@/lib/fo-analysis";
 import { NBA_SLOTS, NFL_SLOTS, league, player, rng } from "./helpers";
 
 describe("lineup math", () => {
@@ -90,6 +90,36 @@ describe("team analyzer", () => {
       expect(d.strengths).not.toContain("Health");
       expect(d.weaknesses).not.toContain("Health");
     }
+  });
+});
+
+describe("stars over depth", () => {
+  it("nobody gives the deal's best player for two lesser ones, even for more total value", () => {
+    const v: Record<string, number> = { star: 70, a: 40, b: 40, c: 40, near: 65 };
+    const w = (id: string) => v[id];
+    expect(keepsStar(["star"], ["a", "b", "c"], w)).toBe(false); // 70 for three 40s: no
+    expect(keepsStar(["star"], ["near", "a"], w)).toBe(true); // 70 for 65 + 40: someone close comes back
+    expect(keepsStar(["a", "b"], ["star"], w)).toBe(true); // the side getting the star is fine
+  });
+  for (const seed of [11, 12, 13, 14, 15, 21, 22]) {
+    it(`the finder never suggests giving up a team's best player for less (league ${seed})`, () => {
+      const { P, T } = league(seed, 8, 14);
+      const h = (id: string) => healthy(P[id]);
+      for (const me of T)
+        for (const i of tradeFinder(me, T, P, NBA_SLOTS)) {
+          expect(keepsStar(i.get, i.give, h)).toBe(true);
+          expect(keepsStar(i.give, i.get, h)).toBe(true);
+        }
+    });
+  }
+  it("the analyzer calls it a no when they'd lose the best player in the deal", () => {
+    const pl = [player("s", ["PG"], 70), player("x", ["SF"], 40), player("y", ["C"], 40), player("z", ["PF"], 38)];
+    const P = Object.fromEntries(pl.map((p) => [p.pid, p]));
+    const me = { id: "me", team: "Me", players: ["x", "y"] };
+    const them = { id: "th", team: "Them", players: ["s", "z"] };
+    const r = evaluateTrade(["x", "y"], ["s"], me, them, P, NBA_SLOTS);
+    expect(r.starLoss).toBe(true);
+    expect(r.accept).toBe("unlikely");
   });
 });
 

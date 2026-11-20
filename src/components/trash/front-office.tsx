@@ -620,6 +620,9 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                         {trade.accept === "likely" ? "probably say yes" : trade.accept === "maybe" ? "think about it" : "probably say no"}
                       </span>
                     </p>
+                    {trade.starLoss ? (
+                      <p className="text-sm text-[var(--muted)]">They&apos;d be giving up the best player in the deal without getting anyone close back. Stars win this format, so that&apos;s a no.</p>
+                    ) : null}
                   </div>
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     {[
