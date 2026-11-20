@@ -42,7 +42,7 @@ const rescored = new Set<string>();
 export async function rescoreDiveOnce(sql: Sql, leagueId: string, familyId: string): Promise<string> {
   if (rescored.has(familyId)) return "cached";
   const fresh = await sql`
-    insert into game_resets (family_id, game, day) values (${familyId}, 'rescore-dive2', '2026-11-20'::date) on conflict do nothing returning 1`;
+    insert into game_resets (family_id, game, day) values (${familyId}, 'rescore-dive2-b', '2026-11-20'::date) on conflict do nothing returning 1`;
   rescored.add(familyId);
   if (!fresh.length) return "done before";
   try {
@@ -77,7 +77,7 @@ export async function rescoreDiveOnce(sql: Sql, leagueId: string, familyId: stri
     return `rescored ${changed} of ${rows.length} (skipped ${skipped})`;
   } catch (e) {
     // Try again on a later visit.
-    await sql`delete from game_resets where family_id = ${familyId} and game = 'rescore-dive2'`;
+    await sql`delete from game_resets where family_id = ${familyId} and game = 'rescore-dive2-b'`;
     rescored.delete(familyId);
     logError(`rescore dive ${familyId}`, e);
     return "failed";
