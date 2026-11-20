@@ -123,6 +123,20 @@ describe("stars over depth", () => {
   });
 });
 
+describe("trade analyzer health views", () => {
+  it("fully healthy counts an injured player at full value; right now barely counts him", async () => {
+    const { avail } = await import("@/lib/fo-analysis");
+    const pl = [player("hurt", ["PG"], 70, { injury: "Out" }), player("x", ["SF"], 50), player("y", ["C"], 30), player("z", ["PF"], 30)];
+    const P = Object.fromEntries(pl.map((p) => [p.pid, p]));
+    const me = { id: "me", team: "Me", players: ["x", "y"] };
+    const them = { id: "th", team: "Them", players: ["hurt", "z"] };
+    const now = evaluateTrade(["x"], ["hurt"], me, them, P, NBA_SLOTS, 15, "nba", avail);
+    const full = evaluateTrade(["x"], ["hurt"], me, them, P, NBA_SLOTS, 15, "nba", fullStrength);
+    expect(full.meDelta).toBeGreaterThan(now.meDelta);
+    expect(full.meDelta).toBeCloseTo(20, 5); // 70 in for 50 out
+  });
+});
+
 describe("team analyzer labels", () => {
   it("a team with a top-third starting nine is never called 'Deep, no ceiling'", () => {
     for (let seed = 1; seed <= 40; seed++) {

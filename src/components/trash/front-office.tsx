@@ -4,7 +4,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { FrontOffice } from "@/lib/front-office";
-import { diagnose, evaluateTrade, market, metricsFor, profile, tradeFinder, tradeNotes, type Metric, type Mover, fullStrength } from "@/lib/fo-analysis";
+import { avail, diagnose, evaluateTrade, market, metricsFor, profile, tradeFinder, tradeNotes, type Metric, type Mover, fullStrength } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
 import { Handle, MgrPhoto } from "@/components/trash/brand";
@@ -195,7 +195,14 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
   const partner = them !== me && ids.includes(them) ? them : ids.find((x) => x !== me)!;
   const meTeam = data.teams.find((t) => t.id === me)!;
   const themTeam = data.teams.find((t) => t.id === partner)!;
-  const trade = give.length && get.length ? evaluateTrade(give, get, meTeam, themTeam, P, data.slots, undefined, sport) : null;
+  // Trade analyzer with someone hurt in the deal: right now (injured players count as they are today:
+  // Out and IR barely count) or fully healthy (as if they were back).
+  const [tradeHealth, setTradeHealth] = useState<"now" | "full">("now");
+  const hurtInTrade = [...give, ...get].some((id) => P[id]?.onIR || !!P[id]?.injury);
+  const trade =
+    give.length && get.length
+      ? evaluateTrade(give, get, meTeam, themTeam, P, data.slots, undefined, sport, hurtInTrade ? (tradeHealth === "full" ? fullStrength : avail) : undefined)
+      : null;
 
   const mk = useMemo(() => market(P, data.teams, sport), [P, data, sport]);
   // Only searched while the Trade finder is open (it tries a few hundred trades).
@@ -593,10 +600,25 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
               ))}
             </div>
 
+            {hurtInTrade ? (
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Segmented
+                  id="fo-trade-health"
+                  value={tradeHealth}
+                  onChange={setTradeHealth}
+                  options={[["now", "Right now"], ["full", "Fully healthy"]]}
+                />
+                <p className="text-sm text-[var(--muted)]">
+                  {tradeHealth === "full"
+                    ? "Everyone in the deal counted as if healthy."
+                    : "Someone in this deal is hurt: the trade as it plays this week (Out and IR barely count)."}
+                </p>
+              </div>
+            ) : null}
             <AnimatePresence mode="wait">
               {trade ? (
                 <motion.div
-                  key={give.join() + get.join()}
+                  key={give.join() + get.join() + (hurtInTrade ? tradeHealth : "")}
                   initial={{ opacity: 0, y: reduce ? 0 : 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}

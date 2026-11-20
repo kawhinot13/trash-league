@@ -295,20 +295,22 @@ export function evaluateTrade(
   slots: string[],
   roster = 15,
   sport: Sport = "nba",
+  // Trades are for the rest of the season, so players count at expected health by default;
+  // `fullStrength` counts everyone healthy (as if the injured were back).
+  worth: (p: FOPlayer) => number = healthy,
 ) {
   const k = SCALE[sport];
-  // Trades are for the rest of the season, so value players at expected health.
-  const before = (t: FOTeam) => bestLineup(t.players.map((id) => P[id]).filter(Boolean), slots, healthy);
+  const before = (t: FOTeam) => bestLineup(t.players.map((id) => P[id]).filter(Boolean), slots, worth);
   const after = (t: FOTeam, out: string[], inn: string[]) => {
     let ids = t.players.filter((id) => !out.includes(id)).concat(inn);
     // too many players: they'd have to drop the least valuable extras
     const drops: string[] = [];
     while (ids.length > roster) {
-      const worst = [...ids].sort((a, b) => healthy(P[a]) - healthy(P[b]))[0];
+      const worst = [...ids].sort((a, b) => worth(P[a]) - worth(P[b]))[0];
       drops.push(worst);
       ids = ids.filter((x) => x !== worst);
     }
-    return { lu: bestLineup(ids.map((id) => P[id]).filter(Boolean), slots, healthy), drops };
+    return { lu: bestLineup(ids.map((id) => P[id]).filter(Boolean), slots, worth), drops };
   };
   const meB = before(me);
   const themB = before(them);
@@ -318,7 +320,7 @@ export function evaluateTrade(
   const meDelta = meA.lu.total - meB.total;
   const themDelta = themA.lu.total - themB.total;
   const verdict = meDelta >= 12 * k ? "win" : meDelta <= -12 * k ? "lose" : "fair";
-  const hv = (id: string) => (P[id] ? healthy(P[id]) : 0);
+  const hv = (id: string) => (P[id] ? worth(P[id]) : 0);
   // They'd be sending the best player in the deal and getting nobody close back: a no, whatever the totals.
   const starLoss = !keepsStar(get, give, hv);
   const accept = starLoss ? "unlikely" : themDelta >= -8 * k ? "likely" : themDelta >= -25 * k ? "maybe" : "unlikely";
