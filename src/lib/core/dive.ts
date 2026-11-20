@@ -40,6 +40,7 @@ type Raw = {
     rosters?: Record<string, Record<string, string[]>>;
     playoffs: { starters: [string, number][] }[];
     guys: Record<string, Record<string, [number, number, number]>>;
+    added?: string[];
   }[];
 };
 /** Percentile rank in [0, 1] of each value among the map's values (higher value -> closer to 1). */
@@ -332,6 +333,8 @@ export function divePool(d: Dataset): Prompt[] {
     for (const s of raw.seasons) {
       const ps = new Map<string, number>();
       for (const g of Object.values(s.guys)) for (const [pid, [w]] of Object.entries(g)) sum(ps, pid, w);
+      // Picked up and dropped mid-week still counts: he was on a roster.
+      for (const pid of s.added ?? []) if (!ps.has(pid)) ps.set(pid, 0.5);
       const when = s.code === latest ? `this season (${years[s.code]})` : `in ${years[s.code]}`;
       add("Season rosters", `Name a player who was on a ${d.name} roster ${when}.`, ps, 0.5, { v: 4, t: "season-roster" });
     }

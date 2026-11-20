@@ -81,6 +81,8 @@ export function buildDataset(
     const lineups: Record<string, [number, number, number][]> = {};
     const guys: RawSeason["guys"] = {};
     const adds: Record<string, number> = {};
+    // Everyone picked up this season, even if dropped before a week ended (weekly rosters miss them).
+    const added = new Set<string>();
     const playoffs: RawSeason["playoffs"] = [];
     const weekly: NonNullable<RawSeason["weekly"]> = {};
     const bracketPairs = new Set(
@@ -118,6 +120,7 @@ export function buildDataset(
         }
       }
       for (const [rid, pid] of w.adds) {
+        added.add(pid);
         adds[W(rid)] = (adds[W(rid)] ?? 0) + 1;
         addsBy.set(W(rid), (addsBy.get(W(rid)) ?? 0) + 1);
         need.add(pid);
@@ -230,6 +233,7 @@ export function buildDataset(
       lineups,
       playoffs,
       guys,
+      added: [...added],
       weekly,
     });
   });

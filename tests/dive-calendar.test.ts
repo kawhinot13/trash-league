@@ -82,3 +82,17 @@ describe("NBA-team questions count every team a player has played for", () => {
     expect(warriors(withPast).answers.length).toBe(before + 1);
   });
 });
+
+describe("Season rosters count every pickup", () => {
+  it("accepts a player picked up and dropped mid-week", () => {
+    const q = (d: typeof TRASH) => divePool(d).find((x) => x.kind === "Season rosters" && x.prompt.includes("this season"))!;
+    const before = new Set(q(TRASH).answers.map(([p]) => p));
+    const last = TRASH.extras.seasons.length - 1;
+    // A player who's in the directory but never on a weekly roster this season.
+    const pid = Object.keys(TRASH.extras.players).find((p) => TRASH.extras.players[p]?.[0] && !before.has(p))!;
+    const seasons = TRASH.extras.seasons.map((s, i) => (i === last ? { ...s, added: [pid] } : s));
+    const after = q({ ...TRASH, extras: { ...TRASH.extras, seasons } });
+    expect(after.prompt).toBe(q(TRASH).prompt);
+    expect(after.answers.some(([p]) => p === pid)).toBe(true);
+  });
+});

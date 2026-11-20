@@ -96,6 +96,8 @@ export type RawSeason = {
   weekly?: Record<string, { games: [string, string, number, number][]; top: [string, string, number][]; adds: [string, string, number][] }>;
   /** manager -> pid -> [weeks rostered, starts, points as a starter], playoffs included */
   guys: Record<string, Record<string, [number, number, number]>>;
+  /** Every player picked up that season (adds), including ones dropped before a week's rosters were taken. */
+  added?: string[];
   /** Winners-bracket playoff games: each team's actual and best lineup and its starters. */
   playoffs: { week: number; who: string; mid: number; act: number; opt: number; starters: [string, number][] }[];
 };
