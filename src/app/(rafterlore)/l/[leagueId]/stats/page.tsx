@@ -44,16 +44,6 @@ function Stats({ p }: { p: LeaguePage }) {
         well. Built from the Sleeper record.
       </Intro>
 
-      <section aria-labelledby="gm" className="py-14 md:py-32">
-        <SectionHead id="gm" title="GM rating">
-          Who&apos;s the best manager in the league? One all-time grade from drafting, the waiver wire, trades, lineups and
-          results.
-        </SectionHead>
-        <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <GmRatings rows={gmRatings(d)} people={d.league.managers} />
-        </div>
-      </section>
-
       <section aria-labelledby="trapezoid" className="py-14 md:py-32">
         <SectionHead id="trapezoid" title="Trapezoid of Excellence">
           Who scores and wins like a champion? Every manager plotted by regular-season win rate and scoring, against the window
@@ -61,6 +51,16 @@ function Stats({ p }: { p: LeaguePage }) {
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
           <Trapezoid views={trapezoidViews(d)} bt={backtest(d)} people={d.league.managers} />
+        </div>
+      </section>
+
+      <section aria-labelledby="gm" className="py-14 md:py-32">
+        <SectionHead id="gm" title="GM rating">
+          Who&apos;s the best manager in the league? One all-time grade from drafting, the waiver wire, trades, lineups and
+          results.
+        </SectionHead>
+        <div className="mx-auto max-w-6xl px-5 md:px-10">
+          <GmRatings rows={gmRatings(d)} people={d.league.managers} />
         </div>
       </section>
 

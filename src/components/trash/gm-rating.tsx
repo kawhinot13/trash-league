@@ -37,6 +37,12 @@ export function GmRatings({ rows, people }: { rows: GmRow[]; people: Manager[] }
   };
   return (
     <div className="rounded-[24px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-3 sm:p-5 md:rounded-[28px] md:p-8">
+      <p className="mb-5 rounded-2xl bg-black/25 px-4 py-3 text-sm text-[var(--paper)]/80">
+        <span className="font-semibold text-[var(--paper)]">How to read it:</span> every manager is graded on five skills against the rest
+        of the league. For each skill, <b>50 is the league average</b>: 65 is well above it, 35 well below. The five bars are those
+        scores, and the big letter is the overall grade (B- to C+ is about average, A is elite). The colored title under a name is
+        their best skill. Tap anyone to see the real numbers behind each score.
+      </p>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[var(--muted)]">
         {GM_SKILLS.map((k) => (
           <span key={k} className="flex items-center gap-1.5">

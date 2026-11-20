@@ -161,6 +161,11 @@ function BoomTab({ data, me, nick }: { data: FrontOffice; me: string; nick: (id:
         <b>{n0(data.boomLine)}+</b>, the top 10% of every game rostered players have played this season. Boom rate is how often a
         player gets there; ceiling is the average of his best quarter of games.
       </p>
+      <p className="mt-3 max-w-[64ch] rounded-2xl bg-black/25 px-4 py-3 text-sm text-[var(--paper)]/80">
+        <span className="font-semibold text-[var(--paper)]">How to read it:</span> the big % is how often he has a big game (&quot;12 of
+        15&quot; = 12 big games in 15). Avg is his normal night, ceiling is what his best nights look like. Two players with the
+        same average aren&apos;t equal here: the one with more big games wins you more weeks.
+      </p>
       <div className="mt-5">
         <Segmented id="fo-boom" value={who} onChange={(v) => (setWho(v), setShown(20))} options={[["all", "Everyone"], ["free", "Free agents"], ["mine", "My team"]]} />
       </div>
