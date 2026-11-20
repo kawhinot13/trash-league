@@ -11,6 +11,8 @@ import { Hero } from "@/components/trash/hero";
 import { Doors, Pending } from "@/components/app/site";
 import { DumpsterDive } from "@/components/trash/dive";
 import { Lineup } from "@/components/trash/lineup";
+import { StartingNine } from "@/components/trash/grid";
+import { gridData } from "@/lib/core/grid";
 import { StatStrip, Ticker } from "@/components/trash/polish";
 import { SectionHead } from "@/components/trash/section-head";
 import { Trashle } from "@/components/trash/trashle";
@@ -206,6 +208,20 @@ function Home({ p }: { p: LeaguePage }) {
               </PlayGate>
             </div>
           </section>
+
+          {d.sport !== "nfl" ? (
+            <section id="grid" aria-labelledby="grid-title" className="scroll-mt-24 pb-24 md:pb-32">
+              <SectionHead id="grid-title" title="Starting Nine">
+                Nine squares, one player each: he has to fit the row and the column. Nine guesses, each player once, and the
+                deeper the answer, the more it scores. A new grid every day.
+              </SectionHead>
+              <div className="mx-auto max-w-4xl px-5 md:px-10">
+                <PlayGate game="Starting Nine" anchor="grid">
+                  <StartingNine data={gridData(d)} players={gamePlayers} people={people} />
+                </PlayGate>
+              </div>
+            </section>
+          ) : null}
 
           <section id="trashle" aria-labelledby="trashle-title" className="scroll-mt-24 pb-24 md:pb-32">
             <SectionHead id="trashle-title" title={p.brand.games.wordle}>

@@ -2,7 +2,7 @@
  * A finished daily game's saved progress, stored with the score so the player's other devices open on
  * the same result: { "dive3:2026-11-17": {...} }. Only these storage names are accepted, and it stays small.
  */
-export const STATE_NAME = /^(dive3|trashle|trashle-hints|lineup):\d{4}-\d{2}-\d{2}$/;
+export const STATE_NAME = /^(dive3|trashle|trashle-hints|lineup|grid):\d{4}-\d{2}-\d{2}$/;
 
 export function cleanState(x: unknown): Record<string, unknown> | null {
   if (!x || typeof x !== "object" || Array.isArray(x)) return null;

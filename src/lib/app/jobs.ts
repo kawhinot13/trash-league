@@ -231,6 +231,27 @@ async function grade(familyId: string) {
         for (const m of await Promise.all(todo.slice(i, i + 4).map((w) => weekTeams(w.season!, w.week, w.final).catch(() => ({}) as Record<string, string>))))
           for (const [pid, team] of Object.entries(m)) (played.get(pid) ?? played.set(pid, new Set()).get(pid)!).add(team);
       ds.extras.teamsPlayed = Object.fromEntries([...played].map(([pid, t]) => [pid, [...t].sort()]));
+      // Real NBA per-game averages in each league season (box scores), for Starting Nine's stat squares.
+      const acc = new Map<string, number[]>(); // "pid|season" -> sums [gp, pts, reb, ast, 3pm, stl, blk, min, maxPts]
+      for (let i = 0; i < todo.length; i += 4)
+        for (const [w, rowsW] of await Promise.all(todo.slice(i, i + 4).map(async (w) => [w, await weekStats(w.season!, w.week, w.final).catch(() => [])] as const)))
+          for (const r of rowsW) {
+            const st = r.stats ?? {};
+            if (!(st.min ?? 0)) continue;
+            const k = `${r.player_id}|${w.season}`;
+            const a = acc.get(k) ?? acc.set(k, [0, 0, 0, 0, 0, 0, 0, 0, 0]).get(k)!;
+            const pts = st.pts ?? 0;
+            const vals = [1, pts, st.reb ?? 0, st.ast ?? 0, st.fg3m ?? 0, st.stl ?? 0, st.blk ?? 0, st.min ?? 0];
+            vals.forEach((v, j) => (a[j] += v));
+            a[8] = Math.max(a[8], pts);
+          }
+      const nbaSeasons: Record<string, Record<string, number[]>> = {};
+      for (const [k, a] of acc) {
+        const [pid, season] = k.split("|");
+        const g = a[0];
+        (nbaSeasons[pid] ??= {})[season] = [g, ...a.slice(1, 8).map((v) => Math.round((v / g) * 10) / 10), a[8]];
+      }
+      ds.extras.nbaSeasons = nbaSeasons;
     } catch (e) {
       logError(`teams played ${familyId}`, e);
     }

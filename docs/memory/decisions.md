@@ -38,6 +38,11 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-20: Starting Nine (daily grid)
+- Owner asked for a grid game for the league. Original name and look (the 3x3 mechanic is generic). Owner wanted
+  many rotating columns and score tiers (50+, 60+ lock-ins; 20+ PPG), so categories are generated with tiers and
+  picked kind-first. Grid picked from finished seasons only, learned from the Dive's mid-day swaps.
+
 ## 2026-11-20: Boom index
 - Owner picked it. League-relative big-game line (top 10% of rostered players' games) so it fits any scoring;
   rate + ceiling per player in the Front office ("Boom or bust": everyone / free agents / my team).

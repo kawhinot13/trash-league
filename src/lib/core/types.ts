@@ -112,6 +112,9 @@ export type ExtrasData = {
   teamsPlayed?: Record<string, string[]>;
   /** Each player's best single start for a league team (Sleeper's starter points; Rafterlore). */
   bigNights?: Record<string, number>;
+  /** Basketball (Rafterlore grade step): each player's real NBA per-game averages in each league season
+   * (Sleeper season -> [games, pts, reb, ast, threes, stl, blk, min, best single-game pts]). */
+  nbaSeasons?: Record<string, Record<string, number[]>>;
 };
 
 /** Everything the shared features need about one league. `name` is how copy refers to it ("Trash"). */

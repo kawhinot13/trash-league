@@ -41,7 +41,7 @@ const sameName = (team: string, ...names: (string | undefined)[]) =>
   names.some((n) => n && squash(n).length >= 3 && squash(team).length >= 3 && (squash(team) === squash(n) || squash(team).startsWith(squash(n)) || squash(n).startsWith(squash(team))));
 /** A one-time code waiting to show up in the manager's Sleeper team name (kept across app switches). */
 type Pending = { challenge: string; code: string; manager: string; expiresAt: string };
-const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup" };
+const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup", grid: "grid" };
 
 export type Person = { id: string; nick: string };
 
@@ -71,7 +71,7 @@ export function Leaderboard({
   saveKeys?: string[];
   /** Current managers, for the "who are you" picker and names. */
   people: Person[];
-  game: "dive" | "dive2" | "trashle" | "lineup";
+  game: "dive" | "dive2" | "trashle" | "lineup" | "grid";
   day: string | null;
   /** The finished result to post, once the game is over. score: higher is better. */
   result: { score: number; label: string } | null;

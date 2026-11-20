@@ -87,7 +87,7 @@ function NextDive() {
   return <span className="font-display text-3xl font-black tabular-nums">{left}</span>;
 }
 
-function AnswerBox({ players, onPick }: { players: Players; onPick: (pid: string | null, typed: string) => void }) {
+export function AnswerBox({ players, onPick }: { players: Players; onPick: (pid: string | null, typed: string) => void }) {
   const [q, setQ] = useState("");
   const [hi, setHi] = useState(0);
   const list = useId();

@@ -36,6 +36,14 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive only.
   Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now
   titled "Test Trash Fantasy" (test copy).
+- Starting Nine (Rafterlore home, basketball; `core/grid.ts`, `components/trash/grid.tsx`, game id "grid"): daily 3x3,
+  rows = 2-3 managers ("Rostered by") or drafted-by / title / runner-up / season; columns = one each of many kinds
+  (NBA team, conference, big-lock-in tiers 50+..., starts / points / avg tiers, waivers, trades, first-round, late
+  round, positions, journeymen, playoff starters, never started, one season, every season, real NBA averages from
+  `extras.nbaSeasons` (grade step): PPG/RPG/APG/3s/steals/blocks/minutes tiers, 40/50-point games). The day's grid
+  is chosen ONLY from finished seasons (`gateIds`; MIN_CELL 3..MAX_CELL 60 per square), so this season's answers can
+  grow but the grid never changes mid-day; a started game also pins its grid (`ids`). 9 guesses, player once,
+  points 10..100 by depth (`cellPoints`, league fame). Never call it Immaculate Grid or copy its look.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)

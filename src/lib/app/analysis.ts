@@ -52,7 +52,7 @@ export type Game = { season: string; years: string; week: number; a: Who; b: Who
 // 10: custom-pack leagues plan Dumpster Dive in the pack's names (Trash on Rafterlore).
 // 11: NBA-team questions count every team a player has played for (box scores).
 // 12: "Big numbers" asks for one big start (extras.bigNights) instead of a season average.
-export const ANALYSIS_VERSION = 14;
+export const ANALYSIS_VERSION = 15;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */

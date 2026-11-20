@@ -34,7 +34,7 @@ function clearResets(v: Who, prefix: string, day: string) {
 
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 /** The game ids behind each section. */
-const GAME_OF: Record<string, string> = { dive: "dive2", trashle: "trashle", lineup: "lineup" };
+const GAME_OF: Record<string, string> = { dive: "dive2", trashle: "trashle", lineup: "lineup", grid: "grid" };
 
 /** Put today's finished games from the account into this browser before the games mount, so a
  * second device opens on the same result instead of a fresh game. The account's copy wins. */
@@ -133,7 +133,7 @@ export function PlayGate({ game, anchor, children, primary }: { game: string; an
   if (v.linked && v.member) {
     // Finished today on another device before results were saved with the account: don't offer a replay.
     const done = who.played?.[GAME_OF[anchor] ?? ""];
-    const SAVE: Record<string, string> = { dive: "dive3", trashle: "trashle", lineup: "lineup" };
+    const SAVE: Record<string, string> = { dive: "dive3", trashle: "trashle", lineup: "lineup", grid: "grid" };
     let here = false;
     try {
       here = !!localStorage.getItem(brand.key(`${SAVE[anchor]}:${todayET()}`));
