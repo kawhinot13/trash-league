@@ -158,13 +158,17 @@ function BoomTab({ data, me, nick }: { data: FrontOffice; me: string; nick: (id:
     <div>
       <p className="max-w-[64ch] text-[var(--paper)]/85">
         Each lineup slot keeps one game a week, so the player who goes off beats the one who&apos;s steady. A big game here is{" "}
-        <b>{n0(data.boomLine)}+</b>, the top 10% of every game rostered players have played this season. Boom rate is how often a
-        player gets there; ceiling is the average of his best quarter of games.
+        <b>{n0(data.boomLine)}+</b>, the top 10% of every game rostered players have played this season.
       </p>
-      <p className="mt-3 max-w-[64ch] rounded-2xl bg-black/25 px-4 py-3 text-sm text-[var(--paper)]/80">
-        <span className="font-semibold text-[var(--paper)]">How to read it:</span> the big % is how often he has a big game (&quot;12 of
-        15&quot; = 12 big games in 15). Avg is his normal night, ceiling is what his best nights look like. Two players with the
-        same average aren&apos;t equal here: the one with more big games wins you more weeks.
+      <p className="mt-3 max-w-3xl rounded-2xl bg-black/25 px-4 py-3 text-sm text-[var(--paper)]/80">
+        <span className="font-semibold text-[var(--paper)]">How to read it</span>
+        <span className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          <span><b>Big %</b>: how often he has a big game. &quot;12 of 15&quot; = 12 big games in 15.</span>
+          <span><b>Avg</b>: his normal night, every game averaged.</span>
+          <span><b>Ceiling</b>: his good nights, the average of his best 25% of games (his best 4 of 16, say).</span>
+          <span><b>Spiky</b>: a tag, not a number. His ceiling is 50%+ above his average (avg 50, ceiling 75 or more).</span>
+        </span>
+        <span className="mt-2 block">Same average, different player: the one with more big games wins you more weeks, because his best night is the one that counts.</span>
       </p>
       <div className="mt-5">
         <Segmented id="fo-boom" value={who} onChange={(v) => (setWho(v), setShown(20))} options={[["all", "Everyone"], ["free", "Free agents"], ["mine", "My team"]]} />
