@@ -4,6 +4,7 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { FrontOffice } from "@/lib/front-office";
+import { BOOM_MIN_GAMES } from "@/lib/core/boom";
 import { avail, diagnose, evaluateTrade, market, metricsFor, profile, tradeFinder, tradeNotes, type Metric, type Mover, fullStrength } from "@/lib/fo-analysis";
 import type { Manager } from "@/lib/league";
 import { Explain, Segmented } from "./intel";
@@ -142,10 +143,70 @@ function MoverList({
   );
 }
 
+/** Boom index (core/boom.ts): who has the big games. One game a slot a week, so ceilings win. */
+function BoomTab({ data, me, nick }: { data: FrontOffice; me: string; nick: (id: string) => string }) {
+  const [who, setWho] = useState<"all" | "free" | "mine">("all");
+  const [shown, setShown] = useState(20);
+  const owner = useMemo(() => new Map(data.teams.flatMap((t) => t.players.map((p) => [p, t.id] as [string, string]))), [data]);
+  const mine = new Set(data.teams.find((t) => t.id === me)?.players ?? []);
+  const list = Object.values(data.players)
+    .filter((p) => p.boom !== undefined && p.gp >= BOOM_MIN_GAMES)
+    .filter((p) => (who === "free" ? !owner.has(p.pid) : who === "mine" ? mine.has(p.pid) : true))
+    .sort((a, b) => (b.boom ?? 0) - (a.boom ?? 0) || (b.ceil ?? 0) - (a.ceil ?? 0));
+  if (!data.boomLine) return <p className="text-[var(--muted)]">The boom numbers fill in once this season has games.</p>;
+  return (
+    <div>
+      <p className="max-w-[64ch] text-[var(--paper)]/85">
+        Each lineup slot keeps one game a week, so the player who goes off beats the one who&apos;s steady. A big game here is{" "}
+        <b>{n0(data.boomLine)}+</b>, the top 10% of every game rostered players have played this season. Boom rate is how often a
+        player gets there; ceiling is the average of his best quarter of games.
+      </p>
+      <div className="mt-5">
+        <Segmented id="fo-boom" value={who} onChange={(v) => (setWho(v), setShown(20))} options={[["all", "Everyone"], ["free", "Free agents"], ["mine", "My team"]]} />
+      </div>
+      <ul className="mt-5 grid gap-2 md:grid-cols-2">
+        {list.slice(0, shown).map((p, i) => {
+          const spiky = p.ppg > 0 && (p.ceil ?? 0) / p.ppg >= 1.5;
+          const o = owner.get(p.pid);
+          return (
+            <li key={p.pid} className="flex items-center gap-3 rounded-2xl bg-black/20 p-3">
+              <span className="font-display w-6 shrink-0 text-right text-lg font-black text-[var(--muted)] tabular-nums">{i + 1}</span>
+              <Head pid={p.pid} />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold break-words">
+                  {p.name} <Injury p={p} />
+                </p>
+                <p className="text-xs break-words text-[var(--muted)]">
+                  {p.team} · {o ? (o === me ? "your team" : nick(o)) : "free agent"} · avg {n0(p.ppg)} · ceiling {n0(p.ceil ?? 0)}
+                  {spiky ? <span className="font-semibold text-[var(--wood)]"> · spiky</span> : null}
+                </p>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/8">
+                  <div className="h-full rounded-full bg-[#7fd49a]" style={{ width: `${Math.min(100, (p.boom ?? 0) * 100 * 2)}%` }} />
+                </div>
+              </div>
+              <p className="text-right">
+                <span className="font-display block text-2xl leading-none font-black tabular-nums">{Math.round((p.boom ?? 0) * 100)}%</span>
+                <span className="text-[11px] text-[var(--muted)]">{Math.round((p.boom ?? 0) * p.gp)} of {p.gp}</span>
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+      {!list.length ? <p className="mt-5 text-[var(--muted)]">Nobody here has {BOOM_MIN_GAMES}+ games yet.</p> : null}
+      {list.length > shown ? (
+        <button type="button" onClick={() => setShown(shown + 20)} className="mt-4 h-11 cursor-pointer rounded-full bg-white/10 px-5 text-sm font-semibold hover:bg-white/15">
+          Show more ({list.length - shown} left)
+        </button>
+      ) : null}
+      <p className="mt-3 text-xs text-[var(--muted)]">This season, {BOOM_MIN_GAMES}+ games. Free agents: the best 25 available. &quot;Spiky&quot;: his ceiling is 50%+ above his average.</p>
+    </div>
+  );
+}
+
 export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice; managers: Manager[]; local: string[] }) {
   const brand = useBrand();
   const localSet = useMemo(() => new Set(local), [local]);
-  const [tab, setTab] = useState<"team" | "finder" | "trade" | "market">("team");
+  const [tab, setTab] = useState<"team" | "finder" | "trade" | "market" | "boom">("team");
   const [me, setMe] = useState(data.teams[0].id);
   const [them, setThem] = useState(data.teams[1].id);
   const [give, setGive] = useState<string[]>([]);
@@ -234,7 +295,7 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
       <Who.Provider value={data.players}>
     <div data-no-rico className="xmas-drift rounded-[24px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-3 sm:rounded-[28px] sm:p-5 md:p-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["finder", "Trade finder"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"]]} />
+        <Segmented id="fo-tab" value={tab} onChange={setTab} options={[["team", "Team analyzer"], ["finder", "Trade finder"], ["trade", "Trade analyzer"], ["market", "Buy low / sell high"], ["boom", "Boom or bust"]]} />
         <p className="text-xs text-[var(--muted)]">Live Season 4 rosters, week {data.week}</p>
       </div>
       <div className="mt-6">
@@ -470,6 +531,10 @@ export function FrontOfficeTools({ data, managers, local }: { data: FrontOffice;
                 </ul>
               </section>
             </div>
+          </motion.div>
+        ) : tab === "boom" ? (
+          <motion.div key="boom" initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">
+            <BoomTab data={data} me={me} nick={nick} />
           </motion.div>
         ) : tab === "market" ? (
           <motion.div key="market" initial={{ opacity: 0, y: reduce ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="mt-8">

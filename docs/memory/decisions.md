@@ -38,6 +38,11 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-20: Boom index
+- Owner picked it. League-relative big-game line (top 10% of rostered players' games) so it fits any scoring;
+  rate + ceiling per player in the Front office ("Boom or bust": everyone / free agents / my team).
+  Rejected: a fixed points line (Trash-only), standard deviation (punishes good players' good games).
+
 ## 2026-11-20: GM rating
 - Owner picked it from the advanced-data list (with the boom index; not the playoff schedule edge, which was
   built then dropped unshipped). Skill-based, not activity-based (the quiz traits count trades/adds made): draft

@@ -1,3 +1,4 @@
+import { boomLine, boomOf } from "@/lib/core/boom";
 import { sportPath, type LiveSource } from "@/lib/core/live-source";
 
 /**
@@ -40,6 +41,9 @@ export type FOPlayer = {
   recent: number;
   min: number;
   minRecent: number;
+  /** Boom index (core/boom.ts): share of this season's games over the league's big-game line, and his ceiling. */
+  boom?: number;
+  ceil?: number;
 };
 export type FOTeam = { id: string; team: string; players: string[] };
 export type FrontOffice = {
@@ -52,6 +56,8 @@ export type FrontOffice = {
   asOf: string;
   /** Basketball when unset. */
   sport?: "nba" | "nfl";
+  /** The big-game line (90th percentile of rostered players' games this season), for the boom index. */
+  boomLine?: number;
 };
 
 const fp = (st: Stats, sc: Stats) => {
@@ -180,8 +186,16 @@ export async function frontOffice(src: LiveSource): Promise<FrontOffice | null> 
         out[pid] = make(pid, false);
         return pid;
       });
+    // Boom index: the league's big-game line from every rostered player's games, then each player's rate.
+    const line = boomLine([...owned].flatMap((pid) => (games.get(pid) ?? []).map((g) => g.v)));
+    for (const p of Object.values(out)) {
+      const b = boomOf((games.get(p.pid) ?? []).map((g) => g.v), line);
+      p.boom = Math.round(b.rate * 1000) / 1000;
+      p.ceil = Math.round(b.ceil * 10) / 10;
+    }
     return {
       week: state.week,
+      boomLine: Math.round(line * 10) / 10,
       slots: lg.roster_positions.filter((p) => (nfl ? !["BN", "IR", "TAXI"].includes(p) : p !== "BN")),
       teams,
       players: out,

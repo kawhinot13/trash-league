@@ -144,6 +144,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   active manager, z-scored vs the league (50 = average): draft 20% (spots gained, rounds 1-6, finished seasons),
   waivers 20% (starter points from pickups a season), trades 20% (trade court net a season), lineups 15% (efficiency),
   results 25% (win rate + rings a season). Trades and lineups are per Sleeper.
+- Boom index (Front office "Boom or bust" tab, both sites; `core/boom.ts`, set in `frontOffice`): big-game line = 90th
+  percentile of rostered players' games this season; `boom` = share of a player's games over it, `ceil` = average of
+  his best quarter (5+ games to rank). Ceilings matter because each slot keeps one game a week.
 - Stats page (`/stats`, `/l/[id]/stats`; split from History, which keeps the story): Trapezoid of Excellence,
   Playoff report, trade court, re-draft (+ best pickups on Rafterlore).
 - Trapezoid of Excellence + Playoff report (Stats page, both sites): pure math in `core/trapezoid.ts`, UI in
