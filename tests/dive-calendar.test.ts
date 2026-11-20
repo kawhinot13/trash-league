@@ -104,3 +104,23 @@ describe("pickups the weekly rosters missed count everywhere", () => {
     if (pool.some((q) => q.kind === "Cut list" && q.who === m)) expect(has((q) => q.kind === "Cut list" && q.who === m)).toBe(true);
   });
 });
+
+describe("100-point answers are spread out", () => {
+  it("each prompt still has exactly one 100, and a player is the 100 for few prompts", () => {
+    const counts = new Map<string, number>();
+    for (const q of pool) {
+      expect(q.answers.filter(([, s]) => s === 100).length, q.prompt).toBe(1);
+      const top = q.answers.find(([, s]) => s === 100)![0];
+      counts.set(top, (counts.get(top) ?? 0) + 1);
+    }
+    const repeats = [...counts.values()].filter((n) => n > 1).length;
+    expect(repeats / pool.length).toBeLessThan(0.05);
+  });
+  it("no planned day has the same 100-point answer twice", () => {
+    const cal = extendCalendar(pool, {}, "2026-11-18", 40);
+    for (const d of Object.keys(cal).filter((d) => d >= RESTART)) {
+      const tops = dailyPrompts(pool, d, cal).map((q) => q.answers.find(([, s]) => s === 100)![0]);
+      expect(new Set(tops).size, d).toBe(tops.length);
+    }
+  });
+});

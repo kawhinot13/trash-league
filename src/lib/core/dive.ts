@@ -362,7 +362,46 @@ export function divePool(d: Dataset): Prompt[] {
       add("Season rosters", `Name a player who was on a ${d.name} roster ${when}.`, ps, 0.5, { v: 4, t: "season-roster" });
     }
   }
+  spreadKrillions(out);
   return out;
+}
+
+/**
+ * Different 100-point answers (owner's call 2026-11-20): the same obscure player came out deepest in every
+ * question he fits, so one name was "the" answer for many. Each prompt's 100 goes to the deepest of its
+ * deepest few answers (top 20%, at least 5) not already the 100 elsewhere; it swaps points with the old one.
+ * Only falls back to a repeat when every candidate is taken. Pure and in pool order, so it's stable.
+ */
+/** Within one day, no two prompts share their 100-point answer: a repeat moves to the next deepest free answer. */
+export function distinctTops(qs: Prompt[]): Prompt[] {
+  const used = new Set<string>();
+  return qs.map((q) => {
+    if (!q.answers.length) return q;
+    let i = 0;
+    if (used.has(q.answers[0][0])) i = Math.max(0, q.answers.findIndex(([p]) => !used.has(p)));
+    used.add(q.answers[i][0]);
+    if (i === 0) return q;
+    const answers = q.answers.map((x) => [...x] as [string, number]);
+    [answers[0][0], answers[i][0]] = [answers[i][0], answers[0][0]];
+    return { ...q, answers };
+  });
+}
+
+export function spreadKrillions(pool: Prompt[]) {
+  const used = new Set<string>();
+  for (const q of pool) {
+    const n = q.answers.length;
+    if (!n) continue;
+    const k = Math.min(n, Math.max(5, Math.ceil(n * 0.2)));
+    const pick = q.answers.slice(0, k).findIndex(([p]) => !used.has(p));
+    const i = pick < 0 ? 0 : pick;
+    if (i > 0) {
+      const [a, b] = [q.answers[0], q.answers[i]];
+      q.answers[0] = [b[0], a[1]];
+      q.answers[i] = [a[0], b[1]];
+    }
+    used.add(q.answers[0][0]);
+  }
 }
 
 const ROUNDS = 5;
@@ -419,7 +458,7 @@ const nextDay = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 86_40
  * and the longest-rested prompt comes back first.
  */
 export function dailyPrompts(all: Prompt[], day: string, calendar: Calendar = {}) {
-  if (day >= RESTART) return planned(all, day, calendar);
+  if (day >= RESTART) return distinctTops(planned(all, day, calendar));
   // Days before the restart keep exactly the prompts they had (nothing added since).
   const pool = all.filter((q) => q.v !== 3 && q.v !== 4);
   if (day < SCHEDULE_FROM) return legacy(pool, day);

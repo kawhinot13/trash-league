@@ -30,6 +30,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   bar = highest with 100+ answers, Trash 80+; `extras.bigNights` from Sleeper's starter points, Rafterlore only).
   Roster questions (Locker room, Season rosters, NBA teams, Positions, Waiver wire, Cut list) also count pickups the
   weekly rosters miss (dropped mid-week, or picked up in the week in progress): `RawSeason.added` (dataset.ts, Rafterlore).
+  100-point answers are spread (owner's call 2026-11-20): `spreadKrillions` gives each prompt's 100 to its deepest
+  answer (top 20%, 5+) not already a 100 elsewhere; `distinctTops` makes one day's five 100s all different.
   One-off day resets (owner's call): `RESETS` in `lib/app/game-resets.ts` deletes that day's scores once and PlayGate
   clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive only.
   Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now

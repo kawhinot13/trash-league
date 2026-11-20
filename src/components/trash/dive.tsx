@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import type { Players } from "@/lib/extras";
-import { dailyPrompts, kindText, promptText, type Calendar, type Prompt } from "@/lib/core/dive";
+import { dailyPrompts, distinctTops, kindText, promptText, type Calendar, type Prompt } from "@/lib/core/dive";
 import { Face, pname } from "./player";
 import { AnswerBoard } from "./dive/answers";
 import { sfx } from "./dive/sfx";
@@ -235,7 +235,7 @@ export function DumpsterDive({ pool, players, people, calendar }: { pool: Prompt
   const qs = useMemo(() => {
     if (!day) return [];
     const fromSave = savedQs?.map((t) => pool.find((q) => q.prompt === t)).filter((q): q is Prompt => !!q);
-    if (fromSave && fromSave.length === savedQs!.length && fromSave.length) return fromSave;
+    if (fromSave && fromSave.length === savedQs!.length && fromSave.length) return distinctTops(fromSave);
     return dailyPrompts(pool, day, calendar);
   }, [pool, day, calendar, savedQs]);
   const edition = day ? Math.floor((Date.parse(day) - LAUNCH) / 86400000) + 1 : null;
