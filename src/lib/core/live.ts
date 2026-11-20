@@ -65,6 +65,29 @@ export async function weekPairings(src: LiveSource): Promise<{ week: number; opp
   }
 }
 
+/** The regular-season schedule from `from` to `to` (Sleeper's matchups): [week, a, b] by manager id. */
+export async function scheduleWeeks(src: LiveSource, from: number, to: number): Promise<[number, string, string][]> {
+  if (to < from) return [];
+  const [rosters, users] = await Promise.all([
+    src.get<{ roster_id: number; owner_id: string }[]>(`/v1/league/${src.leagueId}/rosters`),
+    src.get<{ user_id: string; display_name: string }[]>(`/v1/league/${src.leagueId}/users`),
+  ]);
+  const name = new Map(users.map((u) => [u.user_id, src.idOf(u)]));
+  const who = new Map(rosters.map((r) => [r.roster_id, name.get(r.owner_id)]));
+  const weeks = Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  const all = await Promise.all(weeks.map((w) => src.get<{ roster_id: number; matchup_id: number | null }[]>(`/v1/league/${src.leagueId}/matchups/${w}`).then((ms) => [w, ms ?? []] as const)));
+  const out: [number, string, string][] = [];
+  for (const [w, ms] of all) {
+    const groups = new Map<number, string[]>();
+    for (const m of ms) {
+      const id = who.get(m.roster_id);
+      if (m.matchup_id != null && id) (groups.get(m.matchup_id) ?? groups.set(m.matchup_id, []).get(m.matchup_id)!).push(id);
+    }
+    for (const g of groups.values()) if (g.length === 2) out.push([w, g[0], g[1]]);
+  }
+  return out;
+}
+
 export type Pickup = {
   id: string;
   name: string;

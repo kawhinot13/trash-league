@@ -6,10 +6,11 @@ import { LiveGames } from "@/components/app/live";
 import { Intro, Pending } from "@/components/app/site";
 import { MatchupOfWeek, OfficialTable } from "@/components/trash/intel";
 import { PowerRankings } from "@/components/trash/power";
+import { Forecast } from "@/components/trash/forecast";
 import { WeeklyRecap } from "@/components/trash/recap";
 import { Court, SectionHead } from "@/components/trash/section-head";
 import type { LeaguePage } from "@/lib/app/league-page";
-import { liveTable, pairings, power } from "@/lib/app/live-features";
+import { forecastLive, liveTable, pairings, power } from "@/lib/app/live-features";
 import { logError } from "@/lib/app/safe";
 import { weeklyRecap } from "@/lib/core/extras";
 import type { Dataset } from "@/lib/core/types";
@@ -67,6 +68,22 @@ async function Power({ p, d }: { p: LeaguePage; d: Dataset }) {
   return <PowerRankings rows={r.rows} week={r.week} weights={r.weights} />;
 }
 
+async function TheForecast({ p, d }: { p: LeaguePage; d: Dataset }) {
+  const f = await forecastLive(p.view.current.leagueId, d, p.view.sport).catch((e) => (logError("forecast", e), null));
+  if (!f || !f.rows.length) return <Loading what="The forecast is unavailable right now. Sleeper didn't answer." />;
+  const nick = (id: string) => d.league.managers.find((m) => m.id === id)?.nick ?? id;
+  return (
+    <Forecast
+      rows={f.rows.map((r) => ({ ...r, nick: nick(r.id) }))}
+      line={{ ...f.line, champs: f.line.champs.map((c) => ({ ...c, nick: nick(c.id) })) }}
+      weeksLeft={f.weeksLeft}
+      runs={f.runs}
+      playoffTeams={f.playoffTeams}
+      recentWeeks={f.recentWeeks}
+    />
+  );
+}
+
 function Live({ p }: { p: LeaguePage }) {
   const d = p.dataset;
   const inSeason = p.view.current.status === "in_season";
@@ -87,7 +104,7 @@ function Live({ p }: { p: LeaguePage }) {
   const recap = weeklyRecap(d, undefined, p.view.sport === "nfl" ? undefined : { exact, record });
   return (
     <main className="overflow-x-clip">
-      <Intro title="Live">The table, this week&apos;s matchups, power rankings and the weekly recap, refreshed every few minutes.</Intro>
+      <Intro title="Live">The table, this week&apos;s matchups, power rankings, the title forecast and the weekly recap, refreshed every few minutes.</Intro>
 
       <Suspense fallback={<Loading what="Loading the table…" />}>
         <Table p={p} d={d} />
@@ -116,6 +133,19 @@ function Live({ p }: { p: LeaguePage }) {
           <div className="mx-auto max-w-6xl px-5 md:px-10">
             <Suspense fallback={<p className="text-[var(--muted)]">Ranking the league…</p>}>
               <Power p={p} d={d} />
+            </Suspense>
+          </div>
+        </section>
+      ) : null}
+
+      {inSeason ? (
+        <section aria-labelledby="forecast" className="py-10 md:py-24">
+          <SectionHead id="forecast" title="The forecast">
+            What it has taken to win this league, how every team measures up, and the rest of the season played out.
+          </SectionHead>
+          <div className="mx-auto max-w-6xl px-5 md:px-10">
+            <Suspense fallback={<p className="text-[var(--muted)]">Playing out the season…</p>}>
+              <TheForecast p={p} d={d} />
             </Suspense>
           </div>
         </section>

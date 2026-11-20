@@ -6,6 +6,8 @@ import { sleeper } from "@/lib/app/sleeper";
 import * as coreFO from "@/lib/core/front-office";
 import * as coreLive from "@/lib/core/live";
 import * as corePower from "@/lib/core/power";
+import * as coreForecast from "@/lib/core/forecast";
+import { healthy, profile } from "@/lib/fo-analysis";
 import * as coreStandings from "@/lib/core/standings";
 import type { LiveSource } from "@/lib/core/live-source";
 import type { Sport } from "@/lib/core/sport";
@@ -97,4 +99,39 @@ export async function power(leagueId: string, d: Dataset, sport: Sport = "nba") 
   const lines = d.extras.seasons[d.extras.seasons.length - 1]?.lineups ?? {};
   const nick = (id: string) => d.league.managers.find((m) => m.id === id)?.nick ?? id;
   return corePower.powerRankings({ table, week, fo, lines, officialWeek, nick });
+}
+
+/** The season's remaining schedule (static once set, so kept for hours). */
+async function schedule(leagueId: string, from: number, to: number, sport: Sport) {
+  "use cache: remote";
+  cacheLife("hours");
+  return coreLive.scheduleWeeks(source(leagueId, sport), from, to);
+}
+
+/** The Forecast (core/forecast.ts): title line from history, strength now, the season played out. */
+export async function forecastLive(leagueId: string, d: Dataset, sport: Sport = "nba") {
+  "use cache: remote";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 86_400 });
+  const cur = d.league.seasons[d.league.seasons.length - 1];
+  const [{ rows: table }, fo, snaps] = await Promise.all([
+    liveTable(leagueId, cur.standings, sport),
+    frontOffice(leagueId, sport),
+    officialSnaps(leagueId).catch(() => [] as OfficialSnap[]),
+  ]);
+  if (!table.length || !fo?.teams.length) return null;
+  const perWeek = cur.median ? 2 : 1;
+  const done = Math.max(0, ...table.map((r) => (r.w + r.l + r.t) / perWeek));
+  const regWeeks = cur.regWeeks ?? Math.max(done, 1);
+  const playoffTeams = cur.playoffTeams ?? Math.min(6, table.length);
+  const games = await schedule(leagueId, done + 1, regWeeks, sport);
+  const lineup = new Map(fo.teams.map((t) => [t.id, profile(t, fo.players, fo.slots, sport, healthy).lineup.total]));
+  // Current form: the last three proven weekly scores (core/official.ts), only when every team has them.
+  const verified = verifiedWeeks(snaps);
+  const recentWeeks = [...verified.keys()].filter((w) => w <= done && verified.get(w)!.size === table.length).sort((a, b) => b - a).slice(0, 3);
+  const recent = recentWeeks.length
+    ? new Map(table.map((r) => [r.manager, recentWeeks.reduce((s, w) => s + (verified.get(w)!.get(r.manager) ?? 0), 0) / recentWeeks.length]))
+    : undefined;
+  const line = coreForecast.titleLine(d);
+  const f = coreForecast.forecast({ table, lineup, schedule: games, regWeeks, playoffTeams, median: cur.median, recent, line });
+  return { ...f, line, done, regWeeks, playoffTeams, recentWeeks: recentWeeks.length };
 }

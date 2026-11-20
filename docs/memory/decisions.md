@@ -38,6 +38,13 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-20: The forecast (title chances)
+- Owner asked for a model of how teams stack up and what it takes to win. Built on the Live page: "the title
+  line" (every Trash champion scored 104.9%+ of league average, official; seeds 5, 5, 2), each team's projection
+  (official results blended with best healthy lineup, recent proven weeks as form) and a 5,000-run simulation of
+  the remaining schedule and bracket. Rejected: lineup index as the main line (per Sleeper, looser: 100-107);
+  the word "odds" (Rafterlore has no link to betting).
+
 ## 2026-11-20: Trade finder: stars over depth
 - Owner: nobody who knows the game trades the best player in a deal for depth (3 x 40 for a 70 is a no), even
   for more total value, because only the starting nine scores. `keepsStar`: a side gives up the deal's best
