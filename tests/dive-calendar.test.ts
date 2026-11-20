@@ -124,3 +124,26 @@ describe("100-point answers are spread out", () => {
     }
   });
 });
+
+describe("re-scoring a saved dive", () => {
+  it("uses today's boards for right answers, keeps misses, and keeps a score whose answer left the board", async () => {
+    const { rescorePicks } = await import("@/lib/core/dive");
+    const day = "2026-11-25";
+    const cal = extendCalendar(pool, {}, "2026-11-18", 10);
+    const qs = dailyPrompts(pool, day, cal);
+    const picks = [
+      { pid: qs[0].answers[0][0], score: 1 }, // right answer, old score: becomes the board's
+      { pid: null, score: null }, // miss stays a miss
+      { pid: "not-on-board", score: 77 }, // no longer on the board: keeps 77
+      { pid: qs[3].answers[1][0], score: 5 },
+      { pid: qs[4].answers[2][0], score: 5 },
+    ];
+    const r = rescorePicks(pool, qs.map((q) => q.prompt), picks)!;
+    expect(r.picks[0].score).toBe(qs[0].answers[0][1]);
+    expect(r.picks[1].score).toBeNull();
+    expect(r.picks[2].score).toBe(77);
+    expect(r.total).toBe(r.picks.reduce((t, p) => t + (p.score ?? 0), 0));
+    expect(r.label.split(" · ")[1]).toBe("×");
+    expect(rescorePicks(pool, ["no such prompt"], picks)).toBeNull();
+  });
+});

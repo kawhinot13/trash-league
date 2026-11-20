@@ -690,3 +690,22 @@ export function extendCalendar(pool: Prompt[], cal: Calendar, today: string, ahe
   for (const [d, qs] of plan) if (!(d in keep)) out[d] = qs.map((q) => q.prompt);
   return out;
 }
+
+/**
+ * Re-score a finished dive with today's answer boards (owner's call 2026-11-20: after the 100-point spread
+ * changed points, saved games and standings should match what the boards now show). Same prompts (by saved
+ * text, the day's five 100s kept distinct as the page shows them); a pick that's no longer on a board keeps
+ * its old score rather than losing points. Misses stay misses.
+ */
+export function rescorePicks<P extends { pid: string | null; score: number | null }>(pool: Prompt[], qs: string[], picks: P[]): { picks: P[]; total: number; label: string } | null {
+  const found = qs.map((t) => pool.find((q) => q.prompt === t));
+  if (!found.length || found.some((q) => !q)) return null;
+  const prompts = distinctTops(found as Prompt[]);
+  const out = picks.map((p, k) => {
+    if (!p.pid || p.score === null) return p;
+    const now = prompts[k]?.answers.find(([pid]) => pid === p.pid)?.[1];
+    return now === undefined ? p : { ...p, score: now };
+  });
+  const total = out.reduce((t, p) => t + (p.score ?? 0), 0);
+  return { picks: out, total, label: out.map((p) => (p.score === null ? "×" : p.score)).join(" · ") };
+}

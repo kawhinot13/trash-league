@@ -8,7 +8,7 @@ import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
 import { cleanState } from "@/lib/core/game-state";
 import { viewerOf } from "@/lib/app/viewer";
-import { resetsFor } from "@/lib/app/game-resets";
+import { rescoreDiveOnce, resetsFor } from "@/lib/app/game-resets";
 
 /**
  * Daily-game standings for one Rafterlore league, in Postgres:
@@ -33,6 +33,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
   if (u.searchParams.get("who") === "1") {
     const fid = await familyIdOf(leagueId).catch(() => null);
     if (!fid) return Response.json({ enabled: false });
+    await rescoreDiveOnce(await db(), leagueId, fid).catch(() => {});
     const { accountId: _a, ...viewer } = await viewerOf(req, fid);
     void _a;
     // With ?day: the games this manager already finished that day, so every device shows the same result.
