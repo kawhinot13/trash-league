@@ -81,7 +81,7 @@ export function StartingNine({ data, players, people }: { data: GridData; player
     const c = cellOf(open);
     const ok = c.ids.includes(pid);
     const cells = [...saved.cells];
-    if (ok) cells[open] = { pid, pts: cellPoints(c.ids, data.fame, pid) };
+    if (ok) cells[open] = { pid, pts: cellPoints(c.gateIds, data.fame, pid) };
     const left = saved.left - 1;
     const ids = saved.ids ?? [...grid.rows, ...grid.cols].map((x) => x.id);
     const fin = left <= 0 || cells.filter(Boolean).length === 9;
@@ -175,7 +175,11 @@ export function StartingNine({ data, players, people }: { data: GridData; player
           {note.text}
         </p>
       ) : !done && open === null ? (
-        <p className="mt-4 text-sm text-[var(--muted)]">Tap a square, then name a player who fits its row and its column.</p>
+        <p className="mt-4 text-sm text-[var(--muted)]">
+          Tap a square, then name a player who fits its row and its column. Rarer answers score more: the most obvious right
+          answer in a square is worth 10, the deepest 100. Obvious means rostered a lot and scored a lot in this league&apos;s
+          past seasons.
+        </p>
       ) : null}
 
       {done ? (

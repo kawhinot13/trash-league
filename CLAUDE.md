@@ -48,7 +48,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   `extras.nbaSeasons` (grade step): PPG/RPG/APG/3s/steals/blocks/minutes tiers, 40/50-point games). The day's grid
   is chosen ONLY from finished seasons (`gateIds`; MIN_CELL 3..MAX_CELL 60 per square), so this season's answers can
   grow but the grid never changes mid-day; a started game also pins its grid (`ids`). 9 guesses, player once,
-  points 10..100 by depth (`cellPoints`, league fame). Never call it Immaculate Grid or copy its look.
+  points 10..100 by depth (`cellPoints`: rank among the square's finished-season answers by fame from FINISHED
+  seasons only, newcomers by this season's draft slot, so the same answer scores the same for everyone all season). Never call it Immaculate Grid or copy its look.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)

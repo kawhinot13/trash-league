@@ -43,7 +43,15 @@ describe("Starting Nine", () => {
     const fame = { a: 0.9, b: 0.5, c: 0.1 };
     expect(cellPoints(["a", "b", "c"], fame, "a")).toBe(10);
     expect(cellPoints(["a", "b", "c"], fame, "c")).toBe(100);
-    expect(cellPoints(["a", "b", "c"], fame, "zzz")).toBe(0);
+    // An answer outside the finished-season list ranks among them without moving anyone else.
+    expect(cellPoints(["a", "b"], { ...fame, n: 0 }, "n")).toBe(100);
+    expect(cellPoints(["a", "b", "c"], fame, "b")).toBe(cellPoints(["a", "b", "c"], { ...fame, extra: 0.3 }, "b"));
+  });
+  it("the same answer scores the same all season: fame and the ranked list ignore this season", () => {
+    const shrunk = { ...TRASH, extras: { ...TRASH.extras, seasons: TRASH.extras.seasons.map((x, i, all) => (i === all.length - 1 ? { ...x, guys: {}, added: {} } : x)) } };
+    const a = gridData(TRASH);
+    const b = gridData(shrunk);
+    for (const [p, f] of Object.entries(b.fame)) if (a.fame[p] !== undefined && TRASH.extras.seasons.slice(0, -1).some((x) => Object.values(x.guys).some((g) => g[p]))) expect(a.fame[p], p).toBe(f);
   });
   it("stays a reasonable size to send to the page", () => {
     expect(JSON.stringify(data).length).toBeLessThan(250_000);

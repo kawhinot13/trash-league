@@ -237,22 +237,28 @@ export function gridData(d: Dataset): GridData {
     more.push([`avg:${n}`, "avg", `Averaged ${n}+ a start in a season (5+ starts)`, from((t) => keys(t.bestAvg, (v) => v >= n))]);
   for (const [id, kind, label, [all, gate]] of more) add(id, kind, label, all, new Set([...gate].filter((p) => all.has(p))));
 
-  // Fame (how obvious an answer is): production and weeks rostered across every season.
+  // Fame (how obvious an answer is), from FINISHED seasons only, so a square's points never move during a
+  // season (this season's games used to shift them between players). Someone with no finished season is
+  // placed by his draft slot this season (a high pick is famous); undrafted newcomers count as deep.
   const pts = new Map<string, number>();
   const wks = new Map<string, number>();
-  for (const s of raw.seasons)
+  for (const s of raw.seasons.filter((y) => done.has(y.code)))
     for (const ps of Object.values(s.guys))
       for (const [p, [w, , pt]] of Object.entries(ps)) {
         pts.set(p, (pts.get(p) ?? 0) + pt);
         wks.set(p, (wks.get(p) ?? 0) + w);
       }
   const pct = (m: Map<string, number>) => {
-    const s = [...m].sort((a, b) => a[1] - b[1]);
+    const s = [...m].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1));
     return new Map(s.map(([k], i) => [k, s.length > 1 ? i / (s.length - 1) : 0.5]));
   };
   const [P, W] = [pct(pts), pct(wks)];
   const fame: Record<string, number> = {};
-  for (const p of new Set([...pts.keys(), ...anyRoster.all])) fame[p] = Math.round((0.6 * (P.get(p) ?? 0) + 0.4 * (W.get(p) ?? 0)) * 1000) / 1000;
+  for (const p of pts.keys()) fame[p] = Math.round((0.6 * (P.get(p) ?? 0) + 0.4 * (W.get(p) ?? 0)) * 1000) / 1000;
+  const lastDraft = raw.seasons[raw.seasons.length - 1]?.draft ?? [];
+  const picks = Math.max(1, lastDraft.length);
+  for (const x of lastDraft) if (fame[x.pid] === undefined) fame[x.pid] = Math.round((1 - x.no / picks) * 0.9 * 1000) / 1000;
+  for (const p of anyRoster.all) if (fame[p] === undefined) fame[p] = 0;
   return { criteria: out, fame };
 }
 
@@ -313,10 +319,12 @@ export function dayGrid(data: GridData, day: string): DayGrid | null {
   return null;
 }
 
-/** Points for a right answer in a square: 10 for the most obvious, 100 for the deepest. */
+/**
+ * Points for a right answer: 10 for the most obvious, 100 for the deepest, ranked against the square's
+ * answers from finished seasons (plus this one), so answers added later in the season can't move it.
+ */
 export function cellPoints(ids: string[], fame: Record<string, number>, pid: string): number {
-  const order = [...ids].sort((a, b) => (fame[b] ?? 0) - (fame[a] ?? 0) || (a < b ? -1 : 1)); // most famous first
+  const order = [...new Set([...ids, pid])].sort((a, b) => (fame[b] ?? 0) - (fame[a] ?? 0) || (a < b ? -1 : 1)); // most famous first
   const i = order.indexOf(pid);
-  if (i < 0) return 0;
   return order.length === 1 ? 100 : Math.round(10 + (90 * i) / (order.length - 1));
 }
