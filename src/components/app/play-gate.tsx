@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { useMe } from "@/components/app/account";
 import { MgrPhoto, useBrand } from "@/components/trash/brand";
-import { STATE_NAME } from "@/lib/core/game-state";
+import { STATE_NAME, progressOf } from "@/lib/core/game-state";
 
 /**
  * Daily games, Rafterlore. Before you play: signed in, and the game knows which manager you are.
@@ -22,6 +22,8 @@ type Who = {
   pick?: { current: string[]; taken: string[] } | null;
   resets?: Record<string, string>;
   redos?: { game: string; keep: number; token: string }[];
+  /** Games in progress on the account (any device): storage name -> saved game. */
+  progress?: Record<string, unknown>;
 } | null;
 /** What each board's game saves in the browser for a day (cleared when that day's game is reset). */
 const SAVED_AS: Record<string, (day: string) => string[]> = { dive2: (day) => [`dive3:${day}`], grid: (day) => [`grid:${day}`] };
@@ -74,6 +76,55 @@ function applyRedos(v: Who, prefix: string, day: string) {
   }
 }
 
+/** Every game's storage names for a day (what's saved in the browser and synced to the account). */
+const NAMES = (day: string) => ["dive3", "grid", "trashle", "trashle-hints", "lineup"].map((n) => `${n}:${day}`);
+
+/** The account's game in progress wins when it's further along than this browser's (signed in on two devices). */
+function applyProgress(v: Who, prefix: string) {
+  for (const [name, value] of Object.entries(v?.progress ?? {})) {
+    if (!STATE_NAME.test(name)) continue;
+    try {
+      const raw = localStorage.getItem(prefix + name);
+      const here = raw ? (JSON.parse(raw) as unknown) : null;
+      if (progressOf(name, value) > progressOf(name, here)) localStorage.setItem(prefix + name, JSON.stringify(value));
+    } catch {}
+  }
+}
+
+/** Save today's games to the account as they're played (every few seconds, only what changed), so a second
+ * device opens on the same game instead of a fresh one. */
+const syncing = new Set<string>();
+function startSync(url: string, prefix: string, day: string) {
+  if (syncing.has(url)) return;
+  syncing.add(url);
+  const sent = new Map<string, string | null>();
+  const read = (n: string) => {
+    try {
+      return localStorage.getItem(prefix + n);
+    } catch {
+      return null;
+    }
+  };
+  for (const n of NAMES(day)) sent.set(n, read(n));
+  const flush = () => {
+    const changed = NAMES(day).filter((n) => read(n) !== null && read(n) !== sent.get(n));
+    if (!changed.length) return;
+    const state = Object.fromEntries(changed.slice(0, 4).map((n) => [n, JSON.parse(read(n)!) as unknown]));
+    const snapshot = new Map(changed.slice(0, 4).map((n) => [n, read(n)]));
+    void fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ progress: true, day, state }), keepalive: true })
+      .then((r) => {
+        if (r.ok) for (const [n, v] of snapshot) sent.set(n, v);
+      })
+      .catch(() => {});
+  };
+  setInterval(() => {
+    if (document.visibilityState === "visible") flush();
+  }, 3000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+}
+
 // One shared "who are you here" per league, so the three games on a page ask once and agree.
 const store = new Map<string, { v: Who; subs: Set<() => void>; loading: boolean; prefix: string }>();
 function load(url: string) {
@@ -87,7 +138,10 @@ function load(url: string) {
     .then((v) => {
       clearResets(v, e.prefix, day);
       restore(v, e.prefix, day);
+      applyProgress(v, e.prefix);
       applyRedos(v, e.prefix, day);
+      const vw = (v as Who)?.viewer;
+      if (vw?.linked && vw.member) startSync(url, e.prefix, day);
       e.v = v;
       e.loading = false;
       e.subs.forEach((f) => f());

@@ -11,3 +11,18 @@ export function cleanState(x: unknown): Record<string, unknown> | null {
   const out = Object.fromEntries(entries);
   return JSON.stringify(out).length <= 16_000 ? out : null;
 }
+
+/**
+ * How far along a saved game is, for syncing between devices (the further one wins, so a fresh device
+ * never wipes progress). Dive: answers given; Starting Nine: guesses used; Rosterdle and The Lineup:
+ * guesses (or hints) made. A finished game counts one extra.
+ */
+export function progressOf(name: string, v: unknown): number {
+  if (v == null) return -1;
+  const kind = name.split(":")[0];
+  if (Array.isArray(v)) return v.length;
+  const o = v as { picks?: unknown[]; left?: number; done?: boolean };
+  if (kind === "dive3") return (o.picks?.length ?? 0) + (o.done ? 1 : 0);
+  if (kind === "grid") return 9 - (o.left ?? 9) + (o.done ? 1 : 0);
+  return JSON.stringify(v).length;
+}

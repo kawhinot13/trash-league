@@ -234,6 +234,16 @@ create table if not exists yahoo_leagues (
 alter table families add column if not exists use_ack text;
 -- The finished game itself (what the player answered), so another device shows the same result instead of a replay.
 alter table game_scores add column if not exists state jsonb;
+-- A daily game in progress, per manager and storage name ("dive3:2026-11-21"), so every device signed in to
+-- the same account plays the same game. Only ever moves forward (core/game-state.ts progressOf).
+create table if not exists game_progress (
+  family_id  text not null,
+  manager    text not null,
+  name       text not null,
+  state      jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (family_id, manager, name)
+);
 -- One-off resets of a day's daily game (owner's call): scores deleted once; browsers clear their saved game.
 create table if not exists game_resets (
   family_id text not null,

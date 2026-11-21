@@ -26,13 +26,13 @@ export type Criterion = {
   /** The right answers that come from finished seasons alone. */
   gateIds: string[];
 };
-export type GridData = { criteria: Criterion[]; fame: Record<string, number> };
+export type GridData = { criteria: Criterion[]; fame: Record<string, number>; league: string };
 export type DayGrid = { rows: Criterion[]; cols: Criterion[] };
 
 /** Fewest right answers a square needs (from finished seasons). */
-export const MIN_CELL = 3;
+export const MIN_CELL = 6;
 /** Most right answers a square may have (all seasons), so no square is a gimme. */
-export const MAX_CELL = 60;
+export const MAX_CELL = 80;
 export const GUESSES = 9;
 
 const NBA: Record<string, string> = {
@@ -86,7 +86,7 @@ export function gridData(d: Dataset): GridData {
     for (const [m, ps] of Object.entries(s.guys)) for (const p of Object.keys(ps)) on(m, p, true);
     for (const [m, ps] of Object.entries(s.added ?? {})) for (const [p] of ps) on(m, p, true);
     for (const t of s.trades) for (const ps of Object.values(t.sides)) for (const p of ps) if (!p.startsWith("pick:")) put(traded, p, fin);
-    if (fin) add(`season:${s.code}`, "season", `On a roster in ${years[s.code]}`, season.all, season.gate);
+    if (fin) add(`season:${s.code}`, "season", `On a ${d.name} roster in ${years[s.code]}`, season.all, season.gate);
     // Title team: the champion's roster that season.
     const champ = d.league.seasons.find((x) => x.code === s.code)?.champion;
     if (fin && champ && s.guys[champ]) {
@@ -106,12 +106,12 @@ export function gridData(d: Dataset): GridData {
     for (const p of anyRoster.all) if (players[p]?.[2] === abbr || (played[p] ?? []).includes(abbr)) put(x, p, anyRoster.gate.has(p));
     add(`nba:${abbr}`, "nba", name, x.all, x.gate);
   }
-  add("waiver", "waiver", "Picked up off waivers", waiver.all, waiver.gate);
-  add("traded", "traded", "Traded in league history", traded.all, traded.gate);
+  add("waiver", "waiver", `Picked up off waivers in ${d.name}`, waiver.all, waiver.gate);
+  add("traded", "traded", `Traded in a ${d.name} trade`, traded.all, traded.gate);
   {
     const x = both();
     for (const s of raw.seasons) for (const p of s.draft) if (p.round === 1) put(x, p.pid, true); // drafts are set before a season starts
-    add("first", "first", "First-round pick", x.all, x.gate);
+    add("first", "first", `First-round pick in a ${d.name} draft`, x.all, x.gate);
   }
   for (const [pos, label] of POS) {
     const x = both();
@@ -132,7 +132,7 @@ export function gridData(d: Dataset): GridData {
   // Gate: finished seasons' weekly top starters (a subset, so the day's pick never moves).
   {
     const best = d.extras.bigNights ?? {};
-    for (let n = 50; n <= 200; n += 10) {
+    for (let n = 50; n <= 80; n += 10) {
       const all = new Set(Object.entries(best).filter(([, v]) => v >= n).map(([p]) => p));
       if (all.size < 12) break;
       const gate = new Set<string>();
@@ -163,14 +163,14 @@ export function gridData(d: Dataset): GridData {
         }
       if (x.gate.size >= 6) add(id, kind, label, x.all, x.gate);
     };
-    for (const n of [15, 20, 25, 30]) stat(`ppg:${n}`, "ppg", `Averaged ${n}+ PPG in a league season`, (a) => a[1] >= n);
-    for (const n of [8, 10, 12]) stat(`rpg:${n}`, "rpg", `Averaged ${n}+ rebounds in a league season`, (a) => a[2] >= n);
-    for (const n of [5, 7, 9]) stat(`apg:${n}`, "apg", `Averaged ${n}+ assists in a league season`, (a) => a[3] >= n);
-    for (const n of [2, 3]) stat(`threes:${n}`, "threes", `Averaged ${n}+ threes a game in a league season`, (a) => a[4] >= n);
-    stat("stocks:stl", "stocks", "Averaged 1.5+ steals in a league season", (a) => a[5] >= 1.5);
-    stat("stocks:blk", "stocks", "Averaged 1.5+ blocks in a league season", (a) => a[6] >= 1.5);
-    for (const n of [30, 35]) stat(`minutes:${n}`, "minutes", `Averaged ${n}+ minutes in a league season`, (a) => a[7] >= n);
-    for (const n of [40, 50]) stat(`nbagame:${n}`, "nbagame", `Scored ${n}+ in an NBA game (league season)`, (a) => a[8] >= n, 1);
+    for (const n of [15, 20]) stat(`ppg:${n}`, "ppg", `Averaged ${n}+ PPG in the NBA in a ${d.name} season`, (a) => a[1] >= n);
+    for (const n of [7, 9]) stat(`rpg:${n}`, "rpg", `Averaged ${n}+ rebounds in the NBA in a ${d.name} season`, (a) => a[2] >= n);
+    for (const n of [4, 6]) stat(`apg:${n}`, "apg", `Averaged ${n}+ assists in the NBA in a ${d.name} season`, (a) => a[3] >= n);
+    for (const n of [1.5, 2]) stat(`threes:${n}`, "threes", `Averaged ${n}+ threes a game in the NBA in a ${d.name} season`, (a) => a[4] >= n);
+    stat("stocks:stl", "stocks", `Averaged 1+ steal a game in the NBA in a ${d.name} season`, (a) => a[5] >= 1);
+    stat("stocks:blk", "stocks", `Averaged 1+ block a game in the NBA in a ${d.name} season`, (a) => a[6] >= 1);
+    for (const n of [28, 32]) stat(`minutes:${n}`, "minutes", `Averaged ${n}+ NBA minutes in a ${d.name} season`, (a) => a[7] >= n);
+    stat("nbagame:35", "nbagame", `Scored 35+ in an NBA game in a ${d.name} season`, (a) => a[8] >= 35, 1);
   }
 
   // More rows: drafted by each manager; runner-up teams.
@@ -188,7 +188,7 @@ export function gridData(d: Dataset): GridData {
   }
   // More columns, from what each player did for league teams (weeks, starts, points per manager-season).
   const EAST = new Set(["ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND", "MIA", "MIL", "NYK", "ORL", "PHI", "TOR", "WAS"]);
-  for (const [id, label, east] of [["conf:E", "Eastern Conference team", true], ["conf:W", "Western Conference team", false]] as const) {
+  for (const [id, label, east] of [["conf:E", "Played for an Eastern Conference team", true], ["conf:W", "Played for a Western Conference team", false]] as const) {
     const x = both();
     for (const p of anyRoster.all) {
       const teams = new Set([players[p]?.[2], ...(played[p] ?? [])].filter((t): t is string => !!t && !!NBA[t]));
@@ -223,18 +223,18 @@ export function gridData(d: Dataset): GridData {
   // Score tiers: every round number enough players reach becomes its own square (one per grid).
   const tiers = (m: Map<string, number>, steps: number[]) => steps.filter((t) => [...m.values()].filter((v) => v >= t).length >= 12);
   const more: [string, GridKind, string, readonly [Set<string>, Set<string>]][] = [
-    ["traded2", "traded2", "Traded 2+ times", from((t) => keys(t.trades, (v) => v >= 2))],
-    ["late", "late", "Drafted in round 8 or later", from((t) => t.late)],
-    ["playoff", "playoff", "Started a playoff game", from((t) => t.playoff)],
-    ["never", "never", "Rostered but never started", from((t) => new Set([...t.rostered].filter((p) => !t.started.has(p))))],
-    ["once", "once", "On a roster in just one season", from((t) => keys(t.seasons, (v) => v.size === 1))],
+    ["traded2", "traded2", `Traded 2+ times in ${d.name}`, from((t) => keys(t.trades, (v) => v >= 2))],
+    ["late", "late", `Round 8+ pick in a ${d.name} draft`, from((t) => t.late)],
+    ["playoff", "playoff", `Started a ${d.name} playoff game`, from((t) => t.playoff)],
+    ["never", "never", `On a ${d.name} roster but never started`, from((t) => new Set([...t.rostered].filter((p) => !t.started.has(p))))],
+    ["once", "once", `On a ${d.name} roster in just one season`, from((t) => keys(t.seasons, (v) => v.size === 1))],
   ];
-  if (nDone >= 2) more.push(["every", "every", "On a roster every season", [keys(A.seasons, (v) => v.size === nSeasons), keys(F.seasons, (v) => v.size === nDone)]]);
-  for (const n of tiers(F.starts, [10, 20, 30, 40, 50, 75, 100])) more.push([`starts:${n}`, "starts", `Started ${n}+ times`, from((t) => keys(t.starts, (v) => v >= n))]);
-  for (const n of tiers(F.bestTeamPts, [500, 750, 1000, 1500, 2000, 2500, 3000]))
-    more.push([`points:${n}`, "points", `Scored ${n.toLocaleString("en-US")}+ for one team in a season`, from((t) => keys(t.bestTeamPts, (v) => v >= n))]);
-  for (const n of tiers(F.bestAvg, [30, 35, 40, 45, 50, 55, 60, 65, 70]))
-    more.push([`avg:${n}`, "avg", `Averaged ${n}+ a start in a season (5+ starts)`, from((t) => keys(t.bestAvg, (v) => v >= n))]);
+  if (nDone >= 2) more.push(["every", "every", `On a ${d.name} roster every season`, [keys(A.seasons, (v) => v.size === nSeasons), keys(F.seasons, (v) => v.size === nDone)]]);
+  for (const n of tiers(F.starts, [10, 20, 30, 40])) more.push([`starts:${n}`, "starts", `Started ${n}+ times for ${d.name} teams`, from((t) => keys(t.starts, (v) => v >= n))]);
+  for (const n of tiers(F.bestTeamPts, [500, 750, 1000]))
+    more.push([`points:${n}`, "points", `Scored ${n.toLocaleString("en-US")}+ for one ${d.name} team in a season`, from((t) => keys(t.bestTeamPts, (v) => v >= n))]);
+  for (const n of tiers(F.bestAvg, [30, 35, 40, 45, 50]))
+    more.push([`avg:${n}`, "avg", `Averaged ${n}+ a start for a ${d.name} team in a season (5+ starts)`, from((t) => keys(t.bestAvg, (v) => v >= n))]);
   for (const [id, kind, label, [all, gate]] of more) add(id, kind, label, all, new Set([...gate].filter((p) => all.has(p))));
 
   // Fame (how obvious an answer is), from FINISHED seasons only, so a square's points never move during a
@@ -259,7 +259,7 @@ export function gridData(d: Dataset): GridData {
   const picks = Math.max(1, lastDraft.length);
   for (const x of lastDraft) if (fame[x.pid] === undefined) fame[x.pid] = Math.round((1 - x.no / picks) * 0.9 * 1000) / 1000;
   for (const p of anyRoster.all) if (fame[p] === undefined) fame[p] = 0;
-  return { criteria: out, fame };
+  return { criteria: out, fame, league: d.name };
 }
 
 const rng = (seed: number) => () => {

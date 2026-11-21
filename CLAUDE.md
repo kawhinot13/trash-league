@@ -34,7 +34,7 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   answer (top 20%, 5+) not already a 100 elsewhere; `distinctTops` makes one day's five 100s all different.
   One-off day resets (owner's call): `RESETS` in `lib/app/game-resets.ts` deletes that day's scores once and PlayGate
   clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive, then
-  Trash's Starting Nine (redone grid).
+  Trash's Starting Nine (redone grid); 2026-11-21: Trash's Starting Nine again (remade, roomier).
   One-manager redos (owner's call): `REDOS` in game-resets.ts keeps the first N answers of that manager's day
   (`redosFor`: finished score removed once; PlayGate `applyRedos` trims the browser's save once per token).
   2026-11-21: KawhiNot, Dive prompt 4.
@@ -43,7 +43,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now
   titled "Test Trash Fantasy" (test copy).
 - Starting Nine (Rafterlore home, basketball; `core/grid.ts`, `components/trash/grid.tsx`, game id "grid"): daily 3x3,
-  six categories of six different kinds, broad first: at most ONE "whose team" square (`OWN_KINDS`: rostered by /
+  six categories of six different kinds, broad first (labels say Trash vs NBA: "First-round pick in a Trash draft";
+  MIN_CELL 6..MAX_CELL 80; no elite tiers: big lock-ins 50-80, starts to 40, points to 1,000, avg to 50, NBA
+  15/20 PPG etc.; owner 2026-11-21): at most ONE "whose team" square (`OWN_KINDS`: rostered by /
   drafted by / title / runner-up team), on ~40% of days (FNV coin per day), owner's call 2026-11-20 (too hard to
   recall); no clashing pairs (`CLASH`). Kinds include
   (NBA team, conference, big-lock-in tiers 50+..., starts / points / avg tiers, waivers, trades, first-round, late
@@ -101,7 +103,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   `PlayGate` shows the league's managers to pick, claimed ones greyed out; typing stays as a fallback). Before a
   game starts, `PlayGate` (uses `/api/l/[id]/scores?who=1`) asks "Who are you?" once (first game only), and in leagues
   that manager isn't in it shows "You're not in this league" instead of the game. First account to claim a manager keeps them. One try a day on any device: the finished game (answers) is saved with the score (`game_scores.state`) and
-  `PlayGate` restores it before the game mounts; older scores without it show "You already played today". Today / This week / All time / High scores (scores kept ~a year; boards refresh every 20 s while visible). With sign-in
+  `PlayGate` restores it before the game mounts; older scores without it show "You already played today".
+  Games in progress sync to the account too (`game_progress`, POST `{progress:true}` to the scores API every few
+  seconds while changed; `who=1` returns `progress`; the further one wins, `progressOf`, never moves back), so
+  phone and computer play ONE game. Resets/redos also clear that progress. Today / This week / All time / High scores (scores kept ~a year; boards refresh every 20 s while visible). With sign-in
   on, Rafterlore's daily games require signing in (`PlayGate` in components/app/play-gate.tsx; client-side, pages stay
   pre-built; without the auth env everyone plays). Trash keeps its honor-system board (no `viewer` in its API).
 - Recreational use: Rafterlore is a history/analytics/entertainment site with no link to betting. First import of a

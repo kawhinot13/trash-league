@@ -6,7 +6,7 @@ import { logError } from "@/lib/app/safe";
 import { verifyChallenge } from "@/lib/app/removal";
 import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
-import { cleanState } from "@/lib/core/game-state";
+import { cleanState, progressOf } from "@/lib/core/game-state";
 import { viewerOf } from "@/lib/app/viewer";
 import { redosFor, rescoreDiveOnce, resetsFor } from "@/lib/app/game-resets";
 
@@ -38,6 +38,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
     void _a;
     // With ?day: the games this manager already finished that day, so every device shows the same result.
     let played: Record<string, { score: number; label: string; state: Record<string, unknown> | null }> = {};
+    let progress: Record<string, unknown> = {};
     // Games reset today: the browser drops its saved game for them so they can be played again.
     const resets = DAY.test(day) ? await resetsFor(await db(), fid, day).catch(() => ({})) : {};
     if (viewer.member && viewer.manager && DAY.test(day)) {
@@ -45,6 +46,10 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
       const rows = await sql<{ game: string; score: number; label: string; state: Record<string, unknown> | null }[]>`
         select game, score, label, state from game_scores where family_id = ${fid} and manager = ${viewer.manager} and day = ${day}::date`;
       played = Object.fromEntries(rows.map((r) => [r.game, { score: r.score, label: r.label, state: r.state }]));
+      // Games in progress on the account (any device), so this one picks up the same game.
+      const prog = await sql<{ name: string; state: unknown }[]>`
+        select name, state from game_progress where family_id = ${fid} and manager = ${viewer.manager} and name like ${"%:" + day}`;
+      progress = Object.fromEntries(prog.map((r) => [r.name, r.state]));
     }
     // Not linked yet and no saved username to go on: the league's managers to pick from (ids only), and
     // which of them another account already plays as.
@@ -59,7 +64,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
       }
     }
     const redos = viewer.member && DAY.test(day) ? await redosFor(await db(), fid, viewer.manager, day).catch(() => []) : [];
-    return Response.json({ enabled: true, viewer, played, pick, resets, redos }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ enabled: true, viewer, played, pick, resets, redos, progress }, { headers: { "cache-control": "no-store" } });
   }
   if (!GAMES.has(game) || !DAY.test(day)) return Response.json({ error: "bad request" }, { status: 400 });
   try {
@@ -141,6 +146,30 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
     verify?: string;
   } | null;
   if (!b) return Response.json({ error: "bad request" }, { status: 400 });
+  // A game in progress, saved to the account after each answer (signed-in managers only; never moves back).
+  if ((b as { progress?: boolean }).progress === true) {
+    if (!authConfigured() || !DAY.test(String(b.day ?? ""))) return Response.json({ error: "bad request" }, { status: 400 });
+    const state = cleanState(b.state);
+    if (!state) return Response.json({ error: "bad request" }, { status: 400 });
+    try {
+      const fid = await familyIdOf(leagueId);
+      if (!fid) return Response.json({ error: "bad request" }, { status: 400 });
+      const v = await viewerOf(req, fid);
+      if (!v.accountId || !v.linked || !v.member || !v.manager) return Response.json({ error: "Sign in first." }, { status: 401 });
+      const sql = await db();
+      for (const [name, value] of Object.entries(state)) {
+        if (!name.endsWith(`:${b.day}`)) continue;
+        const [had] = await sql<{ state: unknown }[]>`select state from game_progress where family_id = ${fid} and manager = ${v.manager} and name = ${name}`;
+        if (had && progressOf(name, had.state) > progressOf(name, value)) continue;
+        await sql`insert into game_progress (family_id, manager, name, state) values (${fid}, ${v.manager}, ${name}, ${sql.json(value as never)})
+          on conflict (family_id, manager, name) do update set state = excluded.state, updated_at = now()`;
+      }
+      return Response.json({ ok: true });
+    } catch (e) {
+      logError(`progress ${leagueId}`, e);
+      return Response.json({ error: "bad request" }, { status: 500 });
+    }
+  }
   const ok = await take("lookup", await clientIp()).catch(() => ({ ok: true as const }));
   if (!ok.ok) return Response.json({ error: "Slow down a little and try again." }, { status: 429 });
   try {

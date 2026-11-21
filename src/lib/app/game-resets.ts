@@ -14,9 +14,13 @@ const RESETS: { family: string; game: "dive2" | "grid"; day: string }[] = [
   { family: "1020516596416155648", game: "dive2", day: "2026-11-20" },
   // Starting Nine's first grid had too many "whose team" squares; the redone grid replaces it.
   { family: "1020516596416155648", game: "grid", day: "2026-11-20" },
+  // Owner: squares too thin and too star-heavy; the remade grid (6+ answers a square, no elite tiers) replaces it.
+  { family: "1020516596416155648", game: "grid", day: "2026-11-21" },
 ];
 /** Board ids stored for each game (the dive's board moved from "dive" to "dive2"). */
 const STORED: Record<string, string[]> = { dive2: ["dive", "dive2"], grid: ["grid"] };
+/** The browser storage names each game saves for a day (and syncs to the account as progress). */
+const SAVED_NAMES: Record<string, (day: string) => string[]> = { dive2: (d) => [`dive3:${d}`], grid: (d) => [`grid:${d}`] };
 
 /**
  * One manager re-answers from a given prompt of one day's game (owner's call): their saved game keeps the
@@ -34,7 +38,10 @@ async function applyResets(sql: Sql) {
   for (const r of RESETS) {
     const fresh = await sql`
       insert into game_resets (family_id, game, day) values (${r.family}, ${r.game}, ${r.day}::date) on conflict do nothing returning 1`;
-    if (fresh.length) await sql`delete from game_scores where family_id = ${r.family} and game in ${sql(STORED[r.game])} and day = ${r.day}::date`;
+    if (fresh.length) {
+      await sql`delete from game_scores where family_id = ${r.family} and game in ${sql(STORED[r.game])} and day = ${r.day}::date`;
+      await sql`delete from game_progress where family_id = ${r.family} and name in ${sql(SAVED_NAMES[r.game](r.day))}`;
+    }
   }
   applied = true;
 }
@@ -106,7 +113,10 @@ export async function redosFor(sql: Sql, familyId: string, manager: string | nul
   for (const r of mine) {
     const key = `redo-${r.game}-${r.manager}-${r.keep}`;
     const fresh = await sql`insert into game_resets (family_id, game, day) values (${r.family}, ${key}, ${r.day}::date) on conflict do nothing returning 1`;
-    if (fresh.length) await sql`delete from game_scores where family_id = ${r.family} and game in ${sql(STORED[r.game])} and day = ${r.day}::date and manager = ${r.manager}`;
+    if (fresh.length) {
+      await sql`delete from game_scores where family_id = ${r.family} and game in ${sql(STORED[r.game])} and day = ${r.day}::date and manager = ${r.manager}`;
+      await sql`delete from game_progress where family_id = ${r.family} and manager = ${r.manager} and name in ${sql(SAVED_NAMES[r.game](r.day))}`;
+    }
     out.push({ game: r.game, keep: r.keep, token: key });
   }
   return out;

@@ -56,12 +56,15 @@ export function StartingNine({ data, players, people }: { data: GridData; player
   const word = (label: string) =>
     lockin
       ? label
-          .replace(/^Started (\d+)\+ times$/, "Locked in $1+ times")
-          .replace("Started a playoff game", "Locked in for a playoff game")
-          .replace("Rostered but never started", "Rostered but never locked in")
-          .replace(" a start in a season (5+ starts)", " a lock-in in a season (5+ lock-ins)")
+          .replace(/^Started (\d+)\+ times/, "Locked in $1+ times")
+          .replace(/^Started a (.+) playoff game$/, "Locked in for a $1 playoff game")
+          .replace("but never started", "but never locked in")
+          .replace(" a start for", " a lock-in for")
+          .replace("(5+ starts)", "(5+ lock-ins)")
       : label;
-  const labelOf = (c: Criterion) => (c.kind === "big" ? (lockin ? `Had a ${c.n}+ lock-in` : `Scored ${c.n}+ in a start`) : word(c.label));
+  const an = (n?: number) => (/^(8|11|18)/.test(String(n)) ? "an" : "a");
+  const labelOf = (c: Criterion) =>
+    c.kind === "big" ? (lockin ? `Had ${an(c.n)} ${c.n}+ lock-in for a ${data.league} team` : `Scored ${c.n}+ in a start for a ${data.league} team`) : word(c.label);
   const cellOf = (k: number) => cell(grid.rows[Math.floor(k / 3)], grid.cols[k % 3]);
   const used = new Set(saved.cells.filter(Boolean).map((x) => x!.pid));
   const filled = saved.cells.filter(Boolean).length;
