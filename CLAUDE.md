@@ -59,7 +59,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   is); posted as `rarityToScore` (9000 - rarity x 10) so the shared API's higher-is-better math holds; `Leaderboard
   rarity` shows rarity and averages. Finish show once per day per browser (`grid-shown:<day>`): lights down, squares
   flip in order while the counter drops from 900, then `FinalCard` (GSAP timeline + SplitText tier name, elastic
-  slam, gold sweep), confetti at 200 or lower; guesses: flip + ring + rising rarity, deep cuts (<5%) burst; misses shake. Never call it Immaculate Grid or copy its look.
+  slam, gold sweep), confetti at 200 or lower; guesses: `PickReveal` over the grid (GSAP: card flips up, rarity counts down from 100%, `rarityName` label in SplitText,
+  ring + shine, drops away; tap to skip), deep cuts (<5%) burst; misses shake. The card must not clip (no overflow-hidden on
+  the game card: it cut off the name suggestions on phones). Top right shows squares filled, not rarity. Never call it Immaculate Grid or copy its look.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)

@@ -32,6 +32,67 @@ export function tierOf(r: number) {
 const tone = (r: number) => (r < 5 ? "var(--gold)" : r < 15 ? "#7fd49a" : "var(--paper)");
 const pctTxt = (r: number) => `${r < 10 ? r.toFixed(1) : Math.round(r)}%`;
 
+/** A single pick's rarity in words. */
+export function rarityName(r: number) {
+  return r < 1 ? "Unicorn" : r < 5 ? "Deep cut" : r < 15 ? "Rare" : r < 30 ? "Solid" : "Popular";
+}
+
+/**
+ * The moment a right answer lands, staged with GSAP over the grid: the card flips up with his photo and
+ * name, his rarity counts down from 100%, the label stamps in letter by letter (SplitText) with a ring
+ * burst, then the card drops toward his square and the grid comes back. Tap to skip. Reduced motion: not shown.
+ */
+function PickReveal({ pid, r, players, onDone }: { pid: string; r: number; players: Players; onDone: () => void }) {
+  const root = useRef<HTMLDivElement>(null);
+  const num = useRef<HTMLSpanElement>(null);
+  const label = useRef<HTMLParagraphElement>(null);
+  useGSAP(
+    () => {
+      const counter = { v: 100 };
+      const split = SplitText.create(label.current, { type: "chars" });
+      const tl = gsap.timeline({ onComplete: onDone });
+      tl.fromTo("[data-veil]", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power1.out" })
+        .fromTo("[data-card]", { rotateY: -110, scale: 0.55, opacity: 0 }, { rotateY: 0, scale: 1, opacity: 1, duration: 0.65, ease: "back.out(1.6)" }, "<0.05")
+        .fromTo("[data-face]", { scale: 0.4 }, { scale: 1, duration: 0.6, ease: "elastic.out(1, 0.5)" }, "<0.2")
+        .to(counter, { v: r, duration: 1.1, ease: "expo.out", onUpdate: () => { if (num.current) num.current.textContent = `${counter.v < 10 ? counter.v.toFixed(1) : Math.round(counter.v)}%`; } }, "<0.1")
+        .fromTo("[data-ring]", { scale: 0.4, opacity: 0.9 }, { scale: 2.4, opacity: 0, duration: 0.9, ease: "power2.out" }, "-=0.35")
+        .from(split.chars, { yPercent: 120, opacity: 0, rotateX: -90, duration: 0.5, ease: "back.out(2.4)", stagger: 0.04 }, "<")
+        .fromTo("[data-shine]", { xPercent: -140 }, { xPercent: 240, duration: 0.9, ease: "power2.inOut" }, "<")
+        .to("[data-card]", { scale: 0.35, y: 60, opacity: 0, duration: 0.45, ease: "power3.in" }, "+=0.55")
+        .to("[data-veil]", { opacity: 0, duration: 0.3 }, "<0.15");
+      return () => split.revert();
+    },
+    { scope: root },
+  );
+  const color = tone(r);
+  return (
+    <div ref={root} className="absolute inset-0 z-30 flex items-center justify-center [perspective:900px]" onClick={onDone} role="status" aria-live="polite">
+      <div data-veil className="absolute inset-0 rounded-xl bg-[rgba(4,12,9,0.78)]" />
+      <div
+        data-card
+        className="relative w-[min(78%,18rem)] overflow-hidden rounded-3xl border-2 bg-[#0b1f16] bg-[radial-gradient(120%_90%_at_50%_0%,rgba(233,196,106,0.14),transparent_60%)] px-5 py-6 text-center shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+        style={{ borderColor: `color-mix(in srgb, ${color} 60%, transparent)` }}
+      >
+        <span data-shine aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <div className="relative mx-auto grid size-24 place-items-center">
+          <span data-ring aria-hidden className="absolute inset-0 rounded-full border-4" style={{ borderColor: color }} />
+          <span data-face className="block">
+            <Face pid={pid} players={players} size={88} />
+          </span>
+        </div>
+        <p className="mt-3 text-lg font-semibold break-words">{pname(players, pid)}</p>
+        <p className="font-display mt-1 text-6xl leading-none font-black tabular-nums" style={{ color, textShadow: `0 0 28px color-mix(in srgb, ${color} 45%, transparent)` }}>
+          <span ref={num}>100%</span>
+        </p>
+        <p className="mt-1 text-[11px] text-[var(--muted)]">of the league would name him</p>
+        <p ref={label} className="font-display mt-3 text-2xl font-black tracking-wide uppercase [perspective:400px]" style={{ color }}>
+          {rarityName(r)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * The final number, staged with GSAP (the site's animation library): the card rises, the score counts down
  * from 900 and lands with an elastic slam, the tier name drops in letter by letter (SplitText), a gold light
@@ -93,6 +154,7 @@ export function StartingNine({ data, players, people }: { data: GridData; player
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [miss, setMiss] = useState<{ k: number; n: number } | null>(null);
   const [landed, setLanded] = useState<{ k: number; n: number; r: number } | null>(null);
+  const [pick, setPick] = useState<{ pid: string; r: number; n: number } | null>(null);
   const [reveal, setReveal] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   // The finish show: plays once per day per browser (when you finish, or the first time you open a finished game).
@@ -232,6 +294,7 @@ export function StartingNine({ data, players, people }: { data: GridData; player
       const r = cellRarity(c.gateIds, data.fame, pid);
       setNote({ ok: true, text: `${pname(players, pid)} fits. Rarity ${pctTxt(r)}${r < 5 ? ", a deep cut." : "."}` });
       setLanded({ k: open, n: Date.now(), r });
+      if (!reduce) setPick({ pid, r, n: Date.now() });
       // A deep cut gets a small burst from its square.
       if (r < 5 && !reduce) {
         const el = document.getElementById(`sq-${open}`)?.getBoundingClientRect();
@@ -275,7 +338,7 @@ export function StartingNine({ data, players, people }: { data: GridData; player
   const tier = tierOf(total);
 
   return (
-    <div className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-3 sm:p-5 md:rounded-[28px] md:p-8">
+    <div className="relative rounded-[24px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-3 sm:p-5 md:rounded-[28px] md:p-8">
       {/* Lights down for the reveal. */}
       <AnimatePresence>
         {show !== "off" && done ? (
@@ -285,7 +348,7 @@ export function StartingNine({ data, players, people }: { data: GridData; player
             initial={{ opacity: 0 }}
             animate={{ opacity: show === "run" ? 1 : 0.55 }}
             transition={{ duration: 0.6 }}
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_38%,rgba(233,196,106,0.16),rgba(4,12,9,0.85)_70%)]"
+            className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(70%_55%_at_50%_38%,rgba(233,196,106,0.16),rgba(4,12,9,0.85)_70%)]"
           />
         ) : null}
       </AnimatePresence>
@@ -295,12 +358,20 @@ export function StartingNine({ data, players, people }: { data: GridData; player
           Guesses left <span className="font-display text-2xl font-black text-[var(--paper)] tabular-nums">{Math.max(0, saved.left)}</span>
         </p>
         <p className="text-sm text-[var(--muted)]">
-          {filled}/9 · Rarity{" "}
-          <span className="font-display text-2xl font-black text-[var(--paper)] tabular-nums">{(show === "run" ? count : total).toFixed(1)}</span>
+          {show === "run" ? (
+            <>
+              Rarity <span className="font-display text-2xl font-black text-[var(--paper)] tabular-nums">{count.toFixed(1)}</span>
+            </>
+          ) : (
+            <>
+              <span className="font-display text-2xl font-black text-[var(--paper)] tabular-nums">{filled}</span>/9 filled
+            </>
+          )}
         </p>
       </div>
 
       <div className="relative mt-4 grid grid-cols-[minmax(0,0.85fr)_repeat(3,minmax(0,1fr))] gap-1.5 [perspective:900px] sm:gap-2">
+        {pick ? <PickReveal key={pick.n} pid={pick.pid} r={pick.r} players={players} onDone={() => setPick(null)} /> : null}
         <div className="flex items-center justify-center rounded-xl text-center">
           <span className="font-display text-3xl leading-none font-black sm:text-4xl">9</span>
         </div>
