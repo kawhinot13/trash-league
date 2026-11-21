@@ -59,14 +59,18 @@ describe("Starting Nine", () => {
 });
 
 describe("Starting Nine rarity", () => {
-  it("famous answers are common, deep ones rare, and a square's shares add to 100%", () => {
-    const fame = { star: 1, mid: 0.5, deep: 0 };
-    const ids = ["star", "mid", "deep"];
+  it("famous answers read high, deep cuts low, spread out between", async () => {
+    const { RARITY_TOP, RARITY_FLOOR } = await import("@/lib/core/grid");
+    const ids = Array.from({ length: 81 }, (_, i) => `p${i}`);
+    const fame = Object.fromEntries(ids.map((p, i) => [p, 1 - i / 80]));
     const r = ids.map((p) => cellRarity(ids, fame, p));
-    expect(r[0]).toBeGreaterThan(r[1]);
-    expect(r[1]).toBeGreaterThan(r[2]);
-    expect(r.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 0);
-    expect(cellRarity(ids, fame, "deep")).toBeLessThan(5); // a deep answer is a few percent at most
+    expect(r[0]).toBe(RARITY_TOP);
+    expect(r[80]).toBe(RARITY_FLOOR);
+    expect(r[40]).toBeGreaterThan(3); // the middle answer is a few percent, not crowded near the floor
+    expect(r[40]).toBeLessThan(6);
+    for (let i = 1; i < r.length; i++) expect(r[i]).toBeLessThanOrEqual(r[i - 1]);
+    // An answer added later in the season doesn't move anyone already on the list.
+    expect(cellRarity(ids, fame, "p10")).toBe(cellRarity(ids, { ...fame, late: 0.5 }, "p10"));
   });
   it("totals run 0 to 900 (empty = 100) and round-trip through the standings score", () => {
     expect(EMPTY_RARITY * 9).toBe(900);

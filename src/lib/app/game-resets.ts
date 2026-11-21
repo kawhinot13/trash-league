@@ -18,7 +18,7 @@ const RESETS: { family: string; game: "dive2" | "grid"; day: string }[] = [
   { family: "1020516596416155648", game: "grid", day: "2026-11-21" },
 ];
 /** Board ids stored for each game (the dive's board moved from "dive" to "dive2"). */
-const STORED: Record<string, string[]> = { dive2: ["dive", "dive2"], grid: ["grid", "grid2"] };
+const STORED: Record<string, string[]> = { dive2: ["dive", "dive2"], grid: ["grid", "grid2", "nine"] };
 /** The browser storage names each game saves for a day (and syncs to the account as progress). */
 const SAVED_NAMES: Record<string, (day: string) => string[]> = { dive2: (d) => [`dive3:${d}`], grid: (d) => [`grid:${d}`] };
 

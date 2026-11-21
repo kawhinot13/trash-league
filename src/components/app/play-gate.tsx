@@ -43,7 +43,7 @@ function clearResets(v: Who, prefix: string, day: string) {
 
 const todayET = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 /** The game ids behind each section. */
-const GAME_OF: Record<string, string> = { dive: "dive2", trashle: "trashle", lineup: "lineup", grid: "grid2" };
+const GAME_OF: Record<string, string> = { dive: "dive2", trashle: "trashle", lineup: "lineup", grid: "nine" };
 
 /** Put today's finished games from the account into this browser before the games mount, so a
  * second device opens on the same result instead of a fresh game. The account's copy wins. */

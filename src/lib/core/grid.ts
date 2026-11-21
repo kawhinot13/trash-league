@@ -337,13 +337,21 @@ export const EMPTY_RARITY = 100;
  * name him, from how famous he is in this league against the square's other answers (finished seasons,
  * like `cellPoints`, so it never moves during a season). Famous answers take most of the 100%.
  */
-/** How steeply fame concentrates picks: a square's best-known answers take most of the 100%. */
-export const RARITY_K = 12;
+/** The most obvious right answer in a square, and the deepest: rarities run between, spread out evenly. */
+export const RARITY_TOP = 60;
+export const RARITY_FLOOR = 0.3;
+/**
+ * Rarity of a right answer, lower is rarer (owner's call 2026-11-21): about how much of the league would name him.
+ * The square's answers (finished seasons, plus his) are ranked by league fame (finished seasons only, so it never
+ * moves in a season); the most obvious is ~60%, the deepest 0.3%, and everyone between falls on an even
+ * (geometric) spread, so common players read high and deep cuts low instead of everyone crowding near 2%.
+ */
 export function cellRarity(ids: string[], fame: Record<string, number>, pid: string): number {
-  const pool = [...new Set([...ids, pid])];
-  const w = (p: string) => Math.exp(RARITY_K * (fame[p] ?? 0));
-  const total = pool.reduce((t, p) => t + w(p), 0);
-  return Math.max(0.1, Math.round((1000 * w(pid)) / total) / 10);
+  const order = [...new Set([...ids, pid])].sort((a, b) => (fame[b] ?? 0) - (fame[a] ?? 0) || (a < b ? -1 : a > b ? 1 : 0));
+  const n = order.length;
+  const i = order.indexOf(pid);
+  const r = n === 1 ? RARITY_TOP / 2 : RARITY_TOP * (RARITY_FLOOR / RARITY_TOP) ** (i / (n - 1));
+  return Math.max(0.1, Math.round(r * 10) / 10);
 }
 
 /** A rarity total (0..900, lower is better) as a standings score (higher is better), and back. */

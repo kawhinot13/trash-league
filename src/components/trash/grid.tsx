@@ -541,7 +541,7 @@ export function StartingNine({ data, players, people }: { data: GridData; player
           </AnimatePresence>
           {show === "end" ? (
             <>
-              <Leaderboard game="grid2" rarity day={day} saveKeys={[`grid:${day}`]} people={people} result={{ score: rarityToScore(total), label: `${filled}/9 · ${tier.name}` }} />
+              <Leaderboard game="nine" rarity day={day} saveKeys={[`grid:${day}`]} people={people} result={{ score: rarityToScore(total), label: `${filled}/9 · ${tier.name}` }} />
               <div>
                 <p className="font-display text-2xl font-black">Every square</p>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-3">

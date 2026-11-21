@@ -19,7 +19,7 @@ import { redosFor, rescoreDiveOnce, resetsFor } from "@/lib/app/game-resets";
  * system: pick who you are. The first result posted each day stands.
  */
 // "dive2": the dive leaderboard since the no-repeat schedule and the 2026-11-15 reset.
-const GAMES = new Set(["dive", "dive2", "trashle", "lineup", "grid", "grid2"]);
+const GAMES = new Set(["dive", "dive2", "trashle", "lineup", "grid", "grid2", "nine"]);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/scores">) {
@@ -228,7 +228,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sc
       return Response.json({ linked: true });
     }
 
-    if (!GAMES.has(b.game ?? "") || !DAY.test(b.day ?? "") || typeof b.score !== "number" || b.score < 0 || b.score > 1000)
+    if (!GAMES.has(b.game ?? "") || !DAY.test(b.day ?? "") || typeof b.score !== "number" || b.score < 0 || b.score > (b.game === "nine" ? 9000 : 1000))
       return Response.json({ error: "bad request" }, { status: 400 });
     if (!season.users.has(String(b.manager))) return Response.json({ error: "bad request" }, { status: 400 });
     if (authConfigured()) {

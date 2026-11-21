@@ -54,9 +54,11 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   is chosen ONLY from finished seasons (`gateIds`; MIN_CELL 3..MAX_CELL 60 per square), so this season's answers can
   grow but the grid never changes mid-day; a started game also pins its grid (`ids`). 9 guesses, player once.
   Scoring is RARITY, lower is better (owner's call 2026-11-21): each right answer = its estimated share of picks
-  (`cellRarity`: exp(RARITY_K x fame) among the square's finished-season answers; fame from finished seasons, newcomers
-  by draft slot, so stable all season), empty = 100, total 0..900. Board id "grid2" (old points board "grid" left as
-  is); posted as `rarityToScore` (9000 - rarity x 10) so the shared API's higher-is-better math holds; `Leaderboard
+  (`cellRarity`: rank by fame among the square's finished-season answers, then a geometric spread from RARITY_TOP 60%
+  for the most obvious to RARITY_FLOOR 0.3% for the deepest; owner 2026-11-21: common players read high; fame from
+  finished seasons, newcomers by draft slot, so stable all season), empty = 100, total 0..900. Board id "nine" ("grid"
+  and "grid2" are dead: grid2 never saved, the API capped scores at 1,000; "nine" allows 9,000); posted as
+  `rarityToScore` (9000 - rarity x 10); the Leaderboard marks a score posted only once the server keeps it so the shared API's higher-is-better math holds; `Leaderboard
   rarity` shows rarity and averages. Finish show once per day per browser (`grid-shown:<day>`): lights down, squares
   flip in order while the counter drops from 900, then `FinalCard` (GSAP timeline + SplitText tier name, elastic
   slam, gold sweep), confetti at 200 or lower; guesses: `PickReveal` over the grid (GSAP: card flips up, rarity counts down from 100%, `rarityName` label in SplitText,

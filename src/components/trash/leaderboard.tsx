@@ -41,7 +41,7 @@ const sameName = (team: string, ...names: (string | undefined)[]) =>
   names.some((n) => n && squash(n).length >= 3 && squash(team).length >= 3 && (squash(team) === squash(n) || squash(team).startsWith(squash(n)) || squash(n).startsWith(squash(team))));
 /** A one-time code waiting to show up in the manager's Sleeper team name (kept across app switches). */
 type Pending = { challenge: string; code: string; manager: string; expiresAt: string };
-const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup", grid: "grid", grid2: "grid" };
+const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup", grid: "grid", grid2: "grid", nine: "grid" };
 
 export type Person = { id: string; nick: string };
 
@@ -72,7 +72,7 @@ export function Leaderboard({
   saveKeys?: string[];
   /** Current managers, for the "who are you" picker and names. */
   people: Person[];
-  game: "dive" | "dive2" | "trashle" | "lineup" | "grid" | "grid2";
+  game: "dive" | "dive2" | "trashle" | "lineup" | "grid" | "grid2" | "nine";
   /** Starting Nine: scores are rarity (lower is better), posted as 9000 - rarity x 10; shown as rarity. */
   rarity?: boolean;
   day: string | null;
@@ -166,10 +166,13 @@ export function Leaderboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ game, day, manager: me, score: rs, label: rl ?? "", ...(viewer && saveKeys ? { state: savedState(saveKeys, brand.key) } : {}) }),
       })
-        .then(() => {
-          try {
-            localStorage.setItem(postedKey, me);
-          } catch {}
+        .then(async (r) => {
+          // Only a score the server kept counts as posted; a refused one is tried again next time.
+          const saved = r.ok ? ((await r.json().catch(() => null)) as { saved?: boolean; enabled?: boolean } | null) : null;
+          if (saved && saved.enabled !== false)
+            try {
+              localStorage.setItem(postedKey, me);
+            } catch {}
         })
         .finally(() => setReload((n) => n + 1));
     // eslint-disable-next-line react-hooks/exhaustive-deps
