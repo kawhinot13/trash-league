@@ -50,7 +50,7 @@ async function applyResets(sql: Sql) {
 export async function resetsFor(sql: Sql, familyId: string, day: string): Promise<Record<string, string>> {
   await applyResets(sql);
   const rows = await sql<{ game: string; at: Date }[]>`
-    select game, at from game_resets where family_id = ${familyId} and day = ${day}::date and game not like 'rescore%'`;
+    select game, at from game_resets where family_id = ${familyId} and day = ${day}::date and game not like 'rescore%' and game not like 'redo-%'`;
   return Object.fromEntries(rows.map((r) => [r.game, r.at.toISOString()]));
 }
 
