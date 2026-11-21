@@ -18,6 +18,16 @@ const RESETS: { family: string; game: "dive2" | "grid"; day: string }[] = [
 /** Board ids stored for each game (the dive's board moved from "dive" to "dive2"). */
 const STORED: Record<string, string[]> = { dive2: ["dive", "dive2"], grid: ["grid"] };
 
+/**
+ * One manager re-answers from a given prompt of one day's game (owner's call): their saved game keeps the
+ * first `keep` answers. Done once per entry: a finished score is taken off that day's board (so the redone
+ * game can post), and the browser trims its saved game (PlayGate, `redos` in `/api/l/[id]/scores?who=1`).
+ * 2026-11-21: KawhiNot redoes Dumpster Dive prompt 4.
+ */
+const REDOS: { family: string; manager: string; game: "dive2"; day: string; keep: number }[] = [
+  { family: "1020516596416155648", manager: "1021907649295794176", game: "dive2", day: "2026-11-21", keep: 3 },
+];
+
 let applied = false;
 async function applyResets(sql: Sql) {
   if (applied) return;
@@ -86,4 +96,18 @@ export async function rescoreDiveOnce(sql: Sql, leagueId: string, familyId: stri
     logError(`rescore dive ${familyId}`, e);
     return "failed";
   }
+}
+
+/** This manager's redos on a day, applied server-side once each, with a token the browser applies once. */
+export async function redosFor(sql: Sql, familyId: string, manager: string | null, day: string): Promise<{ game: string; keep: number; token: string }[]> {
+  if (!manager) return [];
+  const mine = REDOS.filter((r) => r.family === familyId && r.manager === manager && r.day === day);
+  const out: { game: string; keep: number; token: string }[] = [];
+  for (const r of mine) {
+    const key = `redo-${r.game}-${r.manager}-${r.keep}`;
+    const fresh = await sql`insert into game_resets (family_id, game, day) values (${r.family}, ${key}, ${r.day}::date) on conflict do nothing returning 1`;
+    if (fresh.length) await sql`delete from game_scores where family_id = ${r.family} and game in ${sql(STORED[r.game])} and day = ${r.day}::date and manager = ${r.manager}`;
+    out.push({ game: r.game, keep: r.keep, token: key });
+  }
+  return out;
 }

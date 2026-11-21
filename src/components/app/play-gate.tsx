@@ -15,7 +15,14 @@ import { STATE_NAME } from "@/lib/core/game-state";
  */
 type Viewer = { configured: boolean; signedIn: boolean; linked: boolean; member: boolean; manager: string | null; suggest?: string | null };
 type Played = Record<string, { score: number; label: string; state: Record<string, unknown> | null }>;
-type Who = { enabled: boolean; viewer?: Viewer; played?: Played; pick?: { current: string[]; taken: string[] } | null; resets?: Record<string, string> } | null;
+type Who = {
+  enabled: boolean;
+  viewer?: Viewer;
+  played?: Played;
+  pick?: { current: string[]; taken: string[] } | null;
+  resets?: Record<string, string>;
+  redos?: { game: string; keep: number; token: string }[];
+} | null;
 /** What each board's game saves in the browser for a day (cleared when that day's game is reset). */
 const SAVED_AS: Record<string, (day: string) => string[]> = { dive2: (day) => [`dive3:${day}`], grid: (day) => [`grid:${day}`] };
 
@@ -49,6 +56,24 @@ function restore(v: Who, prefix: string, day: string) {
   }
 }
 
+/** Redo from a prompt (owner's call, one manager): keep the first answers of today's saved game, once per token. */
+function applyRedos(v: Who, prefix: string, day: string) {
+  for (const r of v?.redos ?? []) {
+    try {
+      const mark = `${prefix}redo:${r.token}:${day}`;
+      if (localStorage.getItem(mark)) continue;
+      for (const k of SAVED_AS[r.game]?.(day) ?? []) {
+        const raw = localStorage.getItem(prefix + k);
+        if (!raw) continue;
+        const saved = JSON.parse(raw) as { picks?: unknown[]; done?: boolean };
+        if (Array.isArray(saved.picks)) localStorage.setItem(prefix + k, JSON.stringify({ ...saved, picks: saved.picks.slice(0, r.keep), done: false }));
+      }
+      localStorage.removeItem(`${prefix}posted:${r.game}:${day}`);
+      localStorage.setItem(mark, "1");
+    } catch {}
+  }
+}
+
 // One shared "who are you here" per league, so the three games on a page ask once and agree.
 const store = new Map<string, { v: Who; subs: Set<() => void>; loading: boolean; prefix: string }>();
 function load(url: string) {
@@ -62,6 +87,7 @@ function load(url: string) {
     .then((v) => {
       clearResets(v, e.prefix, day);
       restore(v, e.prefix, day);
+      applyRedos(v, e.prefix, day);
       e.v = v;
       e.loading = false;
       e.subs.forEach((f) => f());

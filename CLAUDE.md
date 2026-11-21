@@ -35,6 +35,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   One-off day resets (owner's call): `RESETS` in `lib/app/game-resets.ts` deletes that day's scores once and PlayGate
   clears each browser's saved game (`resets` in `/api/l/[id]/scores?who=1`). 2026-11-20: Trash's Dive, then
   Trash's Starting Nine (redone grid).
+  One-manager redos (owner's call): `REDOS` in game-resets.ts keeps the first N answers of that manager's day
+  (`redosFor`: finished score removed once; PlayGate `applyRedos` trims the browser's save once per token).
+  2026-11-21: KawhiNot, Dive prompt 4.
   Saved dives were re-scored once per league with the current boards (`rescoreDiveOnce`, `rescorePicks`, marker
   `rescore-dive2-b` in `game_resets`); PlayGate's restore then puts the new scores in each browser.
   Prompts can carry `from`/`to` days so planned days switch questions without touching written ones. The owner cares about Rafterlore; the Trash site is now

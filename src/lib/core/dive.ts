@@ -518,7 +518,7 @@ export function promptText(prompt: string, lineup: "lock-in" | "daily" | "weekly
     .replace(/has been started (\d+)\+ times/, (_, n: string) => (lock ? `has been locked in ${n}+ times` : `has been in a lineup ${n}+ weeks`))
     .replace(/per start for/, lock ? "per lock-in for" : "per week in the lineup for")
     .replace(/^Name a player who scored (\d+)\+ in a single start for (.+)\.$/, (_, n: string, rest: string) =>
-      lock ? `Name a player who had a ${n}+ lock-in for ${rest}.` : `Name a player who scored ${n}+ in a week in the lineup for ${rest}.`,
+      lock ? `Name a player who had ${/^(8|11|18)/.test(n) ? "an" : "a"} ${n}+ lock-in for ${rest}.` : `Name a player who scored ${n}+ in a week in the lineup for ${rest}.`,
     )
     .replace(/but never started for the team/, lock ? "but was never locked in by the team" : "but never made the lineup for the team")
     .replace(/was started (\d+)\+ times by/, (_, n: string) => (lock ? `was locked in ${n}+ times by` : `was in the lineup ${n}+ weeks for`))

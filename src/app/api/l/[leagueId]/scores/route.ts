@@ -8,7 +8,7 @@ import { familyIdOf, newestSeason } from "@/lib/app/store";
 import { isSleeperId } from "@/lib/app/validate";
 import { cleanState } from "@/lib/core/game-state";
 import { viewerOf } from "@/lib/app/viewer";
-import { rescoreDiveOnce, resetsFor } from "@/lib/app/game-resets";
+import { redosFor, rescoreDiveOnce, resetsFor } from "@/lib/app/game-resets";
 
 /**
  * Daily-game standings for one Rafterlore league, in Postgres:
@@ -58,7 +58,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/sco
         pick = { current, taken: rows.map((r) => r.sleeper_user) };
       }
     }
-    return Response.json({ enabled: true, viewer, played, pick, resets }, { headers: { "cache-control": "no-store" } });
+    const redos = viewer.member && DAY.test(day) ? await redosFor(await db(), fid, viewer.manager, day).catch(() => []) : [];
+    return Response.json({ enabled: true, viewer, played, pick, resets, redos }, { headers: { "cache-control": "no-store" } });
   }
   if (!GAMES.has(game) || !DAY.test(day)) return Response.json({ error: "bad request" }, { status: 400 });
   try {
