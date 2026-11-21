@@ -19,7 +19,7 @@ import { redosFor, rescoreDiveOnce, resetsFor } from "@/lib/app/game-resets";
  * system: pick who you are. The first result posted each day stands.
  */
 // "dive2": the dive leaderboard since the no-repeat schedule and the 2026-11-15 reset.
-const GAMES = new Set(["dive", "dive2", "trashle", "lineup", "grid"]);
+const GAMES = new Set(["dive", "dive2", "trashle", "lineup", "grid", "grid2"]);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(req: Request, ctx: RouteContext<"/api/l/[leagueId]/scores">) {

@@ -328,3 +328,24 @@ export function cellPoints(ids: string[], fame: Record<string, number>, pid: str
   const i = order.indexOf(pid);
   return order.length === 1 ? 100 : Math.round(10 + (90 * i) / (order.length - 1));
 }
+
+/** An empty square counts as this much rarity; nine empty squares make the worst score, 900. */
+export const EMPTY_RARITY = 100;
+
+/**
+ * Rarity of a right answer, lower is rarer (owner's call 2026-11-21): the share of players you'd expect to
+ * name him, from how famous he is in this league against the square's other answers (finished seasons,
+ * like `cellPoints`, so it never moves during a season). Famous answers take most of the 100%.
+ */
+/** How steeply fame concentrates picks: a square's best-known answers take most of the 100%. */
+export const RARITY_K = 12;
+export function cellRarity(ids: string[], fame: Record<string, number>, pid: string): number {
+  const pool = [...new Set([...ids, pid])];
+  const w = (p: string) => Math.exp(RARITY_K * (fame[p] ?? 0));
+  const total = pool.reduce((t, p) => t + w(p), 0);
+  return Math.max(0.1, Math.round((1000 * w(pid)) / total) / 10);
+}
+
+/** A rarity total (0..900, lower is better) as a standings score (higher is better), and back. */
+export const rarityToScore = (rarity: number) => 9000 - Math.round(rarity * 10);
+export const scoreToRarity = (score: number) => (9000 - score) / 10;

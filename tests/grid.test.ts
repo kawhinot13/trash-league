@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GUESSES, MAX_CELL, MIN_CELL, OWN_KINDS, cell, cellPoints, dayGrid, gridData } from "@/lib/core/grid";
+import { EMPTY_RARITY, cellRarity, rarityToScore, scoreToRarity, GUESSES, MAX_CELL, MIN_CELL, OWN_KINDS, cell, cellPoints, dayGrid, gridData } from "@/lib/core/grid";
 import { TRASH } from "@/lib/extras";
 
 const data = gridData(TRASH);
@@ -55,5 +55,22 @@ describe("Starting Nine", () => {
   });
   it("stays a reasonable size to send to the page", () => {
     expect(JSON.stringify(data).length).toBeLessThan(250_000);
+  });
+});
+
+describe("Starting Nine rarity", () => {
+  it("famous answers are common, deep ones rare, and a square's shares add to 100%", () => {
+    const fame = { star: 1, mid: 0.5, deep: 0 };
+    const ids = ["star", "mid", "deep"];
+    const r = ids.map((p) => cellRarity(ids, fame, p));
+    expect(r[0]).toBeGreaterThan(r[1]);
+    expect(r[1]).toBeGreaterThan(r[2]);
+    expect(r.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 0);
+    expect(cellRarity(ids, fame, "deep")).toBeLessThan(5); // a deep answer is a few percent at most
+  });
+  it("totals run 0 to 900 (empty = 100) and round-trip through the standings score", () => {
+    expect(EMPTY_RARITY * 9).toBe(900);
+    for (const x of [0, 12.3, 456.7, 900]) expect(scoreToRarity(rarityToScore(x))).toBeCloseTo(x, 5);
+    expect(rarityToScore(10)).toBeGreaterThan(rarityToScore(20)); // lower rarity ranks higher
   });
 });

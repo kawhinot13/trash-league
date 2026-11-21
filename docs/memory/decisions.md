@@ -38,6 +38,12 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   Cancel any time. Player shorts keep the game lock (prices move daily). Rejected: requiring mid-week trades to be
   held until final (doesn't remove the edge; my earlier suggestion was wrong).
 
+## 2026-11-21: Starting Nine rarity scoring + animations
+- Owner wanted rarity like popular grid games (lower is better). No pick data to count, so rarity is an estimated
+  share from league fame (exp curve), stable all season. New board id "grid2" so old point scores never mix.
+  Animations use what's installed: GSAP + SplitText for the final card, motion for tiles, canvas-confetti.
+  Rejected: real pick % from the league's own guesses (a dozen players is too few, and it would move all day).
+
 ## 2026-11-20: Starting Nine (daily grid)
 - Owner asked for a grid game for the league. Original name and look (the 3x3 mechanic is generic). Owner wanted
   many rotating columns and score tiers (50+, 60+ lock-ins; 20+ PPG), so categories are generated with tiers and

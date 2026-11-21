@@ -52,9 +52,14 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   round, positions, journeymen, playoff starters, never started, one season, every season, real NBA averages from
   `extras.nbaSeasons` (grade step): PPG/RPG/APG/3s/steals/blocks/minutes tiers, 40/50-point games). The day's grid
   is chosen ONLY from finished seasons (`gateIds`; MIN_CELL 3..MAX_CELL 60 per square), so this season's answers can
-  grow but the grid never changes mid-day; a started game also pins its grid (`ids`). 9 guesses, player once,
-  points 10..100 by depth (`cellPoints`: rank among the square's finished-season answers by fame from FINISHED
-  seasons only, newcomers by this season's draft slot, so the same answer scores the same for everyone all season). Never call it Immaculate Grid or copy its look.
+  grow but the grid never changes mid-day; a started game also pins its grid (`ids`). 9 guesses, player once.
+  Scoring is RARITY, lower is better (owner's call 2026-11-21): each right answer = its estimated share of picks
+  (`cellRarity`: exp(RARITY_K x fame) among the square's finished-season answers; fame from finished seasons, newcomers
+  by draft slot, so stable all season), empty = 100, total 0..900. Board id "grid2" (old points board "grid" left as
+  is); posted as `rarityToScore` (9000 - rarity x 10) so the shared API's higher-is-better math holds; `Leaderboard
+  rarity` shows rarity and averages. Finish show once per day per browser (`grid-shown:<day>`): lights down, squares
+  flip in order while the counter drops from 900, then `FinalCard` (GSAP timeline + SplitText tier name, elastic
+  slam, gold sweep), confetti at 200 or lower; guesses: flip + ring + rising rarity, deep cuts (<5%) burst; misses shake. Never call it Immaculate Grid or copy its look.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)

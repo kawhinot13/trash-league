@@ -41,7 +41,7 @@ const sameName = (team: string, ...names: (string | undefined)[]) =>
   names.some((n) => n && squash(n).length >= 3 && squash(team).length >= 3 && (squash(team) === squash(n) || squash(team).startsWith(squash(n)) || squash(n).startsWith(squash(team))));
 /** A one-time code waiting to show up in the manager's Sleeper team name (kept across app switches). */
 type Pending = { challenge: string; code: string; manager: string; expiresAt: string };
-const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup", grid: "grid" };
+const SECTION: Record<string, string> = { dive: "dive", dive2: "dive", trashle: "trashle", lineup: "lineup", grid: "grid", grid2: "grid" };
 
 export type Person = { id: string; nick: string };
 
@@ -63,6 +63,7 @@ export function Leaderboard({
   people,
   saveKeys,
   onMine,
+  rarity,
 }: {
   /** Rafterlore: tells the game this player's all-time high score (and the best before today) from the standings. */
   onMine?: (b: { best: number | null; before: number | null }) => void;
@@ -71,7 +72,9 @@ export function Leaderboard({
   saveKeys?: string[];
   /** Current managers, for the "who are you" picker and names. */
   people: Person[];
-  game: "dive" | "dive2" | "trashle" | "lineup" | "grid";
+  game: "dive" | "dive2" | "trashle" | "lineup" | "grid" | "grid2";
+  /** Starting Nine: scores are rarity (lower is better), posted as 9000 - rarity x 10; shown as rarity. */
+  rarity?: boolean;
   day: string | null;
   /** The finished result to post, once the game is over. score: higher is better. */
   result: { score: number; label: string } | null;
@@ -217,27 +220,30 @@ export function Leaderboard({
   const choices = ACTIVE;
   // Only rendered after the board loads in the browser, so window is there.
   const signIn = () => `/api/auth/google?next=${encodeURIComponent(`${window.location.pathname}#${SECTION[game]}`)}`;
-  const rows =
+  const R = (score: number) => (9000 - score) / 10;
+  const rows: { id: string; main: number | string; sub: string; sort: number }[] = (
     tab === "today"
-      ? Object.entries(board.today ?? {})
-          .map(([id, v]) => ({ id, main: v.score, sub: v.label }))
-          .sort((a, b) => b.main - a.main)
+      ? Object.entries(board.today ?? {}).map(([id, v]) => ({ id, main: rarity ? R(v.score).toFixed(1) : v.score, sub: v.label, sort: v.score }))
       : tab === "week"
-        ? Object.entries(board.week ?? {})
-            .map(([id, v]) => ({ id, main: v.points, sub: `${v.played} day${v.played === 1 ? "" : "s"} played` }))
-            .sort((a, b) => b.main - a.main)
+        ? Object.entries(board.week ?? {}).map(([id, v]) =>
+            rarity
+              ? { id, main: ((9000 * v.played - v.points) / 10 / Math.max(1, v.played)).toFixed(1), sub: `average · ${v.played} day${v.played === 1 ? "" : "s"} played`, sort: v.points / Math.max(1, v.played) }
+              : { id, main: v.points, sub: `${v.played} day${v.played === 1 ? "" : "s"} played`, sort: v.points },
+          )
         : tab === "best"
-          ? Object.entries(board.best ?? {})
-              .map(([id, v]) => ({ id, main: v.score, sub: `High score, ${dateOf(v.day)}${v.label ? ` · ${v.label}` : ""}` }))
-              .sort((a, b) => b.main - a.main)
-          : Object.entries(board.all ?? {})
-            .map(([id, v]) => ({
+          ? Object.entries(board.best ?? {}).map(([id, v]) => ({
               id,
-              main: v.points,
-              sub: `${v.played} day${v.played === 1 ? "" : "s"} played${v.wins ? `, ${v.wins} daily win${v.wins === 1 ? "" : "s"}` : ""}`,
+              main: rarity ? R(v.score).toFixed(1) : v.score,
+              sub: `${rarity ? "Rarest" : "High score"}, ${dateOf(v.day)}${v.label ? ` · ${v.label}` : ""}`,
+              sort: v.score,
             }))
-            .sort((a, b) => b.main - a.main);
-
+          : Object.entries(board.all ?? {}).map(([id, v]) => ({
+              id,
+              main: rarity ? ((9000 * v.played - v.points) / 10 / Math.max(1, v.played)).toFixed(1) : v.points,
+              sub: `${rarity ? "average · " : ""}${v.played} day${v.played === 1 ? "" : "s"} played${v.wins ? `, ${v.wins} daily win${v.wins === 1 ? "" : "s"}` : ""}`,
+              sort: rarity ? v.points / Math.max(1, v.played) : v.points,
+            }))
+  ).sort((a, b) => b.sort - a.sort);
   return (
     <div className="mt-6 rounded-2xl border border-white/10 bg-black/25 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -251,7 +257,7 @@ export function Leaderboard({
               aria-pressed={tab === t}
               className={`cursor-pointer rounded-full px-3 py-1 font-semibold ${tab === t ? "bg-[var(--paper)] text-[var(--bin)]" : "text-[var(--paper)]/75"}`}
             >
-              {t === "today" ? "Today" : t === "week" ? "This week" : t === "best" ? "High scores" : "All time"}
+              {t === "today" ? "Today" : t === "week" ? "This week" : t === "best" ? (rarity ? "Rarest" : "High scores") : "All time"}
             </button>
           ))}
         </div>
