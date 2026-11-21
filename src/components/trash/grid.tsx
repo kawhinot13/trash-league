@@ -401,18 +401,16 @@ export function StartingNine({ data, players, people }: { data: GridData; player
                   initial={
                     reduce
                       ? false
-                      : fresh
-                        ? { rotateY: -180, scale: 0.92 }
-                        : show === "run" && k <= step
+                      : show === "run" && k <= step
                         ? { rotateY: 90, opacity: 0.3 }
                         : shaking
                           ? { x: 0 }
                           : false
                   }
-                  animate={shaking && !reduce ? { x: [0, -7, 7, -5, 5, 0] } : { rotateY: hidden(k) ? 180 : 0, opacity: 1, scale: 1 }}
-                  transition={shaking ? { duration: 0.4 } : fresh ? { type: "spring", duration: 0.7, bounce: 0.3 } : { duration: 0.5, ease: EASE }}
+                  animate={shaking && !reduce ? { x: [0, -7, 7, -5, 5, 0] } : show === "run" ? { rotateY: hidden(k) ? 180 : 0, opacity: 1 } : { rotateY: 0, opacity: 1 }}
+                  transition={shaking ? { duration: 0.4 } : { duration: 0.5, ease: EASE }}
                   aria-label={`${labelOf(r)} and ${labelOf(c)}${s && rr != null ? `: ${pname(players, s.pid)}, rarity ${pctTxt(rr)}` : ""}`}
-                  className={`relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-1 transition-colors duration-150 [backface-visibility:hidden] ${
+                  className={`relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 p-1 transition-colors duration-150 ${show === "run" ? "[backface-visibility:hidden]" : ""} ${
                     hidden(k)
                       ? "border-white/10 bg-black/40"
                       : s
