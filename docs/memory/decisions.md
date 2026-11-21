@@ -650,3 +650,10 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
 ## Earlier (Trash site)
 - Lenis smooth scroll removed after profiling (with backdrop-blur it caused most dropped frames).
 - three.js / react-three-fiber removed (heaviest thing on the site); the trophy is a still render.
+
+## 2026-11-21: Starting Nine rarity spread + answers sheet
+- Rarity now uses a log-scale curve (60% down to 0.2%, exponent 1.15) with a per-player wobble and hundredths under 1%,
+  so deep answers spread out (owner wanted Dive-like variance). Rejected: shares summing to 100 (too flat), plain
+  geometric (low end crammed), power 1.35 (top crowded near 50%).
+- Answers moved from a long list under the game to a sheet opened by tapping a square (more organized, owner's ask).
+- Today's scores re-posted with the new numbers (board emptied once, browsers re-post their kept answers).

@@ -3,6 +3,7 @@
 import confetti from "canvas-confetti";
 import { AnimatePresence, animate, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import type { Players } from "@/lib/extras";
 import { EMPTY_RARITY, GUESSES, cell, cellRarity, dayGrid, rarityToScore, type Criterion, type GridData } from "@/lib/core/grid";
@@ -30,7 +31,7 @@ export function tierOf(r: number) {
 }
 /** A square's colour by rarity: gold under 5%, green under 15%, paper above. */
 const tone = (r: number) => (r < 5 ? "var(--gold)" : r < 15 ? "#7fd49a" : "var(--paper)");
-const pctTxt = (r: number) => `${r < 10 ? r.toFixed(1) : Math.round(r)}%`;
+const pctTxt = (r: number) => `${r < 1 ? r.toFixed(2) : r < 10 ? r.toFixed(1) : Math.round(r)}%`;
 
 /** A single pick's rarity in words. */
 export function rarityName(r: number) {
@@ -54,7 +55,7 @@ function PickReveal({ pid, r, players, onDone }: { pid: string; r: number; playe
       tl.fromTo("[data-veil]", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power1.out" })
         .fromTo("[data-card]", { rotateY: -110, scale: 0.55, opacity: 0 }, { rotateY: 0, scale: 1, opacity: 1, duration: 0.65, ease: "back.out(1.6)" }, "<0.05")
         .fromTo("[data-face]", { scale: 0.4 }, { scale: 1, duration: 0.6, ease: "elastic.out(1, 0.5)" }, "<0.2")
-        .to(counter, { v: r, duration: 1.1, ease: "expo.out", onUpdate: () => { if (num.current) num.current.textContent = `${counter.v < 10 ? counter.v.toFixed(1) : Math.round(counter.v)}%`; } }, "<0.1")
+        .to(counter, { v: r, duration: 1.1, ease: "expo.out", onUpdate: () => { if (num.current) num.current.textContent = pctTxt(counter.v); } }, "<0.1")
         .fromTo("[data-ring]", { scale: 0.4, opacity: 0.9 }, { scale: 2.4, opacity: 0, duration: 0.9, ease: "power2.out" }, "-=0.35")
         .from(split.chars, { yPercent: 120, opacity: 0, rotateX: -90, duration: 0.5, ease: "back.out(2.4)", stagger: 0.04 }, "<")
         .fromTo("[data-shine]", { xPercent: -140 }, { xPercent: 240, duration: 0.9, ease: "power2.inOut" }, "<")
@@ -155,7 +156,13 @@ export function StartingNine({ data, players, people }: { data: GridData; player
   const [miss, setMiss] = useState<{ k: number; n: number } | null>(null);
   const [landed, setLanded] = useState<{ k: number; n: number; r: number } | null>(null);
   const [pick, setPick] = useState<{ pid: string; r: number; n: number } | null>(null);
-  const [reveal, setReveal] = useState<number | null>(null);
+  const [sheet, setSheet] = useState<number | null>(null);
+  useEffect(() => {
+    if (sheet === null) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setSheet(null);
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [sheet]);
   const [copied, setCopied] = useState(false);
   // The finish show: plays once per day per browser (when you finish, or the first time you open a finished game).
   const [show, setShow] = useState<"off" | "run" | "end">("off");
@@ -393,8 +400,10 @@ export function StartingNine({ data, players, people }: { data: GridData; player
                   id={`sq-${k}`}
                   key={`${c.id}-${show === "run" && k <= step ? "shown" : "base"}-${shaking ? miss!.n : 0}-${fresh ? landed!.n : 0}`}
                   type="button"
-                  disabled={!!s || done}
+                  disabled={(!!s && !done) || (done && show !== "end")}
                   onClick={() => {
+                    // Finished: any square opens its answers. Playing: pick a square to answer.
+                    if (done) return setSheet(k);
                     setOpen(isOpen ? null : k);
                     setNote(null);
                   }}
@@ -541,43 +550,78 @@ export function StartingNine({ data, players, people }: { data: GridData; player
           </AnimatePresence>
           {show === "end" ? (
             <>
-              <Leaderboard game="nine" rarity day={day} saveKeys={[`grid:${day}`]} people={people} result={{ score: rarityToScore(total), label: `${filled}/9 · ${tier.name}` }} />
-              <div>
-                <p className="font-display text-2xl font-black">Every square</p>
-                <ul className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {saved.cells.map((s, k) => {
-                    const c = cellOf(k);
-                    const byRare = [...c.ids].sort((a, b) => (data.fame[a] ?? 0) - (data.fame[b] ?? 0));
-                    const deepest = byRare[0];
-                    const rr = rarities[k];
-                    return (
-                      <li key={k} className="rounded-2xl bg-black/20 p-3 text-sm">
-                        <button type="button" onClick={() => setReveal(reveal === k ? null : k)} aria-expanded={reveal === k} className="w-full cursor-pointer text-left">
-                          <span className="block text-xs text-[var(--muted)]">
-                            {labelOf(grid.rows[Math.floor(k / 3)])} × {labelOf(grid.cols[k % 3])}
-                          </span>
-                          <span className="mt-1 block font-semibold">{s && rr != null ? `${pname(players, s.pid)} · ${pctTxt(rr)}` : "Empty · 100"}</span>
-                          <span className="block text-xs text-[var(--muted)]">
-                            {c.ids.length} right answers · rarest: {deepest ? `${pname(players, deepest)} ${pctTxt(cellRarity(c.gateIds, data.fame, deepest))}` : "none"}
-                          </span>
-                        </button>
-                        {reveal === k ? (
-                          <p className="mt-2 text-xs break-words text-[var(--paper)]/80">
-                            {[...c.ids]
-                              .sort((a, b) => (data.fame[b] ?? 0) - (data.fame[a] ?? 0))
-                              .map((p) => `${pname(players, p)} ${pctTxt(cellRarity(c.gateIds, data.fame, p))}`)
-                              .join(", ")}
-                          </p>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+              <Leaderboard game="nine" postAs="v2" rarity day={day} saveKeys={[`grid:${day}`]} people={people} result={{ score: rarityToScore(total), label: `${filled}/9 · ${tier.name}` }} />
+              <p className="text-center text-sm text-[var(--muted)]">Tap any square to see every right answer and how rare each one was.</p>
             </>
           ) : null}
         </div>
       ) : null}
+      {sheet !== null && typeof document !== "undefined"
+        ? createPortal(
+            (() => {
+              const c = cellOf(sheet);
+              const mine = saved.cells[sheet]?.pid ?? null;
+              const list = [...new Set([...c.ids])]
+                .map((p) => ({ p, r: cellRarity(c.gateIds, data.fame, p) }))
+                .sort((a, b) => b.r - a.r);
+              return (
+                <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Every right answer">
+                  <motion.button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setSheet(null)}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 cursor-default bg-black/70"
+                  />
+                  <motion.div
+                    initial={reduce ? false : { y: 40, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.35, ease: EASE }}
+                    className="relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-[28px] border border-white/10 bg-[var(--bin-2)] p-4 sm:rounded-[28px] sm:p-6"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs text-[var(--muted)]">{labelOf(grid.rows[Math.floor(sheet / 3)])} ×</p>
+                        <p className="text-sm font-semibold break-words">{labelOf(grid.cols[sheet % 3])}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">{list.length} right answers · most named first</p>
+                      </div>
+                      <button type="button" onClick={() => setSheet(null)} className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-full bg-white/10 text-xl" aria-label="Close">
+                        ×
+                      </button>
+                    </div>
+                    {mine ? (
+                      <div className="mt-3 flex items-center gap-3 rounded-2xl border p-3" style={{ borderColor: `color-mix(in srgb, ${tone(rarities[sheet] ?? 100)} 50%, transparent)` }}>
+                        <Face pid={mine} players={players} size={40} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-xs text-[var(--muted)]">Your pick</span>
+                          <span className="block font-semibold break-words">{pname(players, mine)}</span>
+                        </span>
+                        <span className="font-display text-2xl font-black tabular-nums" style={{ color: tone(rarities[sheet] ?? 100) }}>
+                          {pctTxt(rarities[sheet] ?? 100)}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="mt-3 rounded-2xl bg-black/25 p-3 text-sm text-[var(--muted)]">You left this one empty (100).</p>
+                    )}
+                    <ol className="mt-3 -mx-1 flex-1 space-y-1 overflow-y-auto px-1 pb-2">
+                      {list.map(({ p, r }) => (
+                        <li key={p} className={`flex items-center gap-3 rounded-xl px-2 py-1.5 ${p === mine ? "bg-white/10" : ""}`}>
+                          <Face pid={p} players={players} size={28} />
+                          <span className="min-w-0 flex-1 text-sm break-words">{pname(players, p)}</span>
+                          <span className="text-sm font-semibold tabular-nums" style={{ color: tone(r) }}>
+                            {pctTxt(r)}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </motion.div>
+                </div>
+              );
+            })(),
+            document.body,
+          )
+        : null}
     </div>
   );
 }

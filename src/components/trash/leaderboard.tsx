@@ -64,6 +64,7 @@ export function Leaderboard({
   saveKeys,
   onMine,
   rarity,
+  postAs,
 }: {
   /** Rafterlore: tells the game this player's all-time high score (and the best before today) from the standings. */
   onMine?: (b: { best: number | null; before: number | null }) => void;
@@ -75,6 +76,8 @@ export function Leaderboard({
   game: "dive" | "dive2" | "trashle" | "lineup" | "grid" | "grid2" | "nine";
   /** Starting Nine: scores are rarity (lower is better), posted as 9000 - rarity x 10; shown as rarity. */
   rarity?: boolean;
+  /** Bump when a day's posted scores were cleared for a re-score, so browsers post again. */
+  postAs?: string;
   day: string | null;
   /** The finished result to post, once the game is over. score: higher is better. */
   result: { score: number; label: string } | null;
@@ -155,7 +158,7 @@ export function Leaderboard({
   const ready = board !== null;
   useEffect(() => {
     if (!day || !ready) return;
-    const postedKey = brand.key(`posted:${game}:${day}`);
+    const postedKey = brand.key(`posted:${game}${postAs ? `:${postAs}` : ""}:${day}`);
     let posted = false;
     try {
       posted = localStorage.getItem(postedKey) === me;

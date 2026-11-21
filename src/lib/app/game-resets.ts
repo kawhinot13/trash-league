@@ -32,9 +32,21 @@ const REDOS: { family: string; manager: string; game: "dive2"; day: string; keep
   { family: "1020516596416155648", manager: "1021907649295794176", game: "dive2", day: "2026-11-21", keep: 3 },
 ];
 
+/**
+ * Scores re-posted with a new scoring formula (owner's call): the day's board for that game is emptied once,
+ * every league, and each browser posts its game again with today's numbers (Leaderboard `postAs`), keeping
+ * its answers. 2026-11-21: Starting Nine's new rarity spread.
+ */
+const REPOSTS: { game: string; day: string; token: string }[] = [{ game: "nine", day: "2026-11-21", token: "v2" }];
+
 let applied = false;
 async function applyResets(sql: Sql) {
   if (applied) return;
+  for (const r of REPOSTS) {
+    const fresh = await sql`
+      insert into game_resets (family_id, game, day) values ('*', ${`repost-${r.game}-${r.token}`}, ${r.day}::date) on conflict do nothing returning 1`;
+    if (fresh.length) await sql`delete from game_scores where game = ${r.game} and day = ${r.day}::date`;
+  }
   for (const r of RESETS) {
     const fresh = await sql`
       insert into game_resets (family_id, game, day) values (${r.family}, ${r.game}, ${r.day}::date) on conflict do nothing returning 1`;

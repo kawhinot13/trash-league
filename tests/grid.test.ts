@@ -66,9 +66,11 @@ describe("Starting Nine rarity", () => {
     const r = ids.map((p) => cellRarity(ids, fame, p));
     expect(r[0]).toBe(RARITY_TOP);
     expect(r[80]).toBe(RARITY_FLOOR);
-    expect(r[40]).toBeGreaterThan(3); // the middle answer is a few percent, not crowded near the floor
-    expect(r[40]).toBeLessThan(6);
-    for (let i = 1; i < r.length; i++) expect(r[i]).toBeLessThanOrEqual(r[i - 1]);
+    expect(r[40]).toBeGreaterThan(2); // the middle answer sits in single digits
+    expect(r[40]).toBeLessThan(10);
+    expect(r[10]).toBeGreaterThan(15); // a few obvious names stay high
+    // The rare end stays spread out: the deepest tenth reads as many different values.
+    expect(new Set(r.slice(-9)).size).toBeGreaterThan(6);
     // An answer added later in the season doesn't move anyone already on the list.
     expect(cellRarity(ids, fame, "p10")).toBe(cellRarity(ids, { ...fame, late: 0.5 }, "p10"));
   });

@@ -54,8 +54,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   is chosen ONLY from finished seasons (`gateIds`; MIN_CELL 3..MAX_CELL 60 per square), so this season's answers can
   grow but the grid never changes mid-day; a started game also pins its grid (`ids`). 9 guesses, player once.
   Scoring is RARITY, lower is better (owner's call 2026-11-21): each right answer = its estimated share of picks
-  (`cellRarity`: rank by fame among the square's finished-season answers, then a geometric spread from RARITY_TOP 60%
-  for the most obvious to RARITY_FLOOR 0.3% for the deepest; owner 2026-11-21: common players read high; fame from
+  (`cellRarity`: rank by fame among the square's finished-season answers, then a log-scale spread (exponent RARITY_CURVE
+  1.15) from RARITY_TOP 60% (most obvious only; others cap at 56) to RARITY_FLOOR 0.2% for the deepest, each middle
+  answer nudged 0.78-1.28x by a per-player FNV wobble, hundredths under 1%; owner 2026-11-21: common players read high, rare ones spread like the Dive; fame from
   finished seasons, newcomers by draft slot, so stable all season), empty = 100, total 0..900. Board id "nine" ("grid"
   and "grid2" are dead: grid2 never saved, the API capped scores at 1,000; "nine" allows 9,000); posted as
   `rarityToScore` (9000 - rarity x 10); the Leaderboard marks a score posted only once the server keeps it so the shared API's higher-is-better math holds; `Leaderboard
@@ -63,7 +64,10 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   flip in order while the counter drops from 900, then `FinalCard` (GSAP timeline + SplitText tier name, elastic
   slam, gold sweep), confetti at 200 or lower; guesses: `PickReveal` over the grid (GSAP: card flips up, rarity counts down from 100%, `rarityName` label in SplitText,
   ring + shine, drops away; tap to skip), deep cuts (<5%) burst; misses shake. The card must not clip (no overflow-hidden on
-  the game card: it cut off the name suggestions on phones). Top right shows squares filled, not rarity. Never call it Immaculate Grid or copy its look.
+  the game card: it cut off the name suggestions on phones). Top right shows squares filled, not rarity. After the game, tapping any square opens a sheet (portal; bottom sheet on
+  phones) with that square's right answers, most named first, and their rarity; no long answer list under the game.
+  Today's (2026-11-21) Starting Nine scores were re-posted once with the new spread (`REPOSTS` in game-resets.ts empties
+  the day's board once; Leaderboard `postAs="v2"` makes each browser post again, answers kept). Never call it Immaculate Grid or copy its look.
 - Daily-game leaderboards live in Redis via `/api/scores` (env `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair). Without them the boards stay hidden.
 
 ## Rafterlore (multi-league app: `/l`, `/privacy`, `/terms`; own domain rafterlore.com)

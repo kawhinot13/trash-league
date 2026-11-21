@@ -337,21 +337,32 @@ export const EMPTY_RARITY = 100;
  * name him, from how famous he is in this league against the square's other answers (finished seasons,
  * like `cellPoints`, so it never moves during a season). Famous answers take most of the 100%.
  */
-/** The most obvious right answer in a square, and the deepest: rarities run between, spread out evenly. */
+/** The most obvious right answer in a square, and the deepest. */
 export const RARITY_TOP = 60;
-export const RARITY_FLOOR = 0.3;
+export const RARITY_FLOOR = 0.2;
+/** How the spread bends (log scale): just above 1 keeps a few obvious names high and the rare end spread out. */
+export const RARITY_CURVE = 1.15;
+/** A fixed per-player wobble (0.78x to 1.28x), so neighbours on the list don't read like a smooth slide. */
+const wobble = (pid: string) => {
+  let h = 2166136261;
+  for (const ch of pid) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return Math.exp(0.25 * ((h % 1000) / 500 - 1));
+};
 /**
  * Rarity of a right answer, lower is rarer (owner's call 2026-11-21): about how much of the league would name him.
  * The square's answers (finished seasons, plus his) are ranked by league fame (finished seasons only, so it never
- * moves in a season); the most obvious is ~60%, the deepest 0.3%, and everyone between falls on an even
- * (geometric) spread, so common players read high and deep cuts low instead of everyone crowding near 2%.
+ * moves in a season); the most obvious is ~60%, the deepest ~0.2%, along a log-scale curve that keeps the rare end spread out,
+ * with a small fixed wobble per player so the list varies like the Dumpster Dive's.
  */
 export function cellRarity(ids: string[], fame: Record<string, number>, pid: string): number {
   const order = [...new Set([...ids, pid])].sort((a, b) => (fame[b] ?? 0) - (fame[a] ?? 0) || (a < b ? -1 : a > b ? 1 : 0));
   const n = order.length;
   const i = order.indexOf(pid);
-  const r = n === 1 ? RARITY_TOP / 2 : RARITY_TOP * (RARITY_FLOOR / RARITY_TOP) ** (i / (n - 1));
-  return Math.max(0.1, Math.round(r * 10) / 10);
+  const t = n === 1 ? 0.5 : i / (n - 1);
+  const base = RARITY_TOP * (RARITY_FLOOR / RARITY_TOP) ** (t ** RARITY_CURVE);
+  const r = i === 0 ? RARITY_TOP : i === n - 1 ? RARITY_FLOOR : Math.min(RARITY_TOP * 0.93, base * wobble(pid)); // only the most obvious answer reads 60
+  // Hundredths under 1%, so deep cuts read differently from each other.
+  return Math.min(RARITY_TOP, Math.max(0.05, r < 1 ? Math.round(r * 100) / 100 : Math.round(r * 10) / 10));
 }
 
 /** A rarity total (0..900, lower is better) as a standings score (higher is better), and back. */
