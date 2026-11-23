@@ -88,7 +88,7 @@ export type RawSeason = {
     gp: number;
   }[];
   rosters: Record<string, Record<string, string[]>>;
-  trades: { week: number; sides: Record<string, string[]>; gain?: Record<string, [number, number] | [number, number, number]> }[];
+  trades: { week: number; sides: Record<string, string[]>; gain?: Record<string, [number, number] | [number, number, number]>; early?: boolean }[];
   adds: Record<string, number>;
   /** [week, actual, optimal] */
   lineups: Record<string, [number, number, number][]>;
@@ -115,6 +115,9 @@ export type ExtrasData = {
   /** Basketball (Rafterlore grade step): each player's real NBA per-game averages in each league season
    * (Sleeper season -> [games, pts, reb, ast, threes, stl, blk, min, best single-game pts]). */
   nbaSeasons?: Record<string, Record<string, number[]>>;
+  /** Trade grades (Rafterlore): value over replacement. `even` = margin called even; `repl` = replacement level
+   * (average lock-in of a waiver-level player) per season code. Absent: the old raw-value grades (Trash site). */
+  tradeScale?: { even: number; repl: Record<string, number> };
 };
 
 /** Everything the shared features need about one league. `name` is how copy refers to it ("Trash"). */

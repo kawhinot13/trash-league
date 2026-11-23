@@ -158,7 +158,7 @@ export function buildDataset(
         const sides = Object.fromEntries(Object.entries(t.sides).map(([rid, got]) => [W(rid), got]));
         const g = gradeOf.get(`${lg.season}|${w.week}|${t.ts}`);
         const gain = g ? Object.fromEntries(g.sides.map((s) => [s.who, [s.pts, s.held, s.starts ?? 0] as [number, number, number]])) : undefined;
-        exTrades.push({ week: w.week, sides, ...(gain ? { gain } : {}) });
+        exTrades.push({ week: w.week, sides, ...(gain ? { gain } : {}), ...(g?.early ? { early: true } : {}) });
         lgTrades.push({
           season: code,
           week: w.week,

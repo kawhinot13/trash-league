@@ -307,19 +307,31 @@ export type GradedTrade = {
   /** null when it's close enough to call even */
   winner: string | null;
   margin: number;
+  /** Too soon to call (Rafterlore: season in progress, fewer than 3 weeks since the trade). */
+  early?: boolean;
 };
 /** Within this many points, a trade is called even. */
 export const EVEN = 60;
 
 /** Every trade, judged by what each side's incoming players scored for them afterwards. */
-export function tradeCourt(d: Dataset, even = EVEN): { trades: GradedTrade[]; records: { id: string; w: number; l: number; e: number; net: number }[] } {
+/** Rafterlore's trade scale for the copy: the "even" margin and the latest season's waiver line. */
+export function tradeScaleOf(d: Dataset): { even: number; repl: number } | undefined {
+  const t = d.extras.tradeScale;
+  if (!t) return undefined;
+  const code = lastCode(d);
+  return { even: t.even, repl: t.repl[code] ?? Object.values(t.repl).at(-1) ?? 0 };
+}
+
+export function tradeCourt(d: Dataset, even = d.extras.tradeScale?.even ?? EVEN): { trades: GradedTrade[]; records: { id: string; w: number; l: number; e: number; net: number }[] } {
   const trades: GradedTrade[] = [];
   for (const s of d.extras.seasons) {
     s.trades.forEach((t, i) => {
       const sides = Object.entries(t.sides).map(([who, got]) => ({ who, got, pts: t.gain?.[who]?.[0] ?? 0, held: t.gain?.[who]?.[1] ?? 0, starts: t.gain?.[who]?.[2] ?? null }));
       const ranked = [...sides].sort((a, b) => b.pts - a.pts);
       const margin = ranked.length > 1 ? ranked[0].pts - ranked[1].pts : 0;
-      trades.push({ id: `${s.code}-${i}`, code: s.code, years: yearsOf(d)[s.code], week: t.week, sides, winner: margin >= even ? ranked[0].who : null, margin });
+      // Too early (Rafterlore, season still going, under EARLY_WEEKS weeks since): no verdict yet.
+      const early = !!t.early;
+      trades.push({ id: `${s.code}-${i}`, code: s.code, years: yearsOf(d)[s.code], week: t.week, sides, winner: !early && margin >= even ? ranked[0].who : null, margin, ...(early ? { early } : {}) });
     });
   }
   const rec = new Map<string, { id: string; w: number; l: number; e: number; net: number }>();

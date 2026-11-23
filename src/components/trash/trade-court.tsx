@@ -9,12 +9,13 @@ import { Face, pname } from "./player";
 import { MgrPhoto, useBrand, Src } from "@/components/trash/brand";
 import { lineupTerms } from "@/lib/core/lineup-terms";
 import { usePhone } from "./use-phone";
-import { tradeRule } from "@/lib/core/stat-notes";
+import { tradeRule, tradeRuleVor } from "@/lib/core/stat-notes";
+import { EARLY_WEEKS } from "@/lib/core/trade-value";
 
 const n0 = (x: number) => Math.round(x).toLocaleString();
 const WIN = "#7fd49a";
 
-function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; nick: (id: string) => string; i: number }) {
+function TradeCard({ t, players, nick, i, vor }: { t: GradedTrade; players: Players; nick: (id: string) => string; i: number; vor?: boolean }) {
   const reduce = useReducedMotion();
   const max = Math.max(1, ...t.sides.map((s) => s.pts));
   return (
@@ -33,7 +34,7 @@ function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; 
           className="font-display rounded-md border-2 px-2 py-0.5 text-sm leading-none font-black"
           style={{ color: t.winner ? WIN : "var(--muted)", borderColor: t.winner ? WIN : "rgba(255,255,255,0.2)", rotate: t.winner ? "-3deg" : "0deg" }}
         >
-          {t.winner ? `${nick(t.winner)} won by ${n0(t.margin)}` : "Even trade"}
+          {t.winner ? `${nick(t.winner)} won by ${n0(t.margin)}` : t.early ? "Too early to call" : "Even trade"}
         </span>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -60,7 +61,7 @@ function TradeCard({ t, players, nick, i }: { t: GradedTrade; players: Players; 
                 ))}
               </ul>
               <div className="mt-3 flex items-baseline justify-between text-xs">
-                <span className="text-[var(--muted)]">Value for {nick(s.who)} after</span>
+                <span className="text-[var(--muted)]">{vor ? `Value above waivers for ${nick(s.who)}` : `Value for ${nick(s.who)} after`}</span>
                 <span className="font-display text-xl font-black tabular-nums" style={{ color: won ? WIN : undefined }}>
                   {n0(s.pts)}
                 </span>
@@ -94,6 +95,7 @@ export function TradeCourt({
   players,
   managers,
   even = 60,
+  scale,
 }: {
   trades: GradedTrade[];
   records: { id: string; w: number; l: number; e: number; net: number }[];
@@ -101,6 +103,8 @@ export function TradeCourt({
   managers: Manager[];
   /** Margin under which a trade is called even (Rafterlore scales it to the league). */
   even?: number;
+  /** Rafterlore: trades are value over replacement (`repl` = this season's waiver-level average). */
+  scale?: { even: number; repl: number };
 }) {
   const terms = lineupTerms(useBrand().lineup);
   const [season, setSeason] = useState("all");
@@ -122,7 +126,7 @@ export function TradeCourt({
     <div className="rounded-[28px] border border-white/10 bg-[rgba(16,40,30,0.55)] p-5 md:p-10">
       {/* records */}
       <h3 className="font-display text-3xl font-black">Trade records</h3>
-      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and the net value gained across all of them (per <Src />). {tradeRule(terms.avg, even)}</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">Wins and losses in trades, and the net value gained across all of them (per <Src />). {scale ? tradeRuleVor(terms.avg, scale.even, scale.repl) : tradeRule(terms.avg, even)}</p>
       <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {records.map((r, i) => (
           <li key={r.id}>
@@ -176,7 +180,7 @@ export function TradeCourt({
       <AnimatePresence mode="popLayout">
         <motion.ol key={`${season}-${who}-${sort}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-4 grid gap-3 lg:grid-cols-2">
           {list.slice(0, shown).map((t, i) => (
-            <TradeCard key={t.id} t={t} players={players} nick={nick} i={i} />
+            <TradeCard key={t.id} t={t} players={players} nick={nick} i={i} vor={!!scale} />
           ))}
         </motion.ol>
       </AnimatePresence>
@@ -190,28 +194,60 @@ export function TradeCourt({
         </button>
       ) : null}
 
-      <Explain title="How trades are scored">
-        <p>In one line: a trade is worth what the players you got were worth to you, week by week.</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>
-            Each player has an average {terms.avg} for the season: his points per week in a starting lineup, on any team.
-          </li>
-          <li>
-            Every week after the trade that he&apos;s on your roster and plays at least one game, you get that average once.
-            Started or benched counts the same, so forgetting to start him doesn&apos;t change the trade.
-          </li>
-          <li>Weeks he&apos;s hurt, has no games, or is already gone count zero.</li>
-          <li>Add up every player you got: that&apos;s your side&apos;s value. More value wins; within {even} points it&apos;s even.</li>
-        </ul>
-        <p>
-          Example: he averages 47. He&apos;s on your roster for 4 more weeks and plays in 3 of them. Your side gets 3 × 47 = 141,
-          whatever he actually scored, started or not.
-        </p>
-        <p>
-          If he&apos;s traded again, his value counts toward the next trade instead. Draft picks are listed but not scored.
-          Averages come from <Src />&apos;s weekly lineups (per <Src />).
-        </p>
-      </Explain>
+      {scale ? (
+        <Explain title="How trades are scored">
+          <p>In one line: a trade is worth how much better the players you got are than what you could grab off waivers for free.</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>
+              Each player has an average {terms.avg} for the season: his points per week in a starting lineup, on any team.
+            </li>
+            <li>
+              <b>The waiver line</b> is about {Math.round(scale.repl)} here. Count every roster spot in the league (teams ×
+              roster size), rank every player by his average, and take the best one left over once every spot is filled. That&apos;s
+              the kind of player any team can pick up for free.
+            </li>
+            <li>
+              Every week after the trade that he&apos;s on your roster and plays, you get his average minus the waiver line (never
+              below zero). Started or benched counts the same; weeks he&apos;s hurt or gone count zero.
+            </li>
+            <li>
+              Add up every player you got: that&apos;s your side&apos;s value. More value wins; within {scale.even} it&apos;s even.
+              A trade made in the last {EARLY_WEEKS} weeks of a season still going is too early to call.
+            </li>
+          </ul>
+          <p>
+            Example with a waiver line of 40: two depth pieces averaging 45 add 5 + 5 = 10 a week. One star averaging 65 adds 25
+            a week. So the star side wins, even though it got fewer players, because anyone can find a 40 on waivers.
+          </p>
+          <p>
+            If a player is traded again, his value counts toward the next trade instead. Draft picks are listed but not scored.
+            Averages come from <Src />&apos;s weekly lineups (per <Src />).
+          </p>
+        </Explain>
+      ) : (
+        <Explain title="How trades are scored">
+          <p>In one line: a trade is worth what the players you got were worth to you, week by week.</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>
+              Each player has an average {terms.avg} for the season: his points per week in a starting lineup, on any team.
+            </li>
+            <li>
+              Every week after the trade that he&apos;s on your roster and plays at least one game, you get that average once.
+              Started or benched counts the same, so forgetting to start him doesn&apos;t change the trade.
+            </li>
+            <li>Weeks he&apos;s hurt, has no games, or is already gone count zero.</li>
+            <li>Add up every player you got: that&apos;s your side&apos;s value. More value wins; within {even} points it&apos;s even.</li>
+          </ul>
+          <p>
+            Example: he averages 47. He&apos;s on your roster for 4 more weeks and plays in 3 of them. Your side gets 3 × 47 = 141,
+            whatever he actually scored, started or not.
+          </p>
+          <p>
+            If he&apos;s traded again, his value counts toward the next trade instead. Draft picks are listed but not scored.
+            Averages come from <Src />&apos;s weekly lineups (per <Src />).
+          </p>
+        </Explain>
+      )}
     </div>
   );
 }

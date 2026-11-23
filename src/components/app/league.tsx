@@ -1,5 +1,5 @@
 import { lineupTerms } from "@/lib/core/lineup-terms";
-import { tradeRule } from "@/lib/core/stat-notes";
+import { tradeRule, tradeRuleVor } from "@/lib/core/stat-notes";
 import Link from "next/link";
 import { Avatar } from "@/components/app/avatar";
 import type { LeaguePage } from "@/lib/app/league-page";
@@ -306,8 +306,8 @@ export function TradeCourt({ p, only }: { p: LeaguePage; only?: string }) {
     <li key={`${t.ts}-${i}`} className="py-5">
       <p className="text-sm text-[var(--muted)]">
         {t.years}, week {t.week}.{" "}
-        {t.weeksAfter === 0 ? (
-          "Too soon to call: no games since."
+        {t.weeksAfter === 0 || t.early ? (
+          t.weeksAfter === 0 ? "Too soon to call: no games since." : "Too early to call."
         ) : t.winner ? (
           <span className="text-[var(--paper)]">
             {p.nameOf(t.winner)} won it by {fmt(t.margin)}.
@@ -360,7 +360,7 @@ export function TradeCourt({ p, only }: { p: LeaguePage; only?: string }) {
             <ol className="divide-y divide-[var(--line)] border-b border-[var(--line)]">{a.trades.slice(6).map((t, i) => card(t, i + 6))}</ol>
           </details>
         ) : null}
-        <p className="mt-4 text-sm text-[var(--muted)]">{tradeRule(lineupTerms(p.brand.lineup).avg, a.even ?? 60)}</p>
+        <p className="mt-4 text-sm text-[var(--muted)]">{a.repl ? tradeRuleVor(lineupTerms(p.brand.lineup).avg, a.even, Object.values(a.repl).at(-1) ?? 0) : tradeRule(lineupTerms(p.brand.lineup).avg, a.even ?? 60)}</p>
       </div>
     </div>
   );

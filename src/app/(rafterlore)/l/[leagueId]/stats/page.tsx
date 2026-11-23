@@ -10,7 +10,7 @@ import { SectionHead } from "@/components/trash/section-head";
 import { TradeCourt } from "@/components/trash/trade-court";
 import { Trapezoid } from "@/components/trash/trapezoid";
 import type { LeaguePage } from "@/lib/app/league-page";
-import { redrafts, tradeCourt } from "@/lib/core/extras";
+import { redrafts, tradeCourt, tradeScaleOf } from "@/lib/core/extras";
 import { gmRatings } from "@/lib/core/gm-rating";
 import { backtest, playoffReport, trapezoidViews } from "@/lib/core/trapezoid";
 
@@ -79,7 +79,7 @@ function Stats({ p }: { p: LeaguePage }) {
           lineups, per Sleeper.
         </SectionHead>
         <div className="mx-auto max-w-6xl px-5 md:px-10">
-          <TradeCourt {...tradeCourt(d, p.analysis?.even ?? 60)} even={p.analysis?.even ?? 60} players={d.extras.players} managers={d.league.managers} />
+          <TradeCourt {...tradeCourt(d, p.analysis?.even ?? 60)} even={p.analysis?.even ?? 60} scale={tradeScaleOf(d)} players={d.extras.players} managers={d.league.managers} />
         </div>
       </section>
 

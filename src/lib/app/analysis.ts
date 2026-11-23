@@ -1,3 +1,4 @@
+import { EARLY_WEEKS, evenMargin, replacementLevel, weekValue } from "@/lib/core/trade-value";
 import { sportOf } from "@/lib/core/sport";
 import type { SeasonBundle } from "@/lib/app/family";
 import type { WeekData } from "@/lib/app/replay";
@@ -44,6 +45,8 @@ export type GradedTrade = {
   margin: number;
   /** Replayed weeks after the trade (0: too soon to judge). */
   weeksAfter: number;
+  /** Season still going and fewer than EARLY_WEEKS weeks since: no verdict yet. */
+  early?: boolean;
 };
 export type Pickup = { who: Who; pid: string; season: string; years: string; week: number; pts: number; starts: number };
 /** One head-to-head game, per Sleeper's weekly matchup scores. */
@@ -52,7 +55,8 @@ export type Game = { season: string; years: string; week: number; a: Who; b: Who
 // 10: custom-pack leagues plan Dumpster Dive in the pack's names (Trash on Rafterlore).
 // 11: NBA-team questions count every team a player has played for (box scores).
 // 12: "Big numbers" asks for one big start (extras.bigNights) instead of a season average.
-export const ANALYSIS_VERSION = 15;
+// 16: trades graded on value over replacement (waiver level); recent in-season trades are "too early".
+export const ANALYSIS_VERSION = 16;
 export type Analysis = {
   version: number;
   /** Every regular-season and playoff (winners bracket) meeting, per Sleeper. */
@@ -61,6 +65,8 @@ export type Analysis = {
   model: Record<string, "one" | "all">;
   /** Margin under which a trade is called even, scaled to the league's scoring. */
   even: number;
+  /** Replacement level per season (trade grades: value above a waiver-level player). */
+  repl?: Record<string, number>;
   lineups: LineupRow[];
   crimes: { who: Who; season: string; years: string; week: number; act: number; opt: number }[];
   seasons: { season: string; years: string; eff: number; weeks: number; live: boolean }[];
@@ -91,8 +97,9 @@ export function analyse(
   const players: Analysis["players"] = {};
   const model: Analysis["model"] = {};
   const games: Game[] = [];
-  let weeklyTotal = 0;
-  let weeklyN = 0;
+  const replBySeason: Record<string, number> = {};
+  const evens: number[] = [];
+  let lastRepl: number | undefined;
   let misfits = 0;
   let replayed = 0;
 
@@ -143,8 +150,6 @@ export function analyse(
         if (x.opt > 0 && x.act / x.opt >= 0.97) row.perfect += 1;
         if (!row.worst || x.opt - x.act > row.worst.opt - row.worst.act) row.worst = { season: lg.season, week: x.week, act: x.act, opt: x.opt };
         crimes.push({ who: id, season: lg.season, years, week: x.week, act: x.act, opt: x.opt });
-        weeklyTotal += x.act;
-        weeklyN += 1;
       }
       lineups.set(id, row);
       sa += act;
@@ -164,16 +169,29 @@ export function analyse(
 
     // Each player's average lock-in this season: points per week in any team's starting lineup.
     const lockAvg = new Map<string, number>();
+    // Replacement level (trade grades): the Nth best average lock-in, N = teams x lineup spots.
+    let repl = 0;
     {
       const tot = new Map<string, [number, number]>();
+      let all = 0;
+      let alln = 0;
       for (const m of starts.values())
         for (const [p, v] of m) {
           const t = tot.get(p) ?? [0, 0];
           t[0] += v;
           t[1] += 1;
           tot.set(p, t);
+          all += v;
+          alln += 1;
         }
       for (const [p, [sum, n]] of tot) lockAvg.set(p, sum / n);
+      // Every roster spot in the league: teams x the typical roster size.
+      const sizes = weeks.flatMap((w) => w.teams.map((t) => t.pl.length)).filter((n) => n > 0).sort((a, b) => a - b);
+      const size = sizes.length ? sizes[Math.floor(sizes.length / 2)] : 0;
+      repl = replacementLevel([...tot.values()].map(([sum, n]) => ({ avg: sum / n, n })), bundle.rosters.length * size, lastRepl);
+      lastRepl = repl;
+      replBySeason[lg.season] = repl;
+      if (alln) evens.push(evenMargin(all / alln, repl));
     }
 
     // Who played at least one game each week (from the replay; started players count when an old
@@ -188,7 +206,7 @@ export function analyse(
     }
 
     // Trade grades: for the rest of the season (playoffs included), each incoming player earns his
-    // average lock-in for every week he's on that manager's roster and plays at least one game,
+    // average lock-in above replacement (a waiver-level player, never below zero) for every week he's on that manager's roster and plays at least one game,
     // started or not (sitting him is the manager's call, not the trade's fault; injured weeks earn
     // nothing). One lucky or unlucky game doesn't decide a trade. Also how many weeks they stayed.
     for (const w of current ? [...weeks, current] : weeks)
@@ -203,13 +221,14 @@ export function analyse(
               if (!rostered.get(`${rid}|${x}`)?.has(p)) continue;
               held += 1;
               if (played.has(`${x}|${p}`)) {
-                pts += lockAvg.get(p) ?? 0;
+                pts += weekValue(lockAvg.get(p) ?? 0, repl);
                 n += 1;
               }
             }
           return { who: W(rid), got, pts: Math.round(pts * 10) / 10, held, starts: n };
         });
-        trades.push({ season: lg.season, years, week: w.week, ts: t.ts, sides, winner: null, margin: 0, weeksAfter: later.length });
+        const early = lg.status !== "complete" && later.length < EARLY_WEEKS;
+        trades.push({ season: lg.season, years, week: w.week, ts: t.ts, sides, winner: null, margin: 0, weeksAfter: later.length, ...(early ? { early } : {}) });
       }
 
     // Head-to-head games: teams sharing a matchup id. In the playoffs only real bracket games count
@@ -246,14 +265,13 @@ export function analyse(
       }
   }
 
-  // "Even" scales with the league's scoring: about an eighth of an average weekly score
-  // (60 points in a league that averages ~500 a week).
-  const avgWeek = weeklyN ? weeklyTotal / weeklyN : 400;
-  const even = Math.max(10, Math.round(avgWeek * 0.12));
+  // "Even" on the value-over-replacement scale: about 1.5 weeks of an average starter's edge over a
+  // waiver-level player (seasons averaged).
+  const even = evens.length ? Math.round(evens.reduce((a, b) => a + b, 0) / evens.length) : 10;
   for (const t of trades) {
     const ranked = [...t.sides].sort((a, b) => b.pts - a.pts);
     t.margin = ranked.length > 1 ? Math.round((ranked[0].pts - ranked[1].pts) * 10) / 10 : 0;
-    t.winner = t.weeksAfter > 0 && t.margin >= even ? ranked[0].who : null;
+    t.winner = t.weeksAfter > 0 && !t.early && t.margin >= even ? ranked[0].who : null;
   }
   trades.sort((a, b) => b.ts - a.ts);
   const dealers = new Map<Who, Analysis["dealers"][number]>();
@@ -282,6 +300,7 @@ export function analyse(
     computedAt: new Date().toISOString(),
     model,
     even,
+    repl: replBySeason,
     lineups: rows,
     crimes: crimes.slice(0, 10),
     seasons: bySeason,

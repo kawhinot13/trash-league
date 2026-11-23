@@ -657,3 +657,11 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
   geometric (low end crammed), power 1.35 (top crowded near 50%).
 - Answers moved from a long list under the game to a sheet opened by tapping a square (more organized, owner's ask).
 - Today's scores re-posted with the new numbers (board emptied once, browsers re-post their kept answers).
+
+## 2026-11-23: Trades graded on value over replacement (Rafterlore)
+- Problem (owner): two depth pieces out-valued a star because each player's average lock-in was summed.
+- Now each player only earns what he averages above the waiver line (best player left once every roster spot is
+  filled), never below zero; recent in-season trades (<3 weeks) are "too early to call".
+- Rejected: the last-starter line (teams x lineup spots): lock-in averages bunch, so it called regular starters
+  worthless (Trey Murphy 0). Lineup-impact replay (most exact, hard to explain). Projections (forecast, not a result).
+- Trash site left on the old grades (test copy; its HTML stays unchanged).

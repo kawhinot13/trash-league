@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Handle, MgrLink, MgrPhoto, Src } from "@/components/trash/brand";
 import { Face, pname } from "@/components/trash/player";
-import { draftEye, lockIn, myGuys, tradeCourt, yearsOf } from "@/lib/core/extras";
+import { draftEye, lockIn, myGuys, tradeCourt, tradeScaleOf, yearsOf } from "@/lib/core/extras";
 import { h2h as coreH2h, record } from "@/lib/core/league";
 import type { Dataset } from "@/lib/core/types";
 import { lineupTerms } from "@/lib/core/lineup-terms";
-import { tradeRule } from "@/lib/core/stat-notes";
+import { tradeRule, tradeRuleVor } from "@/lib/core/stat-notes";
 import { Explain } from "@/components/trash/intel";
 
 /**
@@ -56,6 +56,7 @@ export function ManagerProfileView({
   const guys = myGuys(d).find((g) => g.id === m.id);
   const eye = draftEye(d, m.id);
   const court = tradeCourt(d, even);
+  const scale = tradeScaleOf(d);
   const rec = court.records.find((r) => r.id === m.id);
   const myTrades = court.trades.filter((t) => t.sides.some((x) => x.who === m.id));
   const net = (t: (typeof myTrades)[number]) => {
@@ -207,7 +208,7 @@ export function ManagerProfileView({
               steal.
             </li>
             <li>
-              <strong>Trade record:</strong> {tradeRule(terms.avg, even, false)} Net is the value received minus the value given away.
+              <strong>Trade record:</strong> {scale ? tradeRuleVor(terms.avg, scale.even, scale.repl, false) : tradeRule(terms.avg, even, false)} Net is the value received minus the value given away.
             </li>
           </ul>
         </Explain>

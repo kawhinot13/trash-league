@@ -170,6 +170,14 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
 - Trade finder / analyzer (`lib/fo-analysis.ts`): stars over depth (owner's call 2026-11-20): a side never gives the
   deal's best player unless it gets back someone within 90% of him (`keepsStar`, `STAR_KEEP`), whatever the totals.
   When someone in a deal is hurt, the analyzer shows a "Right now" (`avail`) / "Fully healthy" (`fullStrength`) toggle.
+- Trade court grades (Rafterlore; owner's call 2026-11-23: two depth pieces shouldn't beat a star): VALUE OVER
+  REPLACEMENT (`core/trade-value.ts`, used in `analysis.ts`). Waiver line = the Nth best average lock-in (2+ lock-ins),
+  N = teams x median roster size, i.e. the best player left once every roster spot is filled (not the last starter:
+  lock-in averages bunch, so that line zeroed real starters); early in a season with too few qualifiers, last
+  season's line. Each player-week on the roster with games earns max(0, his season average - line). Even = 1.5 x
+  (average starter lock-in - line), seasons averaged (Trash: 22). In-season trades under `EARLY_WEEKS` (3) weeks old
+  are "Too early to call" (`early`). Dataset carries `extras.tradeScale` {even, repl}, so every `tradeCourt(d)` and
+  the GM rating use it; copy `tradeRuleVor`. The Trash site keeps its old raw grades (extras.json has no tradeScale).
 - The forecast (Live page, Rafterlore; `core/forecast.ts`, `forecastLive` in live-features, `components/trash/forecast.tsx`):
   title line = lowest official scoring index of any champion (`titleLine`); projection = league ppw x blend of official
   scoring index (+ last 3 proven weeks as form, 25%) and best healthy lineup index (results weight games/(games+5));

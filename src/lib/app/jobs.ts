@@ -219,6 +219,8 @@ async function grade(familyId: string) {
     for (const r of rows) for (const t of r.data.teams ?? []) (t.st ?? []).forEach((pid, i) => (best[pid] = Math.max(best[pid] ?? 0, t.sp?.[i] ?? 0)));
     ds.extras.bigNights = best;
   }
+  // Trade grades are value over replacement: keep the scale with the dataset so every trade view uses it.
+  ds.extras.tradeScale = { even: a.even, repl: Object.fromEntries(inputs.map((x, i) => [`s${i + 1}`, a.repl?.[x.bundle.league.season] ?? 0])) };
   // Basketball: every NBA team each player has played for in these seasons (box scores record the team
   // of each game), for "Name a Warriors player..." questions across all time, not just today's rosters.
   if (sport === "nba")
