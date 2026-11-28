@@ -137,7 +137,8 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   quota ran out): browser polls go through `pollWhileActive` (`lib/client/poll.ts`: only while the tab is visible AND
   used in the last 10 min; `BOARD_POLL_MS` 2 min for standings + market; `PROGRESS_SYNC_MS` 15 s, changed games only,
   plus on hide); in-season catch-up regrades at most every 2 hours per league (`CATCH_UP_MS`). Never add a timer that
-  hits the database without it.
+  hits the database without it. The build only pre-builds the example league if the database answers
+  (`l/[leagueId]/layout.tsx` pings it, 8 s); otherwise it uses a stand-in id so a database outage never fails a deploy.
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
   instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are
   cached in `sleeper_cache` (`sleeper-cache.ts`). Never call Sleeper with raw `fetch`.

@@ -671,3 +671,5 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
 - Polls now stop when a tab is idle 10 min; standings and market every 2 min (were 20 s / 30 s); game progress every
   15 s (was 3 s); in-season catch-ups every 2 hours (was 30 min).
 - Rejected: paid Neon plan (owner's call; costs money), websockets/realtime (more always-on load).
+- Deploys no longer need the database: the build pings it and skips pre-building the example league if it's down
+  (the 2026-11-28 deploy failed only because Neon was down).
