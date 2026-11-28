@@ -665,3 +665,9 @@ URLs in here. Add an entry whenever a choice would surprise someone reading the 
 - Rejected: the last-starter line (teams x lineup spots): lock-in averages bunch, so it called regular starters
   worthless (Trey Murphy 0). Lineup-impact replay (most exact, hard to explain). Projections (forecast, not a result).
 - Trash site left on the old grades (test copy; its HTML stays unchanged).
+
+## 2026-11-28: Let the database sleep (Neon free compute ran out)
+- Symptom: sign-in bounced back signed out, standings off, market "closed" (every database call failing).
+- Polls now stop when a tab is idle 10 min; standings and market every 2 min (were 20 s / 30 s); game progress every
+  15 s (was 3 s); in-season catch-ups every 2 hours (was 30 min).
+- Rejected: paid Neon plan (owner's call; costs money), websockets/realtime (more always-on load).

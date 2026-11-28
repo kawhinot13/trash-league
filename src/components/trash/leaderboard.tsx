@@ -1,5 +1,6 @@
 "use client";
 
+import { BOARD_POLL_MS, pollWhileActive } from "@/lib/client/poll";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { MgrPhoto } from "@/components/trash/brand";
@@ -140,19 +141,11 @@ export function Leaderboard({
     };
   }, [game, day, brand.scores, reload]);
 
-  // Live: while the page is open and visible, check for new scores every 20 seconds, and right away
-  // when you come back to the tab, so everyone sees a finished game without reloading.
+  // Live: while the page is open, visible and in use, check for new scores every 2 minutes, and right away
+  // when you come back to the tab; an idle tab stops asking so the database can sleep.
   useEffect(() => {
     if (!day) return;
-    const tick = () => {
-      if (document.visibilityState === "visible") setReload((n) => n + 1);
-    };
-    const t = setInterval(tick, 20_000);
-    document.addEventListener("visibilitychange", tick);
-    return () => {
-      clearInterval(t);
-      document.removeEventListener("visibilitychange", tick);
-    };
+    return pollWhileActive(() => setReload((n) => n + 1), BOARD_POLL_MS);
   }, [day]);
 
   const ready = board !== null;

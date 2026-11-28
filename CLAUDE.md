@@ -117,9 +117,9 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   game starts, `PlayGate` (uses `/api/l/[id]/scores?who=1`) asks "Who are you?" once (first game only), and in leagues
   that manager isn't in it shows "You're not in this league" instead of the game. First account to claim a manager keeps them. One try a day on any device: the finished game (answers) is saved with the score (`game_scores.state`) and
   `PlayGate` restores it before the game mounts; older scores without it show "You already played today".
-  Games in progress sync to the account too (`game_progress`, POST `{progress:true}` to the scores API every few
+  Games in progress sync to the account too (`game_progress`, POST `{progress:true}` to the scores API every 15
   seconds while changed; `who=1` returns `progress`; the further one wins, `progressOf`, never moves back), so
-  phone and computer play ONE game. Resets/redos also clear that progress. Today / This week / All time / High scores (scores kept ~a year; boards refresh every 20 s while visible). With sign-in
+  phone and computer play ONE game. Resets/redos also clear that progress. Today / This week / All time / High scores (scores kept ~a year; boards refresh every 2 min while the tab is visible and in use). With sign-in
   on, Rafterlore's daily games require signing in (`PlayGate` in components/app/play-gate.tsx; client-side, pages stay
   pre-built; without the auth env everyone plays). Trash keeps its honor-system board (no `viewer` in its API).
 - Recreational use: Rafterlore is a history/analytics/entertainment site with no link to betting. First import of a
@@ -133,6 +133,11 @@ Head-to-head data is from Sleeper's weekly scores and is unreliable: always labe
   `/api/l/find/opened`, sent by the Finder on open). Plus 8-week series, accounts, proven managers, Yahoo, plays.
 - Traffic: Vercel Web Analytics (`<Analytics />` in the root layout; cookieless; enable in the Vercel dashboard).
 - Database: Postgres via `DATABASE_URL` (Neon in production); schema created on first use (`db.ts`).
+  Neon's free plan bills compute time while the database is awake, so let it sleep (owner's call 2026-11-28, after the
+  quota ran out): browser polls go through `pollWhileActive` (`lib/client/poll.ts`: only while the tab is visible AND
+  used in the last 10 min; `BOARD_POLL_MS` 2 min for standings + market; `PROGRESS_SYNC_MS` 15 s, changed games only,
+  plus on hide); in-season catch-up regrades at most every 2 hours per league (`CATCH_UP_MS`). Never add a timer that
+  hits the database without it.
 - Sleeper calls: always through `sleeper()` in `sleeper.ts`. It goes through `throttle.ts` (500 calls/min shared across
   instances via Postgres, 8/s per instance, shared backoff on 429). The player list (daily) and box-score weeks are
   cached in `sleeper_cache` (`sleeper-cache.ts`). Never call Sleeper with raw `fetch`.

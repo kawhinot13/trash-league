@@ -1,5 +1,6 @@
 "use client";
 
+import { BOARD_POLL_MS, pollWhileActive } from "@/lib/client/poll";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useReducedMotion } from "motion/react";
@@ -456,8 +457,7 @@ export function MarketBoard({ leagueId }: { leagueId: string }) {
   }, [url]);
   useEffect(() => {
     load();
-    const t = setInterval(() => document.visibilityState === "visible" && load(), 30_000);
-    return () => clearInterval(t);
+    return pollWhileActive(load, BOARD_POLL_MS);
   }, [load]);
 
   const order = async (body: object, done: string) => {

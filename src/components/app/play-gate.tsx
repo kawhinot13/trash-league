@@ -1,5 +1,6 @@
 "use client";
 
+import { PROGRESS_SYNC_MS } from "@/lib/client/poll";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { useMe } from "@/components/app/account";
@@ -119,7 +120,7 @@ function startSync(url: string, prefix: string, day: string) {
   };
   setInterval(() => {
     if (document.visibilityState === "visible") flush();
-  }, 3000);
+  }, PROGRESS_SYNC_MS);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") flush();
   });
